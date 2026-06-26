@@ -3,6 +3,11 @@ import pytest
 from app import orchestrator_tools
 
 
+class _FakeDb:
+    async def commit(self):
+        pass
+
+
 class _FakeOutput:
     def __init__(self, id, status="draft"):
         self.id = id
@@ -36,12 +41,12 @@ async def test_create_content_tool_creates_draft_and_runs_guardian(monkeypatch):
     monkeypatch.setattr(orchestrator_tools, "review_output_quality", fake_review)
 
     tools = orchestrator_tools.build_tools(
-        db=object(), brand_slug="duofy_solucoes", task_id=1, log=fake_log
+        db=_FakeDb(), brand_slug="duofy_solucoes", task_id=1, log=fake_log
     )
     create_content = {t.name: t for t in tools}["create_content"]
 
     result = await create_content.ainvoke(
-        {"channel": "LinkedIn", "format": "Post LinkedIn", "briefing": "tema x"}
+        {"channel": "LinkedIn", "format": "Post LinkedIn", "briefing": "tema x para o post"}
     )
 
     assert calls["payload"].brand_slug == "duofy_solucoes"

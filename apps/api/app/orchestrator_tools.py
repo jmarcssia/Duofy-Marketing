@@ -24,6 +24,7 @@ LogFn = Callable[[str], Awaitable[None]]
 async def _submit_to_guardian(db: AsyncSession, output) -> str:
     review = await review_output_quality(db, output, force=True)
     output.status = "review" if review.passed else "needs_adjustment"
+    await db.commit()
     return f"score {review.score}/100, status {output.status}"
 
 
@@ -46,7 +47,7 @@ def build_tools(
                 brand_slug=brand_slug,
                 theme=theme[:255],
                 period=period,
-                depth=depth,  # type: ignore[arg-type]
+                depth=depth,  # type: ignore[arg-type]  # mypy rejects str→Literal; Pydantic validates at runtime
             ),
         )
         return f"Pesquisa concluida. Output #{output.id} (relatorio de mercado salvo)."
@@ -65,7 +66,7 @@ def build_tools(
                 category=category,
                 channel=channel,
                 format=format,
-                briefing=briefing.ljust(10),
+                briefing=briefing,
                 status="draft",
             ),
         )
@@ -83,9 +84,9 @@ def build_tools(
             PressGenerateRequest(
                 brand_slug=brand_slug,
                 category=category,
-                format=format,  # type: ignore[arg-type]
+                format=format,  # type: ignore[arg-type]  # mypy rejects str→Literal; Pydantic validates at runtime
                 briefing=briefing,
-                status="draft",  # type: ignore[call-arg]
+                status="draft",  # type: ignore[call-arg]  # field exists in PressGenerateRequest; mypy inference gap
             ),
         )
         guardian = await _submit_to_guardian(db, output)
