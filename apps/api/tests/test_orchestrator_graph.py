@@ -18,7 +18,7 @@ class ScriptedModel:
     async def ainvoke(self, messages, *args, **kwargs):
         msg = self._scripted[min(self._i, len(self._scripted) - 1)]
         self._i += 1
-        return msg
+        return msg.model_copy()
 
 
 @pytest.mark.anyio
@@ -38,7 +38,7 @@ async def test_graph_runs_tool_then_finishes():
             content="",
             tool_calls=[{"name": "research_market", "args": {"theme": "IA"}, "id": "c1"}],
         ),
-        AIMessage(content="Pronto: criei a pesquisa de IA."),  # sem tool_calls -> final via agent
+        AIMessage(content="Pronto: criei a pesquisa de IA."),  # sem tool_calls -> route retorna END
     ]
     model = ScriptedModel(scripted)
     graph = orchestrator_graph.build_graph(model, [tool])

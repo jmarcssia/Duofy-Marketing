@@ -44,11 +44,6 @@ def build_graph(model, tools, *, checkpointer=None):
 
     async def agent_node(state: OrchestratorState) -> dict:
         response = await bound.ainvoke(state["messages"])
-        # Always produce a fresh message object so that returning the same scripted
-        # message multiple times (e.g. in tests) does not cause add_messages to
-        # treat the second call as an update to the already-stored message.
-        if response.id is not None:
-            response = response.model_copy(update={"id": None})
         return {"messages": [response]}
 
     async def tools_node(state: OrchestratorState) -> dict:
