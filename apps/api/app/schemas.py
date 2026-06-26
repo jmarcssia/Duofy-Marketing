@@ -84,6 +84,16 @@ class QualitySettingsUpdate(BaseModel):
     model: str | None = Field(default=None, max_length=255)
 
 
+class AgentSettingsRead(BaseModel):
+    token_budgets: dict[str, int]
+    research_depth: dict[str, dict[str, int]]
+
+
+class AgentSettingsUpdate(BaseModel):
+    token_budgets: dict[str, int]
+    research_depth: dict[str, dict[str, int]]
+
+
 class AgentRunRequest(BaseModel):
     agent_slug: str
     prompt: str = Field(min_length=3)

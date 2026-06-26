@@ -1,22 +1,28 @@
 from __future__ import annotations
 
+import json
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agent_limits import AGENT_TOKEN_BUDGETS_KEY, RESEARCH_DEPTH_LIMITS_KEY
+from app.agent_limits import _config as _limits_config
 from app.crypto import decrypt_secret, encrypt_secret, mask_secret
 from app.db import get_db
 from app.dependencies import require_admin
-from app.models import Agent, ProviderCredential, Setting, User
+from app.models import Agent, ProviderCredential, User
 from app.schemas import (
     AgentRead,
+    AgentSettingsRead,
+    AgentSettingsUpdate,
     ProviderCredentialRead,
     ProviderCredentialUpdate,
     QualitySettingsRead,
     QualitySettingsUpdate,
 )
+from app.settings_store import _setting_value, _upsert_setting
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -74,20 +80,6 @@ def _provider_read(credential: ProviderCredential) -> ProviderCredentialRead:
     )
 
 
-async def _setting_value(db: AsyncSession, key: str) -> str | None:
-    result = await db.execute(select(Setting).where(Setting.key == key))
-    setting = result.scalar_one_or_none()
-    return setting.value if setting is not None else None
-
-
-async def _upsert_setting(db: AsyncSession, key: str, value: str) -> None:
-    result = await db.execute(select(Setting).where(Setting.key == key))
-    setting = result.scalar_one_or_none()
-    if setting is None:
-        db.add(Setting(key=key, value=value))
-        return
-    setting.value = value
-
 
 @router.get("/providers", response_model=list[ProviderCredentialRead])
 async def list_providers(
@@ -132,6 +124,64 @@ async def update_quality_settings(
         review_mode=payload.review_mode,
         provider=payload.provider,
         model=payload.model or None,
+    )
+
+
+def _validate_budgets(budgets: dict[str, int]) -> None:
+    for slug, value in budgets.items():
+        if not (256 <= value <= 32000):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Orçamento inválido para {slug} (256–32000).",
+            )
+
+
+def _validate_depth(depth: dict[str, dict[str, int]]) -> None:
+    for name, entry in depth.items():
+        s, e = entry.get("sources"), entry.get("excerpt")
+        if not (isinstance(s, int) and 1 <= s <= 30 and isinstance(e, int) and 500 <= e <= 20000):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Profundidade inválida em {name}.",
+            )
+
+
+@router.get("/agent-settings", response_model=AgentSettingsRead)
+async def get_agent_settings(
+    _current_user: Annotated[User, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> AgentSettingsRead:
+    cfg = _limits_config()
+    budgets = dict(cfg.get("token_budgets", {}))
+    depth = dict(cfg.get("research_depth", {}))
+    saved_b = await _setting_value(db, AGENT_TOKEN_BUDGETS_KEY)
+    saved_d = await _setting_value(db, RESEARCH_DEPTH_LIMITS_KEY)
+    if saved_b:
+        try:
+            budgets.update(json.loads(saved_b))
+        except (ValueError, TypeError):
+            pass
+    if saved_d:
+        try:
+            depth.update(json.loads(saved_d))
+        except (ValueError, TypeError):
+            pass
+    return AgentSettingsRead(token_budgets=budgets, research_depth=depth)
+
+
+@router.put("/agent-settings", response_model=AgentSettingsRead)
+async def update_agent_settings(
+    payload: AgentSettingsUpdate,
+    _current_user: Annotated[User, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> AgentSettingsRead:
+    _validate_budgets(payload.token_budgets)
+    _validate_depth(payload.research_depth)
+    await _upsert_setting(db, AGENT_TOKEN_BUDGETS_KEY, json.dumps(payload.token_budgets))
+    await _upsert_setting(db, RESEARCH_DEPTH_LIMITS_KEY, json.dumps(payload.research_depth))
+    await db.commit()
+    return AgentSettingsRead(
+        token_budgets=payload.token_budgets, research_depth=payload.research_depth
     )
 
 

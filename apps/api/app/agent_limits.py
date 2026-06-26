@@ -6,7 +6,7 @@ import logging
 import yaml
 
 from app.agent_config import read_config_text
-from app.routers.admin import _setting_value
+from app.settings_store import _setting_value
 
 logger = logging.getLogger(__name__)
 
