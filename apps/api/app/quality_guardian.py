@@ -18,9 +18,9 @@ from app.models import (
     OutputVersion,
     ProviderCredential,
     QualityReview,
-    Setting,
 )
 from app.output_workflow import OutputWorkflowError, current_version
+from app.settings_store import _setting_value
 from app.text_repair import has_mojibake, repair_text
 
 MINIMUM_SCORE = 80
@@ -260,12 +260,6 @@ def _provider_for_model(model: str) -> str:
     if model.startswith("claude-"):
         return "anthropic"
     return "openrouter"
-
-
-async def _setting_value(db: AsyncSession, key: str) -> str | None:
-    result = await db.execute(select(Setting).where(Setting.key == key))
-    setting = result.scalar_one_or_none()
-    return setting.value if setting is not None else None
 
 
 async def _quality_settings(db: AsyncSession) -> tuple[ReviewMode, str | None, str | None]:

@@ -39,6 +39,25 @@ async def test_update_agent_settings_persists(monkeypatch):
 
 
 @pytest.mark.anyio
+async def test_get_agent_settings_merges_saved_with_defaults(monkeypatch):
+    saved = {admin.AGENT_TOKEN_BUDGETS_KEY: json.dumps({"research_agent": 9000})}
+
+    async def fake_get(db, key):
+        return saved.get(key)
+
+    monkeypatch.setattr(admin, "_setting_value", fake_get)
+
+    class _Db:
+        pass
+
+    result = await admin.get_agent_settings(_current_user=None, db=_Db())
+    # Saved value overrides config default for research_agent
+    assert result.token_budgets["research_agent"] == 9000
+    # Non-overridden default from agent_limits.yaml is still present
+    assert result.token_budgets["content_agent"] == 4000
+
+
+@pytest.mark.anyio
 async def test_update_agent_settings_rejects_out_of_range(monkeypatch):
     monkeypatch.setattr(admin, "_upsert_setting", lambda *a, **k: None)
 
