@@ -1,72 +1,84 @@
-# Workflow de Desenvolvimento Paralelo - Sprint Final DUOFY V1
+# Workflow de Desenvolvimento Sequencial - Sprint Final DUOFY V1
 
-Este documento define as regras operacionais para trabalho paralelo no sprint final. O baseline seguro foi criado antes da abertura das branches de sprint.
+Este documento substitui a regra anterior de trabalho paralelo por worktrees. A partir desta consolidação, a pasta oficial única do projeto é:
 
-## Baseline
+```text
+C:\DUOFY_V1_MARKETING_AI
+```
 
-- Commit base: `79896e2001d292658737fe8f1a629b0344f868b4`
-- Tag local: `baseline-pre-final-sprint`
-- Data: `2026-06-26 01:59:20 -03:00`
-- Repositório raiz: `C:\DUOFY_V1_MARKETING_AI`
+Codex e Cloud Code podem alterar qualquer área do projeto, mas nunca devem ser usados simultaneamente.
 
-## Codex
+## Regra principal
 
-- Branch: `sprint/codex-stabilization`
-- Pasta: `C:\DUOFY_V1_MARKETING_AI`
-- Responsabilidade inicial:
-  - backend;
-  - segurança;
-  - persistência;
-  - infraestrutura;
-  - testes;
-  - integração técnica.
+- Uma única ferramenta trabalha por vez.
+- A pasta oficial é sempre `C:\DUOFY_V1_MARKETING_AI`.
+- Não trabalhar diretamente na `main`.
+- A branch ativa para estabilização continua sendo `sprint/codex-stabilization`.
+- As branches antigas são mantidas temporariamente como backup.
+- A worktree auxiliar `C:\DUOFY_V1_MARKETING_AI_CLOUD` foi usada apenas para preparação e deve ser removida após consolidação limpa.
 
-Codex não deve redesenhar componentes de frontend durante o trabalho paralelo sem acordo explícito, para evitar conflito com Cloud Code.
+## Antes de trocar de ferramenta
 
-## Cloud Code
+Antes de sair de Codex para Cloud Code, ou de Cloud Code para Codex:
 
-- Branch: `sprint/cloudcode-interface`
-- Pasta: `C:\DUOFY_V1_MARKETING_AI_CLOUD`
-- Responsabilidade inicial:
-  - frontend;
-  - UX;
-  - correções visuais;
-  - encoding visível;
-  - componentes;
-  - estados de interface.
+1. Rodar os checks relevantes da mudança.
+2. Fazer commit pequeno e descritivo.
+3. Confirmar:
 
-Cloud Code não deve alterar migrations, banco, contratos de API ou comportamento de backend sem autorização explícita.
+```powershell
+git status --short
+```
 
-## Integração
+4. O resultado deve estar limpo.
+5. Informar no handoff o último commit e os arquivos tocados.
 
-- Branch: `integration/final-demo`
-- Worktree dedicada: não criada nesta etapa.
-- Uso: integrar mudanças revisadas de Codex e Cloud Code para demonstração final.
+## Responsabilidades
+
+Como não há mais paralelismo, ambas as ferramentas podem trabalhar em:
+
+- backend;
+- frontend;
+- UX;
+- segurança;
+- persistência;
+- infraestrutura;
+- testes;
+- documentação;
+- integração técnica.
+
+Mesmo assim, mudanças de contrato de API, migrations, autenticação, storage, prompts e agentes exigem descrição explícita no commit e no handoff.
 
 ## Regras obrigatórias
 
-- Fazer commits pequenos e descritivos.
-- Manter uma responsabilidade por commit.
+- Commits pequenos e descritivos.
+- Uma responsabilidade por commit.
 - Nunca editar diretamente a `main`.
 - Não usar `git reset --hard`.
 - Não usar `git clean -fd`.
-- Não rebasear ou apagar trabalho alheio.
-- Antes de integrar, rodar lint, testes e build.
+- Não rebasear ou apagar trabalho anterior sem autorização.
+- Antes de handoff, rodar lint/testes/build compatíveis com a mudança.
 - Conflitos devem ser analisados manualmente.
-- Mudanças de contrato de API precisam ser comunicadas antes.
-- Migrations devem ser criadas somente pelo trabalho de backend.
 - Nenhum segredo pode ser commitado.
 - `.env`, `.env.local`, uploads, dumps, dependências, caches e validações locais devem permanecer ignorados.
-- O branch `integration/final-demo` deve receber somente código validado.
+- Migrations devem ser criadas por Alembic quando houver mudança de banco.
+- Não alterar prompt/agente sem registrar o motivo.
+- Não alterar comportamento funcional em commits rotulados apenas como chore de workflow.
 
-## Procedimento recomendado de integração
+## Script de frontend dev
 
-1. Confirmar que a branch de origem está limpa com `git status --short`.
-2. Rodar checks relevantes na branch de origem.
-3. Trocar para `integration/final-demo` em uma worktree ou na pasta principal quando nenhuma outra atividade estiver em andamento.
-4. Fazer merge de uma branch por vez.
-5. Resolver conflitos manualmente.
-6. Rodar os checks completos:
+Para rodar o frontend de desenvolvimento na pasta oficial, use:
+
+```powershell
+.\scripts\start-frontend-dev.ps1
+```
+
+Padrões:
+
+- API: `http://localhost:8000`
+- Frontend dev: `http://localhost:3001`
+- Porta 3000 fica reservada ao frontend Docker.
+
+## Checks recomendados
 
 ```powershell
 python -m ruff check apps/api/app apps/api/alembic apps/api/tests
@@ -75,13 +87,5 @@ npm.cmd --prefix apps/web run lint
 npm.cmd --prefix apps/web run build
 docker compose ps
 Invoke-RestMethod http://localhost:8000/health
-```
-
-7. Registrar resultado em `docs/SPRINT_FINAL_STATUS.md`.
-
-## Como abrir o worktree Cloud Code
-
-```powershell
-code C:\DUOFY_V1_MARKETING_AI_CLOUD
 ```
 

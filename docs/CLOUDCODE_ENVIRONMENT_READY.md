@@ -1,5 +1,11 @@
 # Cloud Code — Ambiente de Desenvolvimento do Frontend
 
+> Status histórico: este documento registra a preparação anterior da worktree
+> `C:\DUOFY_V1_MARKETING_AI_CLOUD`. O fluxo atual consolidado usa uma única pasta
+> oficial, `C:\DUOFY_V1_MARKETING_AI`, com Codex e Cloud Code trabalhando de forma
+> sequencial. Para iniciar o frontend dev no fluxo atual, use
+> `scripts/start-frontend-dev.ps1`.
+
 Documento gerado pela preparação do ambiente Cloud Code em **2026-06-26**.
 Objetivo: preparar e validar o ambiente da worktree Cloud para desenvolvimento
 do frontend, sem implementar melhorias, redesenhar telas ou alterar
