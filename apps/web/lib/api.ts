@@ -43,6 +43,11 @@ export type QualitySettings = {
   model: string | null
 }
 
+export type AgentSettings = {
+  token_budgets: Record<string, number>
+  research_depth: Record<string, { sources: number; excerpt: number }>
+}
+
 export type AgentRun = {
   id: number
   agent_slug: string

@@ -7,6 +7,7 @@ import { PageTitle, SectionCard, SoftButton } from "@/components/page-primitives
 import {
   apiFetch,
   type Agent,
+  type AgentSettings,
   type Brand,
   type ProviderCredential,
   type QualitySettings
@@ -18,6 +19,7 @@ const tabs = [
   "Agentes",
   "Modelos LLM",
   "Ferramentas",
+  "Limites dos Agentes",
   "Limites de Custo",
   "Usuários",
   "Regras de Marca"
@@ -47,6 +49,7 @@ export default function AdminConfigPage() {
   const [agents, setAgents] = useState<Agent[]>([])
   const [providers, setProviders] = useState<ProviderCredential[]>([])
   const [qualitySettings, setQualitySettings] = useState<QualitySettings | null>(null)
+  const [agentSettings, setAgentSettings] = useState<AgentSettings | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const activeBrand = brands[0]
 
@@ -56,16 +59,18 @@ export default function AdminConfigPage() {
       router.replace("/login")
       return
     }
-    const [brandList, agentList, providerList, qualityConfig] = await Promise.all([
+    const [brandList, agentList, providerList, qualityConfig, agentConfig] = await Promise.all([
       apiFetch<Brand[]>("/api/brands", token),
       apiFetch<Agent[]>("/api/admin/agents", token),
       apiFetch<ProviderCredential[]>("/api/admin/providers", token),
-      apiFetch<QualitySettings>("/api/admin/quality-settings", token)
+      apiFetch<QualitySettings>("/api/admin/quality-settings", token),
+      apiFetch<AgentSettings>("/api/admin/agent-settings", token)
     ])
     setBrands(brandList)
     setAgents(agentList)
     setProviders(providerList)
     setQualitySettings(qualityConfig)
+    setAgentSettings(agentConfig)
   }, [router])
 
   useEffect(() => {
@@ -113,6 +118,35 @@ export default function AdminConfigPage() {
     })
     setQualitySettings(updated)
     setMessage("Configuração do Guardião de Qualidade salva.")
+  }
+
+  async function saveAgentSettings(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setMessage(null)
+    const token = getTokenFromCookie()
+    if (!token || !agentSettings) return
+    const form = new FormData(event.currentTarget)
+    const token_budgets: Record<string, number> = {}
+    for (const key of Object.keys(agentSettings.token_budgets)) {
+      token_budgets[key] = Number(form.get(`budget_${key}`) ?? agentSettings.token_budgets[key])
+    }
+    const research_depth: Record<string, { sources: number; excerpt: number }> = {}
+    for (const key of Object.keys(agentSettings.research_depth)) {
+      research_depth[key] = {
+        sources: Number(form.get(`depth_${key}_sources`) ?? agentSettings.research_depth[key].sources),
+        excerpt: Number(form.get(`depth_${key}_excerpt`) ?? agentSettings.research_depth[key].excerpt)
+      }
+    }
+    try {
+      const updated = await apiFetch<AgentSettings>("/api/admin/agent-settings", token, {
+        method: "PUT",
+        body: JSON.stringify({ token_budgets, research_depth })
+      })
+      setAgentSettings(updated)
+      setMessage("Limites dos agentes salvos.")
+    } catch (err) {
+      setMessage(`Erro ao salvar limites: ${err instanceof Error ? err.message : String(err)}`)
+    }
   }
 
   return (
@@ -313,6 +347,70 @@ export default function AdminConfigPage() {
             ))}
           </div>
         </SectionCard>
+      ) : null}
+
+      {activeTab === "Limites dos Agentes" && agentSettings ? (
+        <form onSubmit={saveAgentSettings} className="space-y-5">
+          <SectionCard title="Orçamento de Tokens por Agente">
+            <p className="mb-4 text-sm leading-6 text-muted">
+              Número máximo de tokens que cada agente pode consumir por execução. Intervalo válido: 256 – 32 000.
+            </p>
+            <div className="grid gap-4 md:grid-cols-2">
+              {Object.entries(agentSettings.token_budgets).map(([slug, budget]) => (
+                <label key={slug} className="block text-sm font-semibold">
+                  {slug}
+                  <input
+                    name={`budget_${slug}`}
+                    type="number"
+                    defaultValue={budget}
+                    min={256}
+                    max={32000}
+                    className="duofy-focus mt-2 w-full rounded-xl border border-line bg-white px-4 py-3"
+                  />
+                </label>
+              ))}
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Profundidade de Pesquisa por Nível">
+            <p className="mb-4 text-sm leading-6 text-muted">
+              Fontes (1 – 30) e tamanho do trecho (500 – 20 000 chars) por nível de profundidade de pesquisa.
+            </p>
+            <div className="grid gap-6 md:grid-cols-2">
+              {Object.entries(agentSettings.research_depth).map(([level, cfg]) => (
+                <div key={level} className="rounded-2xl border border-line bg-white p-4">
+                  <h3 className="mb-3 font-bold tracking-[-0.03em]">{level}</h3>
+                  <div className="space-y-3">
+                    <label className="block text-sm font-semibold">
+                      Fontes
+                      <input
+                        name={`depth_${level}_sources`}
+                        type="number"
+                        defaultValue={cfg.sources}
+                        min={1}
+                        max={30}
+                        className="duofy-focus mt-2 w-full rounded-xl border border-line bg-white px-4 py-3"
+                      />
+                    </label>
+                    <label className="block text-sm font-semibold">
+                      Trecho (chars)
+                      <input
+                        name={`depth_${level}_excerpt`}
+                        type="number"
+                        defaultValue={cfg.excerpt}
+                        min={500}
+                        max={20000}
+                        className="duofy-focus mt-2 w-full rounded-xl border border-line bg-white px-4 py-3"
+                      />
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+
+          <SoftButton>Salvar Limites dos Agentes</SoftButton>
+        </form>
       ) : null}
     </div>
   )
