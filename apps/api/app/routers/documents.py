@@ -15,6 +15,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -121,7 +122,7 @@ async def upload_document(
     content = await file.read()
     STORAGE_DIR.mkdir(parents=True, exist_ok=True)
     stored_path = STORAGE_DIR / f"{uuid4().hex}{suffix}"
-    stored_path.write_bytes(content)
+    await run_in_threadpool(stored_path.write_bytes, content)
 
     source = Source(
         name=file.filename or stored_path.name,
@@ -145,7 +146,7 @@ async def upload_document(
     await db.flush()
 
     try:
-        text = extract_text(document.filename, content)
+        text = await run_in_threadpool(extract_text, document.filename, content)
         chunks = chunk_text(text)
         if not chunks:
             raise ValueError("Documento sem texto extraivel.")
@@ -182,6 +183,8 @@ async def list_documents(
     brand_slug: str | None = None,
     category: str | None = None,
     query: str | None = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 100,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[DocumentRead]:
     statement = select(Document)
     if brand_slug:
@@ -190,7 +193,7 @@ async def list_documents(
         statement = statement.where(Document.category == category)
     if query:
         statement = statement.where(Document.filename.ilike(f"%{query}%"))
-    statement = statement.order_by(Document.created_at.desc())
+    statement = statement.order_by(Document.created_at.desc()).limit(limit).offset(offset)
     result = await db.execute(statement)
     return [_document_read(document) for document in result.scalars().all()]
 
@@ -244,4 +247,7 @@ async def export_indexed_document(
 ) -> Response:
     document = await _get_document_or_404(db, document_id)
     chunks = await _document_chunks(db, document.id)
-    return _export_response(export_document(_document_export(document, chunks), format))
+    exported = await run_in_threadpool(
+        export_document, _document_export(document, chunks), format
+    )
+    return _export_response(exported)

@@ -81,7 +81,9 @@ Branch `hardening/tier0-foundation` — **60 testes passando** (container), ruff
 
 ## 10. Pendências (não bloqueiam ajustar skills/UI)
 
-**Tier 1 (solidez infra/backend):** off-load do event loop (uploads/export/research síncronos em async → threadpool/Celery), pool de conexões em `db.py`, rate limiting + hard budget de custo, exception handler global, paginação em `memory`/`documents`, FK `ON DELETE` + índices `created_at` + FK do `current_version_id`, JSONB, `env.py compare_type`, **Dockerfile web de produção** (hoje roda `npm run dev`), containers non-root, backup do Postgres, logs estruturados/observabilidade.
+**Tier 1 — já aplicado (2026-06-26):** exception handler global (erros JSON consistentes), paginação em `memory`/`documents`, off-load do event loop em upload/export de documentos, pool de conexões parametrizado em `db.py`, `env.py compare_type/compare_server_default`.
+
+**Tier 1 — restante:** off-load da pesquisa síncrona (research → Celery/threadpool), rate limiting + hard budget de custo, FK `ON DELETE` + índices `created_at` + FK do `current_version_id`, JSONB, **Dockerfile web de produção** (hoje roda `npm run dev`), containers non-root, backup do Postgres, logs estruturados/observabilidade.
 
 **Tier 2 (decisão de produto — fora de escopo para equipe única):** tenancy/workspaces + RLS, cookie HttpOnly + revogação de JWT, object storage, fallback entre provedores LLM.
 

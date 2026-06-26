@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,6 +22,8 @@ async def list_memory_entries(
     brand_slug: str | None = None,
     category: str | None = None,
     source_type: str | None = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 100,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[MemoryEntryRead]:
     statement = select(MemoryEntry)
     if brand_slug:
@@ -30,7 +32,7 @@ async def list_memory_entries(
         statement = statement.where(MemoryEntry.category == category)
     if source_type:
         statement = statement.where(MemoryEntry.source_type == source_type)
-    statement = statement.order_by(MemoryEntry.created_at.desc())
+    statement = statement.order_by(MemoryEntry.created_at.desc()).limit(limit).offset(offset)
     result = await db.execute(statement)
     return [
         MemoryEntryRead(

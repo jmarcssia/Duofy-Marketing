@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.calendar_scheduler import start_calendar_scheduler, stop_calendar_scheduler
 from app.db import AsyncSessionLocal
 from app.document_formatting import reformat_legacy_outputs
+from app.error_handlers import register_exception_handlers
 from app.health import check_postgres, check_redis
 from app.routers import (
     admin,
@@ -67,6 +68,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+register_exception_handlers(app)
 
 app.include_router(auth.router)
 app.include_router(brands.router)
