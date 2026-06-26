@@ -31,6 +31,21 @@ services:
       timeout: 5s
       retries: 5
 
+  # Aplica as migrations antes de api/worker aceitarem trafego.
+  # Servico one-shot: roda 'alembic upgrade head' e sai (restart: no).
+  migrate:
+    build:
+      context: .
+      dockerfile: ./apps/api/Dockerfile
+    container_name: duofy-migrate
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://duofy:duofy@postgres:5432/duofy_v1}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   api:
     build:
       context: .
@@ -57,6 +72,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5).read()"]
       interval: 10s
@@ -100,6 +117,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   postgres_data:

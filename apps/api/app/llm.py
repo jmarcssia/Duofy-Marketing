@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -16,6 +18,14 @@ from app.metrics import (
     record_model_call,
 )
 from app.models import ProviderCredential
+
+logger = logging.getLogger(__name__)
+
+# Status HTTP transitorios que justificam nova tentativa.
+RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
+_MAX_ATTEMPTS = 3
+_BASE_DELAY = 0.75
+_MAX_DELAY = 8.0
 
 
 class LLMConfigurationError(RuntimeError):
@@ -66,6 +76,65 @@ def _raise_provider_error(exc: httpx.HTTPStatusError) -> None:
     raise RuntimeError(
         f"Provider returned HTTP {exc.response.status_code}: {response_text}"
     ) from exc
+
+
+def _retry_after_seconds(response: httpx.Response) -> float | None:
+    raw = response.headers.get("Retry-After")
+    if not raw:
+        return None
+    try:
+        return min(float(raw), _MAX_DELAY)
+    except ValueError:
+        return None
+
+
+def _backoff_delay(attempt: int, base_delay: float) -> float:
+    # Backoff exponencial com teto. attempt e 1-indexado.
+    return min(base_delay * (2 ** (attempt - 1)), _MAX_DELAY)
+
+
+async def _post_with_retry(
+    client: httpx.AsyncClient,
+    url: str,
+    *,
+    headers: dict[str, str],
+    payload: dict[str, Any],
+    max_attempts: int = _MAX_ATTEMPTS,
+    base_delay: float = _BASE_DELAY,
+) -> httpx.Response:
+    """POST com retry/backoff em timeouts, erros de transporte e status 429/5xx.
+
+    Retorna a resposta (mesmo 4xx/5xx final) para o chamador decidir via
+    raise_for_status. Erros de rede persistentes sao propagados.
+    """
+    last_exc: Exception | None = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            response = await client.post(url, headers=headers, json=payload)
+        except (httpx.TimeoutException, httpx.TransportError) as exc:
+            last_exc = exc
+            if attempt >= max_attempts:
+                raise
+            logger.warning("LLM POST falhou (%s), tentativa %s/%s", exc, attempt, max_attempts)
+            await asyncio.sleep(_backoff_delay(attempt, base_delay))
+            continue
+
+        if response.status_code in RETRYABLE_STATUS and attempt < max_attempts:
+            delay = _retry_after_seconds(response) or _backoff_delay(attempt, base_delay)
+            logger.warning(
+                "LLM HTTP %s, tentativa %s/%s (espera %.2fs)",
+                response.status_code,
+                attempt,
+                max_attempts,
+                delay,
+            )
+            await asyncio.sleep(delay)
+            continue
+        return response
+
+    if last_exc is not None:
+        raise last_exc
+    raise RuntimeError("Falha ao chamar o provedor LLM apos varias tentativas.")
 
 
 async def call_llm(
@@ -204,12 +273,13 @@ async def _call_openai_compatible(
         payload["tools"] = [{"type": "openrouter:web_search"}]
 
     async with httpx.AsyncClient(timeout=60) as client:
+        response = await _post_with_retry(
+            client,
+            _chat_completions_url(base_url),
+            headers=headers,
+            payload=payload,
+        )
         try:
-            response = await client.post(
-                _chat_completions_url(base_url),
-                headers=headers,
-                json=payload,
-            )
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
             _raise_provider_error(exc)
@@ -248,12 +318,13 @@ async def _call_anthropic(
     base_url = credential.base_url or "https://api.anthropic.com"
 
     async with httpx.AsyncClient(timeout=60) as client:
+        response = await _post_with_retry(
+            client,
+            _messages_url(base_url),
+            headers=headers,
+            payload=payload,
+        )
         try:
-            response = await client.post(
-                _messages_url(base_url),
-                headers=headers,
-                json=payload,
-            )
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
             _raise_provider_error(exc)

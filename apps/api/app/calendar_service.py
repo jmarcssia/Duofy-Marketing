@@ -123,9 +123,16 @@ def _extract_json_array(text: str) -> list[dict[str, Any]]:
     end = cleaned.rfind("]")
     if start >= 0 and end > start:
         cleaned = cleaned[start : end + 1]
-    parsed = json.loads(cleaned)
+    try:
+        parsed = json.loads(cleaned)
+    except json.JSONDecodeError as exc:
+        raise LLMConfigurationError(
+            "O agente de calendario nao retornou JSON valido. Tente gerar novamente."
+        ) from exc
     if not isinstance(parsed, list):
-        raise ValueError("Resposta JSON nao e uma lista.")
+        raise LLMConfigurationError(
+            "O agente de calendario nao retornou uma lista de eventos."
+        )
     return [item for item in parsed if isinstance(item, dict)]
 
 
@@ -134,7 +141,12 @@ def _parse_datetime(value: Any, fallback: datetime) -> datetime:
         return value
     if isinstance(value, str) and value.strip():
         normalized = value.strip().replace("Z", "+00:00")
-        parsed = datetime.fromisoformat(normalized)
+        try:
+            parsed = datetime.fromisoformat(normalized)
+        except ValueError:
+            # Data malformada vinda do LLM degrada para a data base do periodo
+            # em vez de derrubar o batch inteiro.
+            return fallback
         if parsed.tzinfo is None:
             return parsed.replace(tzinfo=fallback.tzinfo)
         return parsed
