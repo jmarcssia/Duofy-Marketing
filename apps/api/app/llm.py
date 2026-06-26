@@ -74,6 +74,7 @@ async def call_llm(
     system_prompt: str,
     user_prompt: str,
     use_web_search: bool = False,
+    max_tokens: int | None = None,
     task_type: str = "llm",
     task_id: int | None = None,
     agent_slug: str | None = None,
@@ -94,6 +95,7 @@ async def call_llm(
                     "X-OpenRouter-Title": "Duofy V1 Local",
                 },
                 use_web_search=use_web_search,
+                max_tokens=max_tokens or 1200,
             )
         elif provider == "openai":
             result = await _call_openai_compatible(
@@ -102,9 +104,12 @@ async def call_llm(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 base_url=credential.base_url or "https://api.openai.com/v1",
+                max_tokens=max_tokens or 1200,
             )
         elif provider == "anthropic":
-            result = await _call_anthropic(credential, model, system_prompt, user_prompt)
+            result = await _call_anthropic(
+                credential, model, system_prompt, user_prompt, max_tokens=max_tokens or 1200
+            )
         else:
             raise LLMConfigurationError(f"Provedor {provider} nao suporta execucao de agentes.")
 
@@ -179,6 +184,7 @@ async def _call_openai_compatible(
     base_url: str,
     extra_headers: dict[str, str] | None = None,
     use_web_search: bool = False,
+    max_tokens: int = 1200,
 ) -> LLMResult:
     headers = {
         "Authorization": f"Bearer {_api_key(credential)}",
@@ -192,7 +198,7 @@ async def _call_openai_compatible(
             {"role": "user", "content": user_prompt},
         ],
         "temperature": 0.3,
-        "max_tokens": 1200,
+        "max_tokens": max_tokens,
     }
     if credential.provider == "openrouter" and use_web_search:
         payload["tools"] = [{"type": "openrouter:web_search"}]
@@ -226,6 +232,7 @@ async def _call_anthropic(
     model: str,
     system_prompt: str,
     user_prompt: str,
+    max_tokens: int = 1200,
 ) -> LLMResult:
     headers = {
         "x-api-key": _api_key(credential),
@@ -234,7 +241,7 @@ async def _call_anthropic(
     }
     payload = {
         "model": model,
-        "max_tokens": 1200,
+        "max_tokens": max_tokens,
         "system": system_prompt,
         "messages": [{"role": "user", "content": user_prompt}],
     }
