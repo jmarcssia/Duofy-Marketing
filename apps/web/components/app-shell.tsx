@@ -231,9 +231,36 @@ function BellPopover() {
   )
 }
 
+function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+  return (
+    <nav className="space-y-1.5">
+      {navItems.map((item) => {
+        const Icon = item.icon
+        const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            className={`flex items-center gap-4 rounded-xl px-4 py-3 text-[15px] transition ${
+              active
+                ? "bg-purple-soft font-semibold text-purple"
+                : "text-muted hover:bg-purple-soft/60 hover:text-purple"
+            }`}
+          >
+            <Icon className="h-5 w-5" />
+            <span className="font-medium">{item.label}</span>
+          </Link>
+        )
+      })}
+    </nav>
+  )
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [user, setUser] = useState<User | null>(null)
+  const [mobileOpen, setMobileOpen] = useState(false)
   const { brands, selected, setSelected } = useBrand()
 
   useEffect(() => {
@@ -244,34 +271,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       .catch(() => clearTokenCookie())
   }, [pathname])
 
+  useEffect(() => {
+    setMobileOpen(false)
+  }, [pathname])
+
   return (
     <main className="min-h-screen bg-panel text-ink">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[245px] border-r border-line bg-white px-5 py-7 text-ink lg:flex lg:flex-col">
         <div className="rounded-2xl border border-line bg-panel px-4 py-3">
           <DuofyLogo />
         </div>
-
-        <nav className="mt-16 flex-1 space-y-1.5">
-          {navItems.map((item) => {
-            const Icon = item.icon
-            const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-4 rounded-xl px-4 py-3 text-[15px] transition ${
-                  active
-                    ? "bg-purple-soft font-semibold text-purple"
-                    : "text-muted hover:bg-purple-soft/60 hover:text-purple"
-                }`}
-              >
-                <Icon className="h-5 w-5" />
-                <span className="font-medium">{item.label}</span>
-              </Link>
-            )
-          })}
-        </nav>
-
+        <div className="mt-16 flex-1 overflow-y-auto">
+          <NavLinks pathname={pathname} />
+        </div>
         <div className="space-y-5">
           <div className="flex items-center justify-between rounded-xl border border-line bg-panel px-4 py-3 text-sm font-semibold text-ink">
             <span>Novidades</span>
@@ -281,8 +293,50 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
+      {mobileOpen ? (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <div
+            className="absolute inset-0 bg-ink/30"
+            onClick={() => setMobileOpen(false)}
+            aria-hidden="true"
+          />
+          <aside className="absolute inset-y-0 left-0 flex w-[260px] flex-col border-r border-line bg-white px-5 py-6">
+            <div className="mb-6 flex items-center justify-between gap-2">
+              <div className="rounded-2xl border border-line bg-panel px-3 py-2">
+                <DuofyLogo />
+              </div>
+              <button
+                onClick={() => setMobileOpen(false)}
+                aria-label="Fechar menu"
+                className="rounded-lg p-2 text-muted transition hover:bg-purple-soft hover:text-purple"
+              >
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <NavLinks pathname={pathname} onNavigate={() => setMobileOpen(false)} />
+            </div>
+            <div className="pt-4">
+              <LogoutButton />
+            </div>
+          </aside>
+        </div>
+      ) : null}
+
       <section className="min-h-screen lg:pl-[245px]">
-        <header className="sticky top-0 z-20 flex h-[86px] items-center justify-end gap-4 border-b border-line bg-white/92 px-8 backdrop-blur">
+        <header className="sticky top-0 z-20 flex h-[86px] items-center justify-end gap-3 border-b border-line bg-white/92 px-4 backdrop-blur md:gap-4 md:px-8">
+          <button
+            onClick={() => setMobileOpen(true)}
+            aria-label="Abrir menu"
+            className="mr-auto rounded-lg border border-line p-2 text-ink transition hover:bg-purple-soft hover:text-purple lg:hidden"
+          >
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />
+            </svg>
+          </button>
+
           <label className="hidden h-12 min-w-[210px] items-center gap-3 rounded-xl border border-line bg-white px-4 text-sm font-semibold md:flex">
             <BuildingIcon className="h-5 w-5 text-ink/70" />
             <select
@@ -310,7 +364,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <div className="px-8 py-7">{children}</div>
+        <div className="px-4 py-5 md:px-8 md:py-7">{children}</div>
       </section>
     </main>
   )
