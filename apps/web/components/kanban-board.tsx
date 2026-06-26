@@ -199,14 +199,14 @@ interface KanbanColumnProps {
 
 function KanbanColumn({ status, label, cards, onOpenCard, onMove, movingId, moveErrors }: KanbanColumnProps) {
   return (
-    <div className="duofy-card flex min-h-[200px] flex-col rounded-2xl p-4">
-      <div className="mb-4 flex items-center gap-2">
+    <div className="duofy-card flex min-h-0 flex-col rounded-2xl p-4">
+      <div className="mb-4 flex shrink-0 items-center gap-2">
         <h3 className="text-sm font-bold tracking-[-0.02em] text-ink">{label}</h3>
         <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-purple-soft text-xs font-bold text-purple">
           {cards.length}
         </span>
       </div>
-      <div className="flex flex-1 flex-col gap-3">
+      <div className="flex flex-1 flex-col gap-3 overflow-y-auto pr-1">
         {cards.length === 0 ? (
           <p className="py-6 text-center text-xs text-muted">Sem itens</p>
         ) : (
@@ -414,9 +414,11 @@ export function KanbanBoard({
   }
 
   return (
-    <div className="space-y-4">
-      <FilterTabs active={activeTab} onChange={setActiveTab} />
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+    <div className="flex h-full flex-col gap-4">
+      <div className="shrink-0">
+        <FilterTabs active={activeTab} onChange={setActiveTab} />
+      </div>
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 md:grid-cols-3">
         {COLUMNS.map((col) => (
           <KanbanColumn
             key={col.status}

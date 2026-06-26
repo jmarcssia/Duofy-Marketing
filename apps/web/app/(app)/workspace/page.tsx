@@ -30,9 +30,9 @@ export default function WorkspacePage() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-150px)] flex-col gap-4">
+    <div className="flex h-[calc(100vh-150px)] flex-col gap-3 overflow-hidden">
       <div className="flex min-h-0 flex-1 gap-4">
-        <div className="hidden w-[300px] shrink-0 lg:block">
+        <div className="hidden h-full w-[320px] shrink-0 lg:block">
           <ChatPanel
             brandSlug={selected}
             onArtifact={(outputType, outputId) => {
@@ -42,7 +42,7 @@ export default function WorkspacePage() {
             onTaskActivity={setActiveTask}
           />
         </div>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 overflow-hidden">
           <KanbanBoard
             key={reloadKey}
             brandSlug={selected}
