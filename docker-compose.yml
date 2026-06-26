@@ -50,6 +50,8 @@ services:
       ADMIN_NAME: ${ADMIN_NAME:-Admin Duofy}
     ports:
       - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./storage:/app/storage
     depends_on:
       postgres:
         condition: service_healthy
@@ -79,6 +81,8 @@ services:
       dockerfile: ./apps/api/Dockerfile
     container_name: duofy-worker
     command: ["celery", "-A", "app.worker.celery_app", "worker", "--loglevel=INFO", "--pool=solo"]
+    volumes:
+      - ./storage:/app/storage
     environment:
       APP_ENV: ${APP_ENV:-development}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
