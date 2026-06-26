@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent_config import read_agent_prompt
+from app.agent_limits import get_token_budget
 from app.content_generation import _provider_for_model
 from app.crypto import decrypt_secret
 from app.document_formatting import normalize_document_content
@@ -417,6 +418,7 @@ async def run_market_research(
     )
     user_prompt = _user_prompt(brand, payload, collected_sources, rag_context)
 
+    budget = await get_token_budget(db, "research_agent")
     try:
         llm_result = await call_llm(
             credential=credential,
@@ -426,6 +428,7 @@ async def run_market_research(
             task_type="research_generation",
             agent_slug=agent.slug,
             brand_slug=brand.slug,
+            max_tokens=budget,
         )
         title = _derive_title(payload.theme, llm_result.output)
         normalized_output = normalize_document_content(

@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent_config import read_agent_prompt
+from app.agent_limits import get_token_budget
 from app.content_generation import generate_content_output
 from app.document_formatting import normalize_document_content
 from app.llm import LLMConfigurationError, call_llm
@@ -194,6 +195,7 @@ async def generate_calendar_events(
             "Responda exclusivamente com lista JSON de 3 a 8 eventos.",
         ]
     )
+    budget = await get_token_budget(db, "calendar_agent")
     try:
         llm_result = await call_llm(
             credential=credential,
@@ -203,6 +205,7 @@ async def generate_calendar_events(
             task_type="calendar_generation",
             agent_slug=agent.slug,
             brand_slug=brand.slug,
+            max_tokens=budget,
         )
         run = AgentRun(
             agent_slug=agent.slug,
@@ -293,6 +296,7 @@ async def generate_press_output(
             "- Aponte lacunas de fonte quando necessario.",
         ]
     )
+    budget = await get_token_budget(db, "press_agent")
     try:
         llm_result = await call_llm(
             credential=credential,
@@ -303,6 +307,7 @@ async def generate_press_output(
             task_id=payload.event_id,
             agent_slug=agent.slug,
             brand_slug=brand.slug,
+            max_tokens=budget,
         )
         title = _derive_title(llm_result.output, payload.format)
         normalized_output = normalize_document_content(

@@ -85,10 +85,15 @@ async def _fake_credential(_db, _output_obj, _provider, _model, _agent):
     return _credential(), "openai/gpt-4o-mini"
 
 
+async def _fake_token_budget(_db, _slug):
+    return 1500
+
+
 def _patch_hybrid_dependencies(monkeypatch, call_llm):
     monkeypatch.setattr(quality_guardian, "_quality_settings", _fake_settings)
     monkeypatch.setattr(quality_guardian, "_quality_agent", _fake_agent)
     monkeypatch.setattr(quality_guardian, "_quality_credential", _fake_credential)
+    monkeypatch.setattr(quality_guardian, "get_token_budget", _fake_token_budget)
     monkeypatch.setattr(quality_guardian, "call_llm", call_llm)
 
 

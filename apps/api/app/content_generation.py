@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent_config import read_agent_prompt, read_config_text
+from app.agent_limits import get_token_budget
 from app.document_formatting import normalize_document_content
 from app.llm import LLMConfigurationError, call_llm
 from app.models import Agent, AgentRun, Brand, Output, OutputVersion, ProviderCredential
@@ -148,6 +149,7 @@ async def generate_content_output(
     )
     user_prompt = _user_prompt(brand, payload, template, rag_context)
 
+    budget = await get_token_budget(db, "content_agent")
     try:
         llm_result = await call_llm(
             credential=credential,
@@ -157,6 +159,7 @@ async def generate_content_output(
             task_type="content_generation",
             agent_slug=agent.slug,
             brand_slug=brand.slug,
+            max_tokens=budget,
         )
         normalized_output = normalize_document_content(
             title=_derive_title(llm_result.output, payload),

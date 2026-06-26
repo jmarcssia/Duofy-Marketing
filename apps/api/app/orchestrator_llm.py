@@ -86,6 +86,7 @@ def build_orchestrator_chat_model(
     *,
     task_id: int,
     brand_slug: str | None,
+    max_tokens: int,
 ) -> ChatOpenAI:
     api_key = decrypt_secret(credential.api_key_encrypted)
     base_url = credential.base_url or OPENROUTER_BASE_URL
@@ -101,7 +102,7 @@ def build_orchestrator_chat_model(
         api_key=api_key,
         base_url=base_url,
         temperature=0.3,
-        max_tokens=1200,
+        max_tokens=max_tokens,
         callbacks=[tracker],
         default_headers={
             "HTTP-Referer": "http://localhost:3000",

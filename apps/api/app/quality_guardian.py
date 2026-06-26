@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent_config import read_agent_prompt, read_config_text
+from app.agent_limits import get_token_budget
 from app.llm import LLMConfigurationError, LLMResult, call_llm
 from app.models import (
     Agent,
@@ -493,6 +494,7 @@ async def assess_output_quality_hybrid(
         )
         llm_provider = credential.provider
         llm_model = model
+        budget = await get_token_budget(db, "quality_guardian")
         llm_result = await call_llm(
             credential=credential,
             model=model,
@@ -502,6 +504,7 @@ async def assess_output_quality_hybrid(
             task_id=output.id,
             agent_slug=REVIEWER_SLUG,
             brand_slug=output.brand_slug,
+            max_tokens=budget,
         )
         llm_provider = llm_result.provider
         llm_model = llm_result.model

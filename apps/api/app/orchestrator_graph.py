@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent_config import agent_system_prompt
+from app.agent_limits import get_token_budget
 from app.models import Agent, ProviderCredential
 from app.orchestrator_llm import build_orchestrator_chat_model
 from app.orchestrator_tools import build_tools
@@ -154,8 +155,9 @@ async def run_orchestrator(
     log: LogFn,
 ) -> str:
     credential, agent, model_name = await _load_orchestrator(db)
+    budget = await get_token_budget(db, "orchestrator")
     chat_model = build_orchestrator_chat_model(
-        credential, model_name, task_id=task_id, brand_slug=brand_slug
+        credential, model_name, task_id=task_id, brand_slug=brand_slug, max_tokens=budget
     )
     tools = build_tools(db, brand_slug=brand_slug, task_id=task_id, log=log)
     graph = build_graph(chat_model, tools)

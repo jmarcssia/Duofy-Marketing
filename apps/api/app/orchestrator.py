@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent_config import agent_system_prompt
+from app.agent_limits import get_token_budget
 from app.llm import LLMConfigurationError, call_llm
 from app.models import Agent, AgentRun, ProviderCredential
 from app.rag import build_rag_context
@@ -106,6 +107,7 @@ async def run_agent(
                 "que nao estejam nele."
             )
 
+        budget = await get_token_budget(db, agent.slug)
         result = await call_llm(
             credential=credential,
             model=credential.default_model or model,
@@ -115,6 +117,7 @@ async def run_agent(
             task_type="agent_run",
             agent_slug=agent.slug,
             brand_slug=brand_slug,
+            max_tokens=budget,
         )
         run = AgentRun(
             agent_slug=agent.slug,
