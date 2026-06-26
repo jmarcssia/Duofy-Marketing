@@ -1,5 +1,9 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react"
 
+export function Skeleton({ className = "" }: { className?: string }) {
+  return <div className={`duofy-skeleton ${className}`} aria-hidden="true" />
+}
+
 export function PageTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div>

@@ -57,3 +57,19 @@ textarea {
   border-color: rgba(109, 53, 238, 0.55);
   box-shadow: 0 0 0 4px rgba(109, 53, 238, 0.08);
 }
+
+.duofy-skeleton {
+  background: linear-gradient(90deg, #f1f0f6 25%, #e9e8ef 37%, #f1f0f6 63%);
+  background-size: 400% 100%;
+  animation: duofy-shimmer 1.4s ease infinite;
+  border-radius: 10px;
+}
+
+@keyframes duofy-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
