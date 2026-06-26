@@ -22,36 +22,17 @@ def psycopg_dsn_from_async_url(async_url: str) -> str:
     psycopg (sync/async) expects ``postgresql://`` scheme; SQLAlchemy async
     drivers use ``postgresql+asyncpg://``.  This helper strips the driver
     suffix so the DSN can be handed directly to AsyncPostgresSaver.
+
+    V1 uses MemorySaver (the default in build_graph).
+
+    V2 — activate Postgres persistence by entering
+    ``AsyncPostgresSaver.from_conn_string(psycopg_dsn_from_async_url(settings.database_url))``
+    once in a Celery ``worker_init`` hook, calling ``.setup()``, and passing
+    the saver to ``build_graph(..., checkpointer=saver)``.
+    AsyncPostgresSaver.from_conn_string is an ``@asynccontextmanager`` — enter
+    it once per worker process, not once per request, to avoid connection leaks.
     """
     return async_url.replace("postgresql+asyncpg://", "postgresql://")
-
-
-def build_postgres_checkpointer():
-    """Return a factory coroutine that yields an AsyncPostgresSaver.
-
-    NOTE (V1): This factory is intentionally NOT activated in run_orchestrator.
-    AsyncPostgresSaver.from_conn_string is an @asynccontextmanager — it owns
-    its connection lifetime and must be used as ``async with ... as saver``.
-    Entering it once per message would leak a DB connection on every chat
-    request.  A clean solution requires a module-level, lazily-initialised
-    context that is entered once per worker process.  That lifecycle is
-    deferred to V2 when true state resumption is needed.
-
-    Usage (when Postgres activation is desired):
-
-        async with AsyncPostgresSaver.from_conn_string(dsn) as saver:
-            await saver.setup()
-            graph = build_graph(chat_model, tools, checkpointer=saver)
-            ...
-
-    The DSN should be obtained via::
-
-        psycopg_dsn_from_async_url(get_settings().database_url)
-    """
-    from app.settings import get_settings  # local import avoids circular deps at module load
-
-    dsn = psycopg_dsn_from_async_url(get_settings().database_url)
-    return dsn
 
 MAX_STEPS = 5
 
