@@ -19,7 +19,7 @@ from app.schemas import (
     ChatSessionDetail,
     ChatSessionRead,
 )
-from app.task_service import add_task_log, classify_task
+from app.task_service import add_task_log
 from app.worker import execute_agent_task_celery
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
@@ -176,7 +176,7 @@ async def create_message(
         session_id=session.id,
         user_id=current_user.id,
         brand_slug=brand_slug,
-        task_type=classify_task(payload.content),
+        task_type="orchestrate",
         status="queued",
         input=payload.content,
     )
