@@ -1,555 +1,254 @@
 "use client"
 
-import { FormEvent, useEffect, useMemo, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState } from "react"
 
-import { EmptyState, PageTitle, PurpleButton, SectionCard, SoftButton } from "@/components/page-primitives"
-import { apiFetch, type Brand, type CalendarEvent, type ContentOutput, type ProviderCredential } from "@/lib/api"
-import { getTokenFromCookie } from "@/lib/auth"
+import { Badge, GhostButton, Segmented, StatCard, type Tone } from "@/components/ui"
+import {
+  CalendarIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ClockIcon,
+  CopyIcon,
+  ExternalLinkIcon,
+  MoveIcon,
+  PencilIcon,
+  PlusIcon,
+  SheetIcon
+} from "@/components/icons"
+import {
+  calendarDayDetail,
+  calendarEvents,
+  calendarKindMeta,
+  calendarStats,
+  importedThemes,
+  type CalendarKind
+} from "@/lib/mock"
 
-const eventTypes = ["content", "research", "press", "approval", "campaign", "internal_task"]
-const statuses = ["planned", "scheduled", "completed", "failed", "cancelled"]
-const agentSlugs = ["", "content_agent", "research_agent", "press_agent", "calendar_agent"]
-const pressFormats = [
-  { value: "pauta", label: "Pauta" },
-  { value: "press_release", label: "Press release" },
-  { value: "comunicado", label: "Comunicado" },
-  { value: "editorial_angle", label: "Angulo editorial" },
-  { value: "approach", label: "Abordagem" }
-]
+const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]
+const statIcons = [CalendarIcon, ClockIcon, ClockIcon, CalendarIcon]
 
-const statusLabels: Record<string, string> = {
-  planned: "Planejado",
-  scheduled: "Agendado",
-  in_progress: "Executando",
-  completed: "Concluido",
-  failed: "Falhou",
-  cancelled: "Cancelado"
-}
-
-function toLocalInputValue(date: Date) {
-  const offset = date.getTimezoneOffset()
-  const local = new Date(date.getTime() - offset * 60_000)
-  return local.toISOString().slice(0, 16)
-}
-
-function fromLocalInputValue(value: string) {
-  return new Date(value).toISOString()
-}
-
-function currentMonthRange() {
-  const now = new Date()
-  return {
-    start: new Date(now.getFullYear(), now.getMonth(), 1),
-    end: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
-  }
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short"
-  }).format(new Date(value))
-}
-
-function isLlmProvider(provider: ProviderCredential) {
-  return !["apify", "openai_embeddings"].includes(provider.provider)
+function buildMonthGrid() {
+  // Maio/2025: 1º = quinta (getDay 4)
+  const firstDay = 4
+  const daysInMonth = 31
+  const cells: { day: number; current: boolean }[] = []
+  for (let i = 0; i < firstDay; i += 1) cells.push({ day: 27 + i, current: false })
+  for (let d = 1; d <= daysInMonth; d += 1) cells.push({ day: d, current: true })
+  let trailing = 1
+  while (cells.length % 7 !== 0) cells.push({ day: trailing++, current: false })
+  return cells
 }
 
 export default function CalendarPage() {
-  const router = useRouter()
-  const [brands, setBrands] = useState<Brand[]>([])
-  const [providers, setProviders] = useState<ProviderCredential[]>([])
-  const [events, setEvents] = useState<CalendarEvent[]>([])
-  const [selected, setSelected] = useState<CalendarEvent | null>(null)
-  const [view, setView] = useState<"month" | "week" | "list">("month")
-  const [brand, setBrand] = useState("")
-  const [provider, setProvider] = useState("openrouter")
-  const [statusFilter, setStatusFilter] = useState("")
-  const [form, setForm] = useState({
-    title: "",
-    description: "",
-    event_type: "content",
-    status: "planned",
-    category: "general",
-    channel: "LinkedIn",
-    format: "Post LinkedIn",
-    assigned_agent_slug: "",
-    start_at: toLocalInputValue(new Date(Date.now() + 60 * 60 * 1000))
-  })
-  const [calendarBriefing, setCalendarBriefing] = useState("")
-  const [pressBriefing, setPressBriefing] = useState("")
-  const [pressFormat, setPressFormat] = useState("pauta")
-  const [latestOutput, setLatestOutput] = useState<ContentOutput | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
-
-  const visibleEvents = useMemo(() => {
-    const filtered = statusFilter
-      ? events.filter((event) => event.status === statusFilter)
-      : events
-    if (view === "week") {
-      const now = new Date()
-      const weekEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-      return filtered.filter((event) => {
-        const start = new Date(event.start_at)
-        return start >= now && start <= weekEnd
-      })
-    }
-    return filtered
-  }, [events, statusFilter, view])
-
-  async function loadEvents(token: string, nextSelectedId?: number) {
-    const range = currentMonthRange()
-    const params = new URLSearchParams({
-      start: range.start.toISOString(),
-      end: range.end.toISOString(),
-      limit: "200"
-    })
-    if (brand) params.set("brand_slug", brand)
-    const items = await apiFetch<CalendarEvent[]>(`/api/calendar?${params.toString()}`, token)
-    setEvents(items)
-    const target = items.find((event) => event.id === nextSelectedId) ?? items[0] ?? null
-    setSelected(target)
-  }
-
-  useEffect(() => {
-    const token = getTokenFromCookie()
-    if (!token) {
-      router.replace("/login")
-      return
-    }
-
-    Promise.all([
-      apiFetch<Brand[]>("/api/brands", token),
-      apiFetch<ProviderCredential[]>("/api/admin/providers", token)
-    ])
-      .then(async ([brandList, providerList]) => {
-        const llmProviders = providerList.filter(isLlmProvider)
-        const firstBrand = brandList[0]?.slug ?? ""
-        setBrands(brandList)
-        setProviders(llmProviders)
-        setBrand(firstBrand)
-        setProvider(llmProviders.find((item) => item.is_enabled)?.provider ?? "openrouter")
-        setIsLoading(false)
-      })
-      .catch(() => {
-        setError("Nao foi possivel carregar o calendario.")
-        setIsLoading(false)
-      })
-  }, [router])
-
-  useEffect(() => {
-    const token = getTokenFromCookie()
-    if (!token || !brand) return
-    loadEvents(token).catch(() => setError("Nao foi possivel carregar eventos."))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brand])
-
-  async function createEvent(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const token = getTokenFromCookie()
-    if (!token) return
-    setIsSaving(true)
-    setError(null)
-    setNotice(null)
-    try {
-      const created = await apiFetch<CalendarEvent>("/api/calendar", token, {
-        method: "POST",
-        body: JSON.stringify({
-          brand_slug: brand,
-          category: form.category,
-          title: form.title,
-          description: form.description,
-          event_type: form.event_type,
-          status: form.status,
-          channel: form.channel || null,
-          format: form.format || null,
-          start_at: fromLocalInputValue(form.start_at),
-          assigned_agent_slug: form.assigned_agent_slug || null,
-          execution_payload: { briefing: form.description || form.title }
-        })
-      })
-      setNotice("Evento criado.")
-      setForm((current) => ({ ...current, title: "", description: "" }))
-      await loadEvents(token, created.id)
-    } catch (requestError) {
-      setError(String(requestError).replace(/^Error:\s*/, ""))
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  async function generateCalendar() {
-    const token = getTokenFromCookie()
-    if (!token) return
-    setIsSaving(true)
-    setError(null)
-    setNotice(null)
-    const range = currentMonthRange()
-    try {
-      const generated = await apiFetch<CalendarEvent[]>("/api/calendar/generate", token, {
-        method: "POST",
-        body: JSON.stringify({
-          brand_slug: brand,
-          category: "general",
-          objective: calendarBriefing,
-          period_start: range.start.toISOString(),
-          period_end: range.end.toISOString(),
-          channels: ["LinkedIn", "Instagram", "Assessoria"],
-          provider
-        })
-      })
-      setNotice(`${generated.length} evento(s) gerado(s).`)
-      await loadEvents(token, generated[0]?.id)
-    } catch (requestError) {
-      setError(String(requestError).replace(/^Error:\s*/, ""))
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  async function runNow() {
-    const token = getTokenFromCookie()
-    if (!token || !selected) return
-    setIsSaving(true)
-    setError(null)
-    setNotice(null)
-    try {
-      const event = await apiFetch<CalendarEvent>(`/api/calendar/${selected.id}/run-now`, token, {
-        method: "POST"
-      })
-      setNotice(event.status === "completed" ? "Evento executado." : "Execucao finalizada com erro.")
-      await loadEvents(token, event.id)
-    } catch (requestError) {
-      setError(String(requestError).replace(/^Error:\s*/, ""))
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  async function cancelSelected() {
-    const token = getTokenFromCookie()
-    if (!token || !selected) return
-    setIsSaving(true)
-    setError(null)
-    try {
-      await apiFetch<CalendarEvent>(`/api/calendar/${selected.id}`, token, { method: "DELETE" })
-      setNotice("Evento cancelado.")
-      await loadEvents(token)
-    } catch (requestError) {
-      setError(String(requestError).replace(/^Error:\s*/, ""))
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  async function generatePress() {
-    const token = getTokenFromCookie()
-    if (!token) return
-    setIsSaving(true)
-    setError(null)
-    setNotice(null)
-    try {
-      const output = await apiFetch<ContentOutput>("/api/press/generate", token, {
-        method: "POST",
-        body: JSON.stringify({
-          brand_slug: brand,
-          category: selected?.category ?? "general",
-          format: pressFormat,
-          briefing: pressBriefing || selected?.description || selected?.title,
-          event_id: selected?.id ?? null,
-          provider,
-          status: "draft"
-        })
-      })
-      setLatestOutput(output)
-      setNotice("Material de assessoria gerado.")
-      if (selected) await loadEvents(token, selected.id)
-    } catch (requestError) {
-      setError(String(requestError).replace(/^Error:\s*/, ""))
-    } finally {
-      setIsSaving(false)
-    }
-  }
+  const [view, setView] = useState<"mes" | "semana" | "agenda">("mes")
+  const grid = buildMonthGrid()
 
   return (
     <div className="space-y-6">
-      <PageTitle
-        title="Calendário Editorial"
-        subtitle="Planeje eventos, execute agentes agendados e gere materiais de assessoria com contexto real."
-      />
-
-      {error ? (
-        <p className="rounded-2xl border border-red/20 bg-red/5 p-4 text-sm font-semibold text-red">
-          {error}
-        </p>
-      ) : null}
-      {notice ? (
-        <p className="rounded-2xl border border-green/20 bg-green/5 p-4 text-sm font-semibold text-green">
-          {notice}
-        </p>
-      ) : null}
-
-      <div className="grid gap-5 xl:grid-cols-[0.85fr_1.45fr_0.85fr]">
-        <div className="space-y-5">
-          <SectionCard title="Novo evento">
-            <form onSubmit={createEvent} className="space-y-3">
-              <select
-                value={brand}
-                onChange={(event) => setBrand(event.target.value)}
-                className="duofy-focus w-full rounded-xl border border-line bg-white px-4 py-3 text-sm"
-              >
-                {brands.map((item) => (
-                  <option key={item.slug} value={item.slug}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-              <input
-                value={form.title}
-                onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-                placeholder="Titulo do evento"
-                className="duofy-focus w-full rounded-xl border border-line bg-white px-4 py-3 text-sm"
-                required
-              />
-              <textarea
-                value={form.description}
-                onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-                placeholder="Briefing ou descricao"
-                className="duofy-focus min-h-24 w-full rounded-xl border border-line bg-white px-4 py-3 text-sm"
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <select
-                  value={form.event_type}
-                  onChange={(event) => setForm((current) => ({ ...current, event_type: event.target.value }))}
-                  className="duofy-focus rounded-xl border border-line bg-white px-3 py-3 text-sm"
-                >
-                  {eventTypes.map((item) => (
-                    <option key={item}>{item}</option>
-                  ))}
-                </select>
-                <select
-                  value={form.status}
-                  onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}
-                  className="duofy-focus rounded-xl border border-line bg-white px-3 py-3 text-sm"
-                >
-                  {statuses.map((item) => (
-                    <option key={item} value={item}>
-                      {statusLabels[item] ?? item}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <input
-                  value={form.channel}
-                  onChange={(event) => setForm((current) => ({ ...current, channel: event.target.value }))}
-                  placeholder="Canal"
-                  className="duofy-focus rounded-xl border border-line bg-white px-3 py-3 text-sm"
-                />
-                <input
-                  value={form.format}
-                  onChange={(event) => setForm((current) => ({ ...current, format: event.target.value }))}
-                  placeholder="Formato"
-                  className="duofy-focus rounded-xl border border-line bg-white px-3 py-3 text-sm"
-                />
-              </div>
-              <input
-                type="datetime-local"
-                value={form.start_at}
-                onChange={(event) => setForm((current) => ({ ...current, start_at: event.target.value }))}
-                className="duofy-focus w-full rounded-xl border border-line bg-white px-4 py-3 text-sm"
-              />
-              <select
-                value={form.assigned_agent_slug}
-                onChange={(event) => setForm((current) => ({ ...current, assigned_agent_slug: event.target.value }))}
-                className="duofy-focus w-full rounded-xl border border-line bg-white px-4 py-3 text-sm"
-              >
-                {agentSlugs.map((item) => (
-                  <option key={item} value={item}>
-                    {item || "Sem agente"}
-                  </option>
-                ))}
-              </select>
-              <PurpleButton disabled={isSaving || !brand || !form.title.trim()} className="w-full">
-                {isSaving ? "Salvando..." : "Criar evento"}
-              </PurpleButton>
-            </form>
-          </SectionCard>
-
-          <SectionCard title="Gerar calendario">
-            <textarea
-              value={calendarBriefing}
-              onChange={(event) => setCalendarBriefing(event.target.value)}
-              placeholder="Ex.: planejar conteudos do mes sobre inadimplencia, retencao e atendimento."
-              className="duofy-focus min-h-28 w-full rounded-xl border border-line bg-white px-4 py-3 text-sm"
-            />
-            <select
-              value={provider}
-              onChange={(event) => setProvider(event.target.value)}
-              className="duofy-focus mt-3 w-full rounded-xl border border-line bg-white px-4 py-3 text-sm"
-            >
-              {providers.map((item) => (
-                <option key={item.provider} value={item.provider}>
-                  {item.display_name} {item.is_enabled ? "" : "(off)"}
-                </option>
-              ))}
-            </select>
-            <PurpleButton
-              type="button"
-              disabled={isSaving || calendarBriefing.trim().length < 10}
-              onClick={generateCalendar}
-              className="mt-3 w-full"
-            >
-              Gerar calendario
-            </PurpleButton>
-          </SectionCard>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-[30px] font-extrabold tracking-[-0.04em] text-ink">Calendário</h1>
+          <p className="mt-1 text-sm text-muted">Organize sua agenda editorial e operacional conectada à cocriação e aos planos importados.</p>
         </div>
-
-        <SectionCard
-          title="Eventos"
-          action={
-            <div className="flex flex-wrap gap-2">
-              {(["month", "week", "list"] as const).map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => setView(item)}
-                  className={`rounded-xl px-3 py-2 text-xs font-bold ${
-                    view === item ? "bg-purple text-white" : "border border-line bg-white text-muted"
-                  }`}
-                >
-                  {item === "month" ? "Mes" : item === "week" ? "Semana" : "Lista"}
-                </button>
-              ))}
-              <select
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
-                className="duofy-focus rounded-xl border border-line bg-white px-3 py-2 text-xs font-bold"
-              >
-                <option value="">Todos</option>
-                {statuses.map((item) => (
-                  <option key={item} value={item}>
-                    {statusLabels[item] ?? item}
-                  </option>
-                ))}
-              </select>
-            </div>
-          }
-        >
-          {isLoading ? <EmptyState title="Carregando" description="Buscando eventos do calendario." /> : null}
-          {!isLoading && visibleEvents.length === 0 ? (
-            <EmptyState
-              title="Sem eventos"
-              description="Crie um evento manualmente ou gere um calendario com o agente."
-            />
-          ) : null}
-          <div className={view === "month" ? "grid gap-3 md:grid-cols-2 xl:grid-cols-3" : "space-y-3"}>
-            {visibleEvents.map((event) => (
-              <button
-                key={event.id}
-                type="button"
-                onClick={() => setSelected(event)}
-                className={`rounded-2xl border p-4 text-left transition ${
-                  selected?.id === event.id ? "border-purple bg-purple-soft" : "border-line bg-white hover:border-purple/40"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <strong className="line-clamp-2 text-sm">{event.title}</strong>
-                  <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-purple">
-                    {statusLabels[event.status] ?? event.status}
-                  </span>
-                </div>
-                <p className="mt-2 text-xs text-muted">{formatDateTime(event.start_at)}</p>
-                <p className="mt-2 line-clamp-2 text-xs leading-5 text-muted">
-                  {event.description || event.event_type}
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-bold text-muted">
-                  <span className="rounded-full bg-slate-100 px-2 py-1">{event.event_type}</span>
-                  {event.assigned_agent_slug ? (
-                    <span className="rounded-full bg-purple-soft px-2 py-1 text-purple">
-                      {event.assigned_agent_slug}
-                    </span>
-                  ) : null}
-                </div>
-              </button>
-            ))}
-          </div>
-        </SectionCard>
-
-        <div className="space-y-5">
-          <SectionCard title="Detalhe do evento">
-            {selected ? (
-              <div className="space-y-3 text-sm leading-6 text-muted">
-                <h3 className="text-xl font-extrabold tracking-[-0.04em] text-ink">{selected.title}</h3>
-                <p>{selected.description || "Sem descricao."}</p>
-                <p><strong className="text-ink">Quando:</strong> {formatDateTime(selected.start_at)}</p>
-                <p><strong className="text-ink">Tipo:</strong> {selected.event_type}</p>
-                <p><strong className="text-ink">Status:</strong> {statusLabels[selected.status] ?? selected.status}</p>
-                <p><strong className="text-ink">Agente:</strong> {selected.assigned_agent_slug ?? "Nao definido"}</p>
-                <p><strong className="text-ink">Output:</strong> {selected.output_id ?? "Nao gerado"}</p>
-                {selected.last_error ? <p className="text-red">{selected.last_error}</p> : null}
-                <div className="flex flex-wrap gap-2 pt-2">
-                  <SoftButton
-                    type="button"
-                    disabled={isSaving || !selected.assigned_agent_slug}
-                    onClick={runNow}
-                  >
-                    Executar agora
-                  </SoftButton>
-                  <SoftButton type="button" disabled={isSaving} onClick={cancelSelected}>
-                    Cancelar
-                  </SoftButton>
-                </div>
-              </div>
-            ) : (
-              <EmptyState title="Nenhum evento" description="Selecione um evento para ver detalhes." />
-            )}
-          </SectionCard>
-
-          <SectionCard title="Assessoria">
-            <select
-              value={pressFormat}
-              onChange={(event) => setPressFormat(event.target.value)}
-              className="duofy-focus w-full rounded-xl border border-line bg-white px-4 py-3 text-sm"
-            >
-              {pressFormats.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-            <textarea
-              value={pressBriefing}
-              onChange={(event) => setPressBriefing(event.target.value)}
-              placeholder="Briefing da pauta/release. Se vazio, usa o evento selecionado."
-              className="duofy-focus mt-3 min-h-28 w-full rounded-xl border border-line bg-white px-4 py-3 text-sm"
-            />
-            <PurpleButton
-              type="button"
-              disabled={isSaving || (!pressBriefing.trim() && !selected)}
-              onClick={generatePress}
-              className="mt-3 w-full"
-            >
-              Gerar assessoria
-            </PurpleButton>
-            {latestOutput ? (
-              <div className="mt-4 rounded-2xl border border-line bg-white p-4 text-sm">
-                <strong className="line-clamp-2">{latestOutput.title}</strong>
-                <p className="mt-2 text-xs text-muted">
-                  Output #{latestOutput.id} / {latestOutput.format} / {latestOutput.status}
-                </p>
-                <p className="mt-3 line-clamp-5 whitespace-pre-line text-xs leading-5 text-muted">
-                  {latestOutput.current_content}
-                </p>
-              </div>
-            ) : null}
-          </SectionCard>
+        <div className="flex gap-2.5">
+          <GhostButton><CalendarIcon className="h-4 w-4" /> Importar calendário externo</GhostButton>
+          <button className="inline-flex items-center gap-2 rounded-xl bg-purple px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-purple/20 transition hover:bg-purple-deep">
+            <PlusIcon className="h-4 w-4" /> Nova publicação
+          </button>
         </div>
       </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {calendarStats.map((s, i) => {
+          const Icon = statIcons[i]
+          return (
+            <StatCard key={s.label} icon={<Icon className="h-5 w-5" />} iconTone={s.tone} label={s.label} value={s.value} delta={s.delta} deltaDir={s.dir} />
+          )
+        })}
+      </div>
+
+      <div className="duofy-card flex flex-wrap items-end gap-3 rounded-2xl p-4">
+        {["Marca", "Canal", "Formato", "Responsável", "Status"].map((f, i) => (
+          <label key={f} className="flex min-w-[150px] flex-1 flex-col gap-1">
+            <span className="text-xs font-semibold text-muted">{f}</span>
+            <div className="flex h-10 items-center justify-between rounded-xl border border-line bg-white px-3 text-sm font-medium text-ink">
+              {i === 0 ? "Duofy" : "Todos"}
+              <svg viewBox="0 0 24 24" className="h-4 w-4 text-muted" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6" strokeLinecap="round" /></svg>
+            </div>
+          </label>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <section className="duofy-card rounded-2xl p-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <Segmented
+              value={view}
+              onChange={setView}
+              options={[
+                { id: "mes", label: "Mês" },
+                { id: "semana", label: "Semana" },
+                { id: "agenda", label: "Agenda" }
+              ]}
+            />
+            <div className="flex items-center gap-2">
+              <button className="grid h-9 w-9 place-items-center rounded-lg border border-line text-muted hover:text-purple"><ChevronLeftIcon className="h-4 w-4" /></button>
+              <span className="min-w-[130px] text-center text-base font-bold text-ink">Maio de 2025</span>
+              <button className="grid h-9 w-9 place-items-center rounded-lg border border-line text-muted hover:text-purple"><ChevronRightIcon className="h-4 w-4" /></button>
+            </div>
+            <GhostButton>Hoje</GhostButton>
+          </div>
+
+          <div className="grid grid-cols-7 border-b border-line pb-2 text-center text-xs font-semibold text-muted">
+            {WEEKDAYS.map((d) => (
+              <span key={d}>{d}</span>
+            ))}
+          </div>
+          <div className="grid grid-cols-7">
+            {grid.map((cell, i) => {
+              const events = cell.current ? calendarEvents[cell.day] ?? [] : []
+              const isToday = cell.current && cell.day === 15
+              return (
+                <div key={i} className="min-h-[92px] border-b border-r border-line p-1.5 [&:nth-child(7n)]:border-r-0">
+                  <span className={`inline-grid h-6 w-6 place-items-center rounded-full text-xs font-semibold ${isToday ? "bg-purple text-white" : cell.current ? "text-ink" : "text-muted/40"}`}>
+                    {cell.day}
+                  </span>
+                  <div className="mt-1 space-y-1">
+                    {events.map((kind: CalendarKind, idx) => {
+                      const meta = calendarKindMeta[kind]
+                      return (
+                        <div key={idx} className={`truncate rounded-md px-1.5 py-1 text-[11px] font-semibold ${toneBg(meta.tone)}`}>
+                          {meta.label}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+
+        <div className="space-y-5">
+          <section className="duofy-card rounded-2xl p-5">
+            <h3 className="text-base font-bold text-ink">Importar calendário externo</h3>
+            <p className="mt-1 text-xs text-muted">Importe seus planos e tópicos para alimentar o Banco de temas e organize no calendário.</p>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              {[
+                { label: "Importar via", name: "Excel", sub: ".xlsx" },
+                { label: "Importar via", name: "Google Planilhas", sub: "Google Sheets" }
+              ].map((opt) => (
+                <button key={opt.name} className="flex flex-col items-start gap-2 rounded-xl border border-line bg-white p-3 text-left transition hover:border-purple/40">
+                  <span className="grid h-9 w-9 place-items-center rounded-lg bg-green/10 text-green"><SheetIcon className="h-5 w-5" /></span>
+                  <span className="text-xs text-muted">{opt.label}</span>
+                  <span className="text-sm font-bold text-ink">{opt.name}</span>
+                  <span className="text-[11px] text-muted">{opt.sub}</span>
+                </button>
+              ))}
+            </div>
+            <p className="mt-3 rounded-lg bg-purple-soft/60 p-2.5 text-[11px] text-ink/70">
+              Os tópicos importados serão adicionados ao Banco de temas, de onde você pode arrastar para o calendário e agendar publicações.
+            </p>
+          </section>
+
+          <section className="duofy-card rounded-2xl p-5">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-ink">{calendarDayDetail.day}</h3>
+              <Badge tone="purple">{calendarDayDetail.items.length} itens</Badge>
+            </div>
+            <ul className="mt-3 space-y-3">
+              {calendarDayDetail.items.map((item) => (
+                <li key={item.time} className="flex items-start gap-3">
+                  <span className="w-12 shrink-0 text-xs font-semibold text-muted">{item.time}</span>
+                  <span className="flex-1">
+                    <span className="block text-sm font-semibold text-ink">{item.title}</span>
+                    <span className="block text-xs text-muted">{item.owner}</span>
+                  </span>
+                  <span className={`text-xs font-semibold ${toneText(item.tone)}`}>{item.status}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <GhostButton className="text-xs"><PencilIcon className="h-4 w-4" /> Editar</GhostButton>
+              <GhostButton className="text-xs"><MoveIcon className="h-4 w-4" /> Mover</GhostButton>
+              <GhostButton className="text-xs"><CopyIcon className="h-4 w-4" /> Duplicar</GhostButton>
+            </div>
+            <button className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-purple py-2.5 text-sm font-semibold text-white transition hover:bg-purple-deep">
+              Abrir na cocriação <ExternalLinkIcon className="h-4 w-4" />
+            </button>
+          </section>
+
+          <section className="duofy-card rounded-2xl p-5">
+            <h3 className="text-base font-bold text-ink">Relacionada à cocriação</h3>
+            <dl className="mt-3 space-y-2.5 text-sm">
+              <div><dt className="text-xs font-semibold text-muted">Objetivo</dt><dd className="text-ink">{calendarDayDetail.cocriacao.objetivo}</dd></div>
+              <div><dt className="text-xs font-semibold text-muted">Persona</dt><dd className="text-ink">{calendarDayDetail.cocriacao.persona}</dd></div>
+              <div><dt className="text-xs font-semibold text-muted">Legenda sugerida</dt><dd className="text-ink">{calendarDayDetail.cocriacao.legenda}</dd></div>
+              <div><dt className="text-xs font-semibold text-muted">Prompt do conteúdo</dt><dd className="rounded-lg bg-purple-soft/50 p-2.5 text-xs text-ink/80">{calendarDayDetail.cocriacao.prompt}</dd></div>
+            </dl>
+            <button className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-line py-2.5 text-sm font-semibold text-purple transition hover:bg-purple-soft">
+              Abrir na cocriação <ExternalLinkIcon className="h-4 w-4" />
+            </button>
+          </section>
+        </div>
+      </div>
+
+      <section className="duofy-card rounded-2xl p-5">
+        <h3 className="text-base font-bold text-ink">Banco de temas importados</h3>
+        <p className="mt-1 text-xs text-muted">Arraste os temas para o calendário para agendar publicações.</p>
+        <div className="mt-4 overflow-x-auto duofy-scroll">
+          <table className="w-full min-w-[760px] text-sm">
+            <thead>
+              <tr className="border-b border-line text-left text-xs font-semibold uppercase tracking-wide text-muted">
+                <th className="py-2.5 pr-4 font-semibold">Tema</th>
+                <th className="py-2.5 pr-4 font-semibold">Canal sugerido</th>
+                <th className="py-2.5 pr-4 font-semibold">Formato</th>
+                <th className="py-2.5 pr-4 font-semibold">Prioridade</th>
+                <th className="py-2.5 pr-4 font-semibold">Origem</th>
+                <th className="py-2.5 pr-4 font-semibold">Importado em</th>
+                <th className="py-2.5 font-semibold">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {importedThemes.map((t) => (
+                <tr key={t.theme} className="border-b border-line/70 last:border-0">
+                  <td className="py-3 pr-4 font-medium text-ink">{t.theme}</td>
+                  <td className="py-3 pr-4 text-muted">{t.channel}</td>
+                  <td className="py-3 pr-4 text-muted">{t.format}</td>
+                  <td className="py-3 pr-4"><Badge tone={t.priorityTone}>{t.priority}</Badge></td>
+                  <td className="py-3 pr-4 text-muted">{t.origin}</td>
+                  <td className="py-3 pr-4 text-muted">{t.importedAt}</td>
+                  <td className="py-3">
+                    <button className="grid h-7 w-7 place-items-center rounded-lg border border-line text-muted hover:text-purple"><PlusIcon className="h-4 w-4" /></button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   )
+}
+
+function toneBg(tone: Tone) {
+  const map: Partial<Record<Tone, string>> = {
+    pink: "bg-pink/10 text-pink",
+    green: "bg-green/10 text-green",
+    blue: "bg-blue/10 text-blue",
+    amber: "bg-amber/10 text-amber",
+    purple: "bg-purple-soft text-purple-deep",
+    orange: "bg-orange/10 text-orange"
+  }
+  return map[tone] ?? "bg-purple-soft text-purple-deep"
+}
+
+function toneText(tone: Tone) {
+  const map: Partial<Record<Tone, string>> = {
+    green: "text-green",
+    orange: "text-orange",
+    purple: "text-purple",
+    amber: "text-amber"
+  }
+  return map[tone] ?? "text-muted"
 }

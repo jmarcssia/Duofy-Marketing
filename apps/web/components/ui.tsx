@@ -1,0 +1,373 @@
+"use client"
+
+import type { ReactNode } from "react"
+
+import { ChevronDownIcon, TrendDownIcon, TrendUpIcon } from "@/components/icons"
+
+/* ---------------- Badge / Chip ---------------- */
+
+export type Tone =
+  | "purple"
+  | "blue"
+  | "green"
+  | "amber"
+  | "red"
+  | "teal"
+  | "pink"
+  | "indigo"
+  | "sky"
+  | "slate"
+  | "orange"
+
+const TONE: Record<Tone, string> = {
+  purple: "bg-purple-soft text-purple-deep",
+  blue: "bg-blue/10 text-blue",
+  green: "bg-green/10 text-green",
+  amber: "bg-amber/10 text-amber",
+  red: "bg-red/10 text-red",
+  teal: "bg-teal/10 text-teal",
+  pink: "bg-pink/10 text-pink",
+  indigo: "bg-indigo/10 text-indigo",
+  sky: "bg-sky/10 text-sky",
+  slate: "bg-slatex/10 text-slatex",
+  orange: "bg-orange/10 text-orange"
+}
+
+export function Badge({
+  children,
+  tone = "purple",
+  className = ""
+}: {
+  children: ReactNode
+  tone?: Tone
+  className?: string
+}) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${TONE[tone]} ${className}`}
+    >
+      {children}
+    </span>
+  )
+}
+
+export function Dot({ tone = "purple" }: { tone?: Tone }) {
+  const color: Record<Tone, string> = {
+    purple: "bg-purple",
+    blue: "bg-blue",
+    green: "bg-green",
+    amber: "bg-amber",
+    red: "bg-red",
+    teal: "bg-teal",
+    pink: "bg-pink",
+    indigo: "bg-indigo",
+    sky: "bg-sky",
+    slate: "bg-slatex",
+    orange: "bg-orange"
+  }
+  return <span className={`inline-block h-2 w-2 rounded-full ${color[tone]}`} />
+}
+
+/* ---------------- StatCard (KPI) ---------------- */
+
+export function StatCard({
+  icon,
+  iconTone = "purple",
+  label,
+  value,
+  delta,
+  deltaDir = "up",
+  hint
+}: {
+  icon: ReactNode
+  iconTone?: Tone
+  label: string
+  value: ReactNode
+  delta?: string
+  deltaDir?: "up" | "down"
+  hint?: string
+}) {
+  return (
+    <div className="duofy-card flex items-start gap-4 rounded-2xl p-5">
+      <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${TONE[iconTone]}`}>
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm text-muted">{label}</p>
+        <p className="mt-1 text-[26px] font-extrabold leading-none tracking-[-0.03em] text-ink">{value}</p>
+        {delta ? (
+          <p
+            className={`mt-2 flex items-center gap-1 text-xs font-semibold ${
+              deltaDir === "up" ? "text-green" : "text-red"
+            }`}
+          >
+            {deltaDir === "up" ? (
+              <TrendUpIcon className="h-3.5 w-3.5" />
+            ) : (
+              <TrendDownIcon className="h-3.5 w-3.5" />
+            )}
+            {delta}
+            {hint ? <span className="font-normal text-muted">{hint}</span> : null}
+          </p>
+        ) : hint ? (
+          <p className="mt-2 text-xs text-muted">{hint}</p>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+/* ---------------- Tabs ---------------- */
+
+export function Tabs<T extends string>({
+  tabs,
+  value,
+  onChange
+}: {
+  tabs: { id: T; label: string }[]
+  value: T
+  onChange: (id: T) => void
+}) {
+  return (
+    <div className="flex items-center gap-6 border-b border-line">
+      {tabs.map((tab) => {
+        const active = tab.id === value
+        return (
+          <button
+            key={tab.id}
+            onClick={() => onChange(tab.id)}
+            className={`relative -mb-px pb-3 text-sm font-semibold transition ${
+              active ? "text-purple" : "text-muted hover:text-ink"
+            }`}
+          >
+            {tab.label}
+            {active ? <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-purple" /> : null}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+/* ---------------- Segmented control ---------------- */
+
+export function Segmented<T extends string>({
+  options,
+  value,
+  onChange
+}: {
+  options: { id: T; label: string }[]
+  value: T
+  onChange: (id: T) => void
+}) {
+  return (
+    <div className="inline-flex items-center rounded-xl border border-line bg-white p-1">
+      {options.map((opt) => {
+        const active = opt.id === value
+        return (
+          <button
+            key={opt.id}
+            onClick={() => onChange(opt.id)}
+            className={`rounded-lg px-3.5 py-1.5 text-sm font-semibold transition ${
+              active ? "bg-purple text-white shadow-soft" : "text-muted hover:text-ink"
+            }`}
+          >
+            {opt.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+/* ---------------- Avatar ---------------- */
+
+const AVATAR_TONES = [
+  "from-purple/30 to-blue/30",
+  "from-orange/30 to-pink/30",
+  "from-teal/30 to-green/30",
+  "from-indigo/30 to-sky/30"
+]
+
+export function Avatar({ name, size = 28 }: { name: string; size?: number }) {
+  const initials = name
+    .split(" ")
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase()
+  const tone = AVATAR_TONES[name.charCodeAt(0) % AVATAR_TONES.length]
+  return (
+    <span
+      className={`grid shrink-0 place-items-center rounded-full bg-gradient-to-br ${tone} font-bold text-ink`}
+      style={{ width: size, height: size, fontSize: size * 0.4 }}
+    >
+      {initials}
+    </span>
+  )
+}
+
+/* ---------------- Progress ring (Guardião score) ---------------- */
+
+export function ProgressRing({
+  value,
+  size = 96,
+  label
+}: {
+  value: number
+  size?: number
+  label?: string
+}) {
+  const stroke = 8
+  const radius = (size - stroke) / 2
+  const circ = 2 * Math.PI * radius
+  const offset = circ - (Math.min(100, Math.max(0, value)) / 100) * circ
+  const color = value >= 80 ? "#16a34a" : value >= 60 ? "#d97706" : "#ef4444"
+  return (
+    <div className="relative grid place-items-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={radius} stroke="#eceaf4" strokeWidth={stroke} fill="none" />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke={color}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={circ}
+          strokeDashoffset={offset}
+          fill="none"
+          style={{ transition: "stroke-dashoffset 600ms ease" }}
+        />
+      </svg>
+      <div className="absolute text-center">
+        <span className="block text-2xl font-extrabold text-ink">{value}</span>
+        {label ? <span className="block text-[10px] font-medium text-muted">{label}</span> : null}
+      </div>
+    </div>
+  )
+}
+
+/* ---------------- Buttons / IconButton ---------------- */
+
+export function IconButton({
+  children,
+  onClick,
+  label,
+  className = ""
+}: {
+  children: ReactNode
+  onClick?: () => void
+  label?: string
+  className?: string
+}) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      className={`grid h-9 w-9 place-items-center rounded-lg border border-line bg-white text-muted transition hover:border-purple/40 hover:text-purple ${className}`}
+    >
+      {children}
+    </button>
+  )
+}
+
+export function GhostButton({
+  children,
+  onClick,
+  className = ""
+}: {
+  children: ReactNode
+  onClick?: () => void
+  className?: string
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center gap-2 rounded-xl border border-line bg-white px-3.5 py-2 text-sm font-semibold text-ink transition hover:border-purple/40 hover:text-purple ${className}`}
+    >
+      {children}
+    </button>
+  )
+}
+
+/* ---------------- Select (visual) ---------------- */
+
+export function FieldSelect({
+  label,
+  value,
+  options,
+  onChange
+}: {
+  label?: string
+  value: string
+  options: { value: string; label: string }[]
+  onChange?: (value: string) => void
+}) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      {label ? <span className="text-xs font-semibold text-muted">{label}</span> : null}
+      <div className="relative">
+        <select
+          value={value}
+          onChange={(e) => onChange?.(e.target.value)}
+          className="duofy-focus h-11 w-full appearance-none rounded-xl border border-line bg-white px-3.5 pr-9 text-sm font-medium text-ink"
+        >
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+      </div>
+    </label>
+  )
+}
+
+/* ---------------- Side panel / Drawer ---------------- */
+
+export function SidePanel({
+  children,
+  onClose,
+  width = 420
+}: {
+  children: ReactNode
+  onClose?: () => void
+  width?: number
+}) {
+  return (
+    <aside
+      className="duofy-card flex max-h-full flex-col overflow-hidden rounded-2xl"
+      style={{ width }}
+    >
+      {children}
+    </aside>
+  )
+}
+
+/* ---------------- Checklist row ---------------- */
+
+export function ChecklistRow({
+  label,
+  state = "done"
+}: {
+  label: string
+  state?: "done" | "warn" | "pending"
+}) {
+  const map = {
+    done: { c: "text-green", b: "bg-green/10", i: "M5 10.5 8.5 14l6-7" },
+    warn: { c: "text-amber", b: "bg-amber/10", i: "M10 5v6M10 14h.01" },
+    pending: { c: "text-muted", b: "bg-line", i: "M5 10h10" }
+  }[state]
+  return (
+    <li className="flex items-center gap-2.5 text-sm text-ink">
+      <span className={`grid h-5 w-5 place-items-center rounded-full ${map.b} ${map.c}`}>
+        <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d={map.i} />
+        </svg>
+      </span>
+      {label}
+    </li>
+  )
+}

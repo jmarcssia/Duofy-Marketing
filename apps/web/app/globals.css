@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --background: #fbfbfd;
+  --background: #f7f7fb;
   --foreground: #11131a;
   --muted: #6b7280;
   --line: #e9e8ef;
@@ -41,8 +41,10 @@ textarea {
 
 .duofy-card {
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 18px 45px rgba(18, 20, 30, 0.035);
+  background: #ffffff;
+  box-shadow:
+    0 1px 2px rgba(18, 20, 30, 0.04),
+    0 12px 32px rgba(18, 20, 30, 0.05);
 }
 
 .duofy-focus {
@@ -56,6 +58,20 @@ textarea {
 .duofy-focus:focus {
   border-color: rgba(109, 53, 238, 0.55);
   box-shadow: 0 0 0 4px rgba(109, 53, 238, 0.08);
+}
+
+.duofy-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.duofy-scroll::-webkit-scrollbar-thumb {
+  background: #e3e2ec;
+  border-radius: 999px;
+}
+
+.duofy-scroll::-webkit-scrollbar-thumb:hover {
+  background: #d2d0de;
 }
 
 .duofy-skeleton {
