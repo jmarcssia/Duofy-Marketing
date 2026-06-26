@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent_config import read_agent_prompt
-from app.agent_limits import get_token_budget
+from app.agent_limits import get_research_depth_limits, get_token_budget
 from app.content_generation import _provider_for_model
 from app.crypto import decrypt_secret
 from app.document_formatting import normalize_document_content
@@ -32,7 +32,6 @@ from app.models import (
 from app.rag import build_rag_context
 from app.schemas import ResearchRunRequest
 
-MAX_SOURCES = 8
 REQUEST_TIMEOUT = 14
 USER_AGENT = "DuofyResearchBot/1.0 (+http://localhost:3000)"
 
@@ -103,8 +102,8 @@ def _plain_text_from_html(html: str) -> str:
     return " ".join(soup.get_text(" ").split())
 
 
-def _evidence_excerpt(text: str) -> str:
-    return " ".join(text.split())[:1800]
+def _evidence_excerpt(text: str, limit: int) -> str:
+    return " ".join(text.split())[:limit]
 
 
 async def _fetch_url_text(url: str) -> str:
@@ -138,7 +137,9 @@ async def _fetch_with_playwright(url: str) -> str:
     return _plain_text_from_html(html)
 
 
-async def _rss_candidates(theme: str, brand: Brand, period: str) -> list[SourceCandidate]:
+async def _rss_candidates(
+    theme: str, brand: Brand, period: str, sources: int
+) -> list[SourceCandidate]:
     feed_url = _google_news_rss_url(theme, brand, period)
     async with httpx.AsyncClient(
         timeout=REQUEST_TIMEOUT,
@@ -148,7 +149,7 @@ async def _rss_candidates(theme: str, brand: Brand, period: str) -> list[SourceC
         response.raise_for_status()
     feed = feedparser.parse(response.text)
     candidates: list[SourceCandidate] = []
-    for entry in feed.entries[: MAX_SOURCES * 2]:
+    for entry in feed.entries[: sources * 2]:
         url = str(entry.get("link", "")).strip()
         if not url:
             continue
@@ -168,6 +169,7 @@ async def _apify_candidates(
     db: AsyncSession,
     payload: ResearchRunRequest,
     brand: Brand,
+    sources: int,
 ) -> list[SourceCandidate]:
     if not payload.use_apify:
         return []
@@ -203,7 +205,7 @@ async def _apify_candidates(
         return []
 
     candidates: list[SourceCandidate] = []
-    for item in items[:MAX_SOURCES]:
+    for item in items[:sources]:
         url = str(item.get("url") or item.get("link") or "").strip()
         if not url:
             continue
@@ -218,7 +220,7 @@ async def _apify_candidates(
     return candidates
 
 
-def _dedupe_candidates(candidates: list[SourceCandidate]) -> list[SourceCandidate]:
+def _dedupe_candidates(candidates: list[SourceCandidate], sources: int) -> list[SourceCandidate]:
     seen: set[str] = set()
     unique: list[SourceCandidate] = []
     for candidate in candidates:
@@ -226,7 +228,7 @@ def _dedupe_candidates(candidates: list[SourceCandidate]) -> list[SourceCandidat
             continue
         seen.add(candidate.url)
         unique.append(candidate)
-        if len(unique) >= MAX_SOURCES:
+        if len(unique) >= sources:
             break
     return unique
 
@@ -234,6 +236,7 @@ def _dedupe_candidates(candidates: list[SourceCandidate]) -> list[SourceCandidat
 async def _collect_candidate(
     candidate: SourceCandidate,
     use_playwright: bool,
+    excerpt_limit: int,
 ) -> CollectedSource:
     publisher = candidate.publisher or _publisher_from_url(candidate.url)
     try:
@@ -242,7 +245,7 @@ async def _collect_candidate(
         if len(text) < 450 and use_playwright:
             text = await _fetch_with_playwright(candidate.url)
             source_kind = "playwright"
-        evidence = _evidence_excerpt(text)
+        evidence = _evidence_excerpt(text, excerpt_limit)
         status = "collected" if evidence else "failed"
         error = None if evidence else "Fonte sem texto extraivel."
     except Exception as exc:
@@ -269,6 +272,10 @@ async def collect_research_sources(
     payload: ResearchRunRequest,
     brand: Brand,
 ) -> list[CollectedSource]:
+    limits = await get_research_depth_limits(db, payload.depth)
+    sources = limits["sources"]
+    excerpt_limit = limits["excerpt"]
+
     candidates = [
         SourceCandidate(
             title=f"Fonte informada: {_publisher_from_url(url) or url}",
@@ -279,7 +286,7 @@ async def collect_research_sources(
         for url in payload.source_urls
     ]
     try:
-        candidates.extend(await _rss_candidates(payload.theme, brand, payload.period))
+        candidates.extend(await _rss_candidates(payload.theme, brand, payload.period, sources))
     except Exception as exc:
         candidates.append(
             SourceCandidate(
@@ -289,11 +296,14 @@ async def collect_research_sources(
                 source_kind="rss",
             )
         )
-    candidates.extend(await _apify_candidates(db, payload, brand))
+    candidates.extend(await _apify_candidates(db, payload, brand, sources))
 
-    unique = _dedupe_candidates(candidates)
+    unique = _dedupe_candidates(candidates, sources)
     use_playwright = payload.depth == "deep"
-    return [await _collect_candidate(candidate, use_playwright) for candidate in unique]
+    return [
+        await _collect_candidate(candidate, use_playwright, excerpt_limit)
+        for candidate in unique
+    ]
 
 
 def _sources_block(sources: list[CollectedSource]) -> str:
