@@ -1,42 +1,161 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { Badge, GhostButton, StatCard } from "@/components/ui"
 import {
   BookIcon,
-  BookmarkIcon,
-  ChevronDownIcon,
   ClockIcon,
   FileIcon,
   LayersIcon,
-  MoreIcon,
-  PencilIcon,
   RefreshIcon,
   SearchIcon,
-  SettingsIcon,
   SparklesIcon,
-  UploadIcon,
   UsersIcon
 } from "@/components/icons"
 import {
-  memoryActivity,
-  memoryCollections,
-  memoryDetail,
-  memoryDocs,
-  memoryStats
-} from "@/lib/mock"
+  apiFetch,
+  type DocumentChunk,
+  type DocumentItem,
+  type MemorySearchResult
+} from "@/lib/api"
+import { getTokenFromCookie } from "@/lib/auth"
+import { useBrand } from "@/lib/brand-context"
 
-const statIcons = [FileIcon, LayersIcon, ClockIcon, UsersIcon]
-const activityIcons: Record<string, typeof FileIcon> = {
-  upload: UploadIcon,
-  edit: PencilIcon,
-  search: SearchIcon,
-  users: UsersIcon
+type MemoryEntry = {
+  id: number
+  brand_slug: string
+  category: string
+  source_type: string
+  title: string
+  content: string
+  created_at: string
+}
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+
+function fmtSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
+function fmtDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })
+  } catch {
+    return iso
+  }
+}
+
+function fmtRelative(iso: string): string {
+  try {
+    const diff = Date.now() - new Date(iso).getTime()
+    const h = Math.floor(diff / 3.6e6)
+    if (h < 1) return "agora há pouco"
+    if (h < 24) return `há ${h}h`
+    const d = Math.floor(h / 24)
+    return `há ${d}d`
+  } catch {
+    return ""
+  }
 }
 
 export default function MemoryPage() {
-  const [selected, setSelected] = useState("d1")
+  const { selected: brand } = useBrand()
+  const [docs, setDocs] = useState<DocumentItem[]>([])
+  const [entries, setEntries] = useState<MemoryEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedDoc, setSelectedDoc] = useState<DocumentItem | null>(null)
+  const [chunks, setChunks] = useState<DocumentChunk[] | null>(null)
+  const [chunksLoading, setChunksLoading] = useState(false)
+
+  // filters / search
+  const [filter, setFilter] = useState("")
+  const [ragQuery, setRagQuery] = useState("")
+  const [ragResults, setRagResults] = useState<MemorySearchResult[] | null>(null)
+  const [ragLoading, setRagLoading] = useState(false)
+
+  const load = useCallback(async () => {
+    const token = getTokenFromCookie()
+    if (!token) { setLoading(false); return }
+    setLoading(true)
+    const [d, m] = await Promise.allSettled([
+      apiFetch<DocumentItem[]>("/api/documents?limit=200", token),
+      apiFetch<MemoryEntry[]>("/api/memory?limit=200", token)
+    ])
+    const allDocs = d.status === "fulfilled" ? d.value : []
+    const allEntries = m.status === "fulfilled" ? m.value : []
+    const fdocs = brand ? allDocs.filter((x) => x.brand_slug === brand) : allDocs
+    const fentries = brand ? allEntries.filter((x) => x.brand_slug === brand) : allEntries
+    setDocs(fdocs)
+    setEntries(fentries)
+    setSelectedDoc((prev) => (prev && fdocs.some((x) => x.id === prev.id) ? prev : fdocs[0] ?? null))
+    setLoading(false)
+  }, [brand])
+
+  useEffect(() => { load() }, [load])
+
+  // load chunks when a doc is selected
+  useEffect(() => {
+    if (!selectedDoc) { setChunks(null); return }
+    const token = getTokenFromCookie()
+    if (!token) return
+    setChunks(null)
+    setChunksLoading(true)
+    apiFetch<DocumentChunk[]>(`/api/documents/${selectedDoc.id}/chunks`, token)
+      .then(setChunks)
+      .catch(() => setChunks([]))
+      .finally(() => setChunksLoading(false))
+  }, [selectedDoc])
+
+  async function runRag() {
+    if (ragQuery.trim().length < 3) return
+    const token = getTokenFromCookie()
+    if (!token) return
+    setRagLoading(true)
+    try {
+      const res = await apiFetch<MemorySearchResult[]>("/api/memory/search", token, {
+        method: "POST",
+        body: JSON.stringify({ query: ragQuery, brand_slug: brand || undefined, limit: 8 })
+      })
+      setRagResults(res)
+    } catch {
+      setRagResults([])
+    }
+    setRagLoading(false)
+  }
+
+  const visibleDocs = useMemo(() => {
+    const q = filter.trim().toLowerCase()
+    if (!q) return docs
+    return docs.filter((d) => d.filename.toLowerCase().includes(q) || d.category.toLowerCase().includes(q))
+  }, [docs, filter])
+
+  const collections = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const e of entries) map.set(e.category, (map.get(e.category) ?? 0) + 1)
+    for (const d of docs) map.set(d.category, (map.get(d.category) ?? 0) + 1)
+    return Array.from(map.entries()).sort((a, b) => b[1] - a[1])
+  }, [entries, docs])
+
+  const activity = useMemo(() => {
+    const items = [
+      ...docs.map((d) => ({ kind: "doc" as const, title: d.filename, when: d.created_at, sub: `${d.category} · ${fmtSize(d.file_size)}` })),
+      ...entries.map((e) => ({ kind: "mem" as const, title: e.title, when: e.created_at, sub: `${e.source_type}` }))
+    ]
+    return items.sort((a, b) => new Date(b.when).getTime() - new Date(a.when).getTime()).slice(0, 6)
+  }, [docs, entries])
+
+  const indexedCount = docs.filter((d) => d.status === "indexed").length
+  const brands = new Set([...docs.map((d) => d.brand_slug), ...entries.map((e) => e.brand_slug)]).size
+
+  const stats = [
+    { icon: <FileIcon className="h-5 w-5" />, tone: "purple" as const, label: "Documentos", value: String(docs.length), hint: brand ? "nesta marca" : "todas as marcas" },
+    { icon: <LayersIcon className="h-5 w-5" />, tone: "blue" as const, label: "Entradas de memória", value: String(entries.length), hint: "indexadas no RAG" },
+    { icon: <SparklesIcon className="h-5 w-5" />, tone: "green" as const, label: "Indexados", value: `${indexedCount}/${docs.length}`, hint: "prontos p/ busca" },
+    { icon: <UsersIcon className="h-5 w-5" />, tone: "amber" as const, label: "Marcas cobertas", value: String(brands), hint: "com conteúdo" }
+  ]
 
   return (
     <div className="space-y-6">
@@ -48,132 +167,163 @@ export default function MemoryPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {memoryStats.map((s, i) => {
-          const Icon = statIcons[i]
-          return (
-            <StatCard key={s.label} icon={<Icon className="h-5 w-5" />} iconTone={s.tone} label={s.label} value={s.value} delta={s.delta} hint={s.hint} />
-          )
-        })}
+        {stats.map((s) => (
+          <StatCard key={s.label} icon={s.icon} iconTone={s.tone} label={s.label} value={s.value} hint={s.hint} />
+        ))}
       </div>
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_400px]">
         <div className="space-y-5">
+          {/* Busca semântica (RAG) */}
           <section className="duofy-card rounded-2xl p-5">
-            <h2 className="text-lg font-bold tracking-[-0.02em] text-ink">Biblioteca de memória</h2>
-            <div className="mt-4 flex flex-wrap items-center gap-2.5">
-              <div className="flex h-10 min-w-[220px] flex-1 items-center gap-2 rounded-xl border border-line bg-white px-3 text-muted">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold tracking-[-0.02em] text-ink">Busca semântica (RAG)</h2>
+              <Badge tone="teal">pgvector</Badge>
+            </div>
+            <div className="mt-3 flex gap-2">
+              <div className="flex h-10 flex-1 items-center gap-2 rounded-xl border border-line bg-white px-3 text-muted">
                 <SearchIcon className="h-4 w-4" />
-                <input className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-muted" placeholder="Buscar documentos..." />
+                <input
+                  value={ragQuery}
+                  onChange={(e) => setRagQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && runRag()}
+                  className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-muted"
+                  placeholder="Ex: posicionamento de marca, tom de voz, persona..."
+                />
               </div>
-              {["Tipo", "Marca", "Fonte"].map((f) => (
-                <button key={f} className="flex h-10 items-center gap-1.5 rounded-xl border border-line bg-white px-3 text-sm font-medium text-ink">
-                  {f} <ChevronDownIcon className="h-4 w-4 text-muted" />
-                </button>
-              ))}
-              <GhostButton className="h-10">+ Filtros</GhostButton>
-              <button className="grid h-10 w-10 place-items-center rounded-xl border border-line text-muted hover:text-purple"><RefreshIcon className="h-4 w-4" /></button>
-              <button className="grid h-10 w-10 place-items-center rounded-xl border border-line text-muted hover:text-purple"><SettingsIcon className="h-4 w-4" /></button>
+              <button
+                onClick={runRag}
+                disabled={ragLoading || ragQuery.trim().length < 3}
+                className="rounded-xl bg-purple px-4 text-sm font-semibold text-white transition hover:bg-purple-deep disabled:opacity-50"
+              >
+                {ragLoading ? "Buscando…" : "Buscar"}
+              </button>
+            </div>
+            {ragResults && (
+              <div className="mt-3 space-y-2">
+                {ragResults.length === 0 ? (
+                  <p className="text-sm text-muted">Nenhum resultado semântico encontrado.</p>
+                ) : (
+                  ragResults.map((r) => (
+                    <div key={`${r.kind}-${r.id}`} className="rounded-lg border border-line bg-white p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate text-sm font-semibold text-ink">{r.title || "(sem título)"}</span>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <Badge tone="slate">{r.source_type}</Badge>
+                          <span className="font-mono text-xs font-bold text-teal">{(r.score * 100).toFixed(0)}%</span>
+                        </div>
+                      </div>
+                      <p className="mt-1 line-clamp-2 text-xs text-muted">{r.content}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </section>
+
+          {/* Biblioteca */}
+          <section className="duofy-card rounded-2xl p-5">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold tracking-[-0.02em] text-ink">Biblioteca de memória</h2>
+              <button onClick={load} className="grid h-9 w-9 place-items-center rounded-lg border border-line text-muted hover:text-purple">
+                <RefreshIcon className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="mt-4 flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-muted">
+              <SearchIcon className="h-4 w-4" />
+              <input
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-muted"
+                placeholder="Filtrar documentos por nome ou categoria..."
+              />
             </div>
 
             <div className="mt-4 overflow-x-auto duofy-scroll">
-              <table className="w-full min-w-[720px] text-sm">
+              <table className="w-full min-w-[640px] text-sm">
                 <thead>
                   <tr className="border-b border-line text-left text-xs font-semibold uppercase tracking-wide text-muted">
                     <th className="py-2.5 pr-4">Documento</th>
-                    <th className="py-2.5 pr-4">Tipo</th>
+                    <th className="py-2.5 pr-4">Categoria</th>
                     <th className="py-2.5 pr-4">Marca</th>
-                    <th className="py-2.5 pr-4">Tags</th>
-                    <th className="py-2.5 pr-4">Fonte</th>
+                    <th className="py-2.5 pr-4">Tamanho</th>
                     <th className="py-2.5 pr-4">Status</th>
-                    <th className="py-2.5"></th>
+                    <th className="py-2.5">Criado</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {memoryDocs.map((d) => {
-                    const active = selected === d.id
-                    return (
-                      <tr key={d.id} onClick={() => setSelected(d.id)} className={`cursor-pointer border-b border-line/70 last:border-0 ${active ? "bg-purple-soft/40" : "hover:bg-panel"}`}>
-                        <td className="py-3 pr-4">
-                          <div className="flex items-center gap-2.5">
-                            <span className={`h-2 w-2 rounded-full ${active ? "bg-purple" : "bg-line"}`} />
-                            <span className="grid h-7 w-7 place-items-center rounded-md bg-red/10 text-red"><FileIcon className="h-4 w-4" /></span>
-                            <span className="font-semibold text-ink">{d.name}</span>
-                            <span className="text-xs text-muted">{d.version}</span>
-                          </div>
-                        </td>
-                        <td className="py-3 pr-4 text-muted">{d.type}</td>
-                        <td className="py-3 pr-4 text-muted">{d.brand}</td>
-                        <td className="py-3 pr-4">
-                          <div className="flex flex-wrap gap-1">
-                            {d.tags.slice(0, 2).map((tag) => (
-                              <Badge key={tag} tone="slate">{tag}</Badge>
-                            ))}
-                            {d.tags.length > 2 ? <span className="text-xs text-muted">+{d.tags.length - 2}</span> : null}
-                          </div>
-                        </td>
-                        <td className="py-3 pr-4 text-muted">{d.source}</td>
-                        <td className="py-3 pr-4">
-                          <Badge tone={d.status === "Indexado" ? "green" : "amber"}>{d.status}</Badge>
-                        </td>
-                        <td className="py-3"><MoreIcon className="h-4 w-4 text-muted" /></td>
-                      </tr>
-                    )
-                  })}
+                  {loading ? (
+                    [1, 2, 3, 4].map((i) => (
+                      <tr key={i}><td colSpan={6} className="py-3"><div className="h-8 animate-pulse rounded bg-line/50" /></td></tr>
+                    ))
+                  ) : visibleDocs.length === 0 ? (
+                    <tr><td colSpan={6} className="py-10 text-center text-muted">Nenhum documento {filter ? "para esse filtro" : "para esta marca"}.</td></tr>
+                  ) : (
+                    visibleDocs.map((d) => {
+                      const active = selectedDoc?.id === d.id
+                      return (
+                        <tr key={d.id} onClick={() => setSelectedDoc(d)} className={`cursor-pointer border-b border-line/70 last:border-0 ${active ? "bg-purple-soft/40" : "hover:bg-panel"}`}>
+                          <td className="py-3 pr-4">
+                            <div className="flex items-center gap-2.5">
+                              <span className={`h-2 w-2 rounded-full ${active ? "bg-purple" : "bg-line"}`} />
+                              <span className="grid h-7 w-7 place-items-center rounded-md bg-red/10 text-red"><FileIcon className="h-4 w-4" /></span>
+                              <span className="max-w-[260px] truncate font-semibold text-ink">{d.filename}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 pr-4 text-muted">{d.category}</td>
+                          <td className="py-3 pr-4 text-muted">{d.brand_slug}</td>
+                          <td className="py-3 pr-4 text-muted">{fmtSize(d.file_size)}</td>
+                          <td className="py-3 pr-4">
+                            <Badge tone={d.status === "indexed" ? "green" : d.status === "error" ? "red" : "amber"}>{d.status}</Badge>
+                          </td>
+                          <td className="py-3 text-xs text-muted">{fmtDate(d.created_at)}</td>
+                        </tr>
+                      )
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
-            <div className="mt-4 flex items-center justify-between text-sm text-muted">
-              <span>Exibindo 1–7 de 1.248 documentos</span>
-              <div className="flex items-center gap-1">
-                {["1", "2", "3", "4", "5", "…", "178"].map((p) => (
-                  <button key={p} className={`grid h-8 min-w-[32px] place-items-center rounded-lg px-2 text-xs font-semibold ${p === "1" ? "bg-purple text-white" : "border border-line text-muted hover:text-purple"}`}>
-                    {p}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <p className="mt-4 text-sm text-muted">Exibindo {visibleDocs.length} de {docs.length} documentos</p>
           </section>
 
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <section className="duofy-card rounded-2xl p-5">
               <h3 className="text-base font-bold text-ink">Coleções e contexto</h3>
               <ul className="mt-4 space-y-4">
-                {memoryCollections.map((c) => (
-                  <li key={c.name} className="flex items-start gap-3">
-                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-purple-soft text-purple"><LayersIcon className="h-4 w-4" /></span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-ink">{c.name}</p>
-                      <p className="text-xs text-muted">{c.desc}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-ink">{c.docs}</p>
-                      <p className="text-xs text-green">↑ {c.delta}</p>
-                    </div>
-                  </li>
-                ))}
+                {collections.length === 0 ? (
+                  <li className="text-sm text-muted">Sem coleções ainda.</li>
+                ) : (
+                  collections.map(([name, count]) => (
+                    <li key={name} className="flex items-center gap-3">
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-purple-soft text-purple"><LayersIcon className="h-4 w-4" /></span>
+                      <p className="flex-1 text-sm font-semibold capitalize text-ink">{name}</p>
+                      <p className="text-sm font-semibold text-ink">{count}</p>
+                    </li>
+                  ))
+                )}
               </ul>
-              <button className="mt-4 flex items-center gap-1 text-sm font-semibold text-purple">Ver todas as coleções →</button>
             </section>
 
             <section className="duofy-card rounded-2xl p-5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold text-ink">Atividade recente</h3>
-                <button className="text-sm font-semibold text-purple">Ver todas</button>
-              </div>
+              <h3 className="text-base font-bold text-ink">Atividade recente</h3>
               <ul className="mt-4 space-y-4">
-                {memoryActivity.map((a, i) => {
-                  const Icon = activityIcons[a.icon] ?? FileIcon
-                  return (
+                {activity.length === 0 ? (
+                  <li className="text-sm text-muted">Sem atividade.</li>
+                ) : (
+                  activity.map((a, i) => (
                     <li key={i} className="flex items-start gap-3">
-                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-purple-soft text-purple"><Icon className="h-4 w-4" /></span>
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-purple-soft text-purple">
+                        {a.kind === "doc" ? <FileIcon className="h-4 w-4" /> : <LayersIcon className="h-4 w-4" />}
+                      </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-ink">{a.title}</p>
-                        <p className="text-xs text-muted">{a.desc}</p>
+                        <p className="truncate text-sm font-semibold text-ink">{a.title}</p>
+                        <p className="text-xs text-muted">{a.sub}</p>
                       </div>
-                      <span className="shrink-0 text-xs text-muted">{a.time}</span>
+                      <span className="shrink-0 text-xs text-muted">{fmtRelative(a.when)}</span>
                     </li>
-                  )
-                })}
+                  ))
+                )}
               </ul>
             </section>
           </div>
@@ -181,94 +331,81 @@ export default function MemoryPage() {
 
         {/* Painel de detalhe */}
         <aside className="duofy-card h-fit rounded-2xl p-5">
-          <div className="flex items-start gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-lg bg-red/10 text-red"><FileIcon className="h-5 w-5" /></span>
-            <div className="flex-1">
-              <p className="flex items-center gap-2 text-base font-bold text-ink">
-                {memoryDetail.name} <Badge tone="purple">{memoryDetail.version}</Badge>
-              </p>
+          {!selectedDoc ? (
+            <div className="grid place-items-center py-16 text-center text-sm text-muted">
+              Selecione um documento para ver detalhes.
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="flex items-start gap-3">
+                <span className="grid h-10 w-10 place-items-center rounded-lg bg-red/10 text-red"><FileIcon className="h-5 w-5" /></span>
+                <div className="min-w-0 flex-1">
+                  <p className="break-words text-base font-bold text-ink">{selectedDoc.filename}</p>
+                  <Badge tone={selectedDoc.status === "indexed" ? "green" : "amber"}>{selectedDoc.status}</Badge>
+                </div>
+              </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <button className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-purple px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-purple-deep">
-              <BookmarkIcon className="h-4 w-4" /> Usar como referência
-            </button>
-            <GhostButton className="px-3"><LayersIcon className="h-4 w-4" /> Ver chunks</GhostButton>
-            <GhostButton className="px-3"><ClockIcon className="h-4 w-4" /> Versionar</GhostButton>
-            <button className="grid h-9 w-9 place-items-center rounded-lg border border-line text-muted"><MoreIcon className="h-4 w-4" /></button>
-          </div>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <a
+                  href={`${API_URL}/api/documents/${selectedDoc.id}/download`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-purple px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-purple-deep"
+                >
+                  <BookIcon className="h-4 w-4" /> Baixar original
+                </a>
+              </div>
 
-          <Section title="Metadados">
-            <dl className="grid grid-cols-2 gap-y-2.5 text-sm">
-              <Meta label="Tipo" value={memoryDetail.meta.tipo} />
-              <Meta label="Criado em" value={memoryDetail.meta.criadoEm} />
-              <Meta label="Fonte" value={memoryDetail.meta.fonte} />
-              <Meta label="Atualizado em" value={memoryDetail.meta.atualizadoEm} />
-              <Meta label="Tamanho" value={memoryDetail.meta.tamanho} />
-              <Meta label="Idioma" value={memoryDetail.meta.idioma} />
-            </dl>
-          </Section>
+              <Section title="Metadados">
+                <dl className="grid grid-cols-2 gap-y-2.5 text-sm">
+                  <Meta label="Tipo" value={selectedDoc.content_type} />
+                  <Meta label="Categoria" value={selectedDoc.category} />
+                  <Meta label="Marca" value={selectedDoc.brand_slug} />
+                  <Meta label="Tamanho" value={fmtSize(selectedDoc.file_size)} />
+                  <Meta label="Criado em" value={fmtDate(selectedDoc.created_at)} />
+                  <Meta label="ID" value={`#${selectedDoc.id}`} />
+                </dl>
+              </Section>
 
-          <Section title="Tags">
-            <div className="flex flex-wrap gap-1.5">
-              {memoryDetail.tags.map((t) => (
-                <Badge key={t} tone="purple">{t}</Badge>
-              ))}
-            </div>
-          </Section>
+              <Section title={`Chunks indexados${chunks ? ` (${chunks.length})` : ""}`}>
+                {chunksLoading ? (
+                  <div className="space-y-2">{[1, 2].map((i) => <div key={i} className="h-12 animate-pulse rounded bg-line/50" />)}</div>
+                ) : !chunks || chunks.length === 0 ? (
+                  <p className="text-sm text-muted">Nenhum chunk indexado.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {chunks.slice(0, 5).map((c) => (
+                      <li key={c.id} className="rounded-lg border border-line bg-white p-2.5">
+                        <div className="mb-1 flex items-center justify-between text-[11px] text-muted">
+                          <span>Chunk #{c.chunk_index}</span>
+                          <span>{c.token_count} tokens</span>
+                        </div>
+                        <p className="line-clamp-3 text-xs text-ink/80">{c.content}</p>
+                      </li>
+                    ))}
+                    {chunks.length > 5 && <li className="text-center text-xs text-muted">+{chunks.length - 5} chunks</li>}
+                  </ul>
+                )}
+              </Section>
 
-          <Section title="Permissões" action="Gerenciar">
-            <p className="flex items-center gap-2 text-sm text-ink"><BookIcon className="h-4 w-4 text-muted" /> Privado para o workspace</p>
-          </Section>
-
-          <Section title="Histórico de versões" action="Ver todas">
-            <ul className="space-y-2.5">
-              {memoryDetail.versions.map((v) => (
-                <li key={v.v} className="flex items-center gap-3 text-sm">
-                  <span className="font-semibold text-ink">{v.v}</span>
-                  {v.current ? <Badge tone="green">Atual</Badge> : null}
-                  <span className="ml-auto text-xs text-muted">{v.at}</span>
-                  <span className="text-xs font-medium text-ink">{v.by}</span>
-                </li>
-              ))}
-            </ul>
-          </Section>
-
-          <Section title="Permissões por agente" action="Ver todas">
-            <ul className="space-y-2.5">
-              {memoryDetail.agentPerms.map((p) => (
-                <li key={p.agent} className="flex items-center justify-between text-sm">
-                  <span className="text-ink">{p.agent}</span>
-                  <span className="flex items-center gap-1.5 text-xs font-semibold text-green">
-                    Pode usar
-                    <span className="grid h-4 w-4 place-items-center rounded-full bg-green/10"><svg viewBox="0 0 16 16" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="m4 8 2.5 2.5L12 5" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </Section>
-
-          <Section title="Prévia do conteúdo">
-            <p className="text-sm leading-relaxed text-ink/80">{memoryDetail.preview}</p>
-            <div className="mt-2 flex items-center justify-between text-xs text-muted">
-              <span>{memoryDetail.previewPages}</span>
-              <button className="font-semibold text-purple">Ver prévia completa ↗</button>
-            </div>
-          </Section>
+              <Section title="Permissões por agente">
+                <p className="flex items-center gap-2 text-sm text-ink">
+                  <span className="grid h-4 w-4 place-items-center rounded-full bg-green/10"><svg viewBox="0 0 16 16" className="h-3 w-3 text-green" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="m4 8 2.5 2.5L12 5" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
+                  Disponível para todos os agentes via RAG
+                </p>
+              </Section>
+            </>
+          )}
         </aside>
       </div>
     </div>
   )
 }
 
-function Section({ title, action, children }: { title: string; action?: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mt-5 border-t border-line pt-4">
-      <div className="mb-2.5 flex items-center justify-between">
-        <p className="text-sm font-bold text-ink">{title}</p>
-        {action ? <button className="text-xs font-semibold text-purple">{action}</button> : null}
-      </div>
+      <p className="mb-2.5 text-sm font-bold text-ink">{title}</p>
       {children}
     </div>
   )
@@ -276,9 +413,9 @@ function Section({ title, action, children }: { title: string; action?: string; 
 
 function Meta({ label, value }: { label: string; value: string }) {
   return (
-    <div>
+    <div className="min-w-0">
       <dt className="text-xs text-muted">{label}</dt>
-      <dd className="font-medium text-ink">{value}</dd>
+      <dd className="truncate font-medium text-ink">{value}</dd>
     </div>
   )
 }

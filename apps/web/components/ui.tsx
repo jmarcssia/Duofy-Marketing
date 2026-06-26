@@ -275,16 +275,19 @@ export function IconButton({
 export function GhostButton({
   children,
   onClick,
-  className = ""
+  className = "",
+  disabled = false
 }: {
   children: ReactNode
   onClick?: () => void
   className?: string
+  disabled?: boolean
 }) {
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-2 rounded-xl border border-line bg-white px-3.5 py-2 text-sm font-semibold text-ink transition hover:border-purple/40 hover:text-purple ${className}`}
+      disabled={disabled}
+      className={`inline-flex items-center gap-2 rounded-xl border border-line bg-white px-3.5 py-2 text-sm font-semibold text-ink transition hover:border-purple/40 hover:text-purple disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
     >
       {children}
     </button>

@@ -1,186 +1,211 @@
 "use client"
 
+import { useCallback, useEffect, useMemo, useState } from "react"
+
 import { AreaLineChart, DonutChart, HBarChart, Legend } from "@/components/charts"
-import { Badge, GhostButton, StatCard } from "@/components/ui"
+import { GhostButton, StatCard } from "@/components/ui"
 import {
-  AlertTriangleIcon,
-  ArrowRightIcon,
   ChartIcon,
   CheckCircleIcon,
   DatabaseIcon,
   DollarIcon,
-  DownloadIcon,
   MoreIcon,
   PhoneIcon,
-  PiggyIcon,
   RefreshIcon,
-  ShareIcon,
-  TrendDownIcon,
-  TrendUpIcon
+  ZapIcon
 } from "@/components/icons"
-import {
-  agentPerformance,
-  callsByAgent,
-  costByWorkflow,
-  costOverTime,
-  modelTable,
-  potentialSaving,
-  reportInsights,
-  reportStats,
-  tokensByModel
-} from "@/lib/mock"
+import { apiFetch, type MetricsSummary, type ModelCall, type InternalReport } from "@/lib/api"
+import { getTokenFromCookie } from "@/lib/auth"
+import { useBrand } from "@/lib/brand-context"
 
-const statIcons: Record<string, typeof DollarIcon> = {
-  dollar: DollarIcon,
-  phone: PhoneIcon,
-  database: DatabaseIcon,
-  refresh: RefreshIcon,
-  check: CheckCircleIcon,
-  piggy: PiggyIcon
-}
-const insightIcons: Record<string, typeof ShareIcon> = {
-  share: ShareIcon,
-  alert: AlertTriangleIcon,
-  trend: TrendUpIcon,
-  check: CheckCircleIcon
-}
-const brl = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+const usd = (v: number) => `US$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`
+const num = (v: number) => v.toLocaleString("pt-BR")
+const DONUT_COLORS = ["#6d35ee", "#8b5cf6", "#2563eb", "#0d9488", "#f97316", "#db2777"]
 
 export default function RelatoriosPage() {
+  const { selected: brand } = useBrand()
+  const [summary, setSummary] = useState<MetricsSummary | null>(null)
+  const [calls, setCalls] = useState<ModelCall[]>([])
+  const [reports, setReports] = useState<InternalReport[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(async () => {
+    const token = getTokenFromCookie()
+    if (!token) { setLoading(false); return }
+    setLoading(true)
+    const qs = brand ? `?brand_slug=${brand}` : ""
+    const [s, c, r] = await Promise.allSettled([
+      apiFetch<MetricsSummary>(`/api/metrics/summary${qs}`, token),
+      apiFetch<ModelCall[]>(`/api/metrics/model-calls?limit=300`, token),
+      apiFetch<InternalReport[]>(`/api/reports?limit=10`, token)
+    ])
+    if (s.status === "fulfilled") setSummary(s.value)
+    if (c.status === "fulfilled") setCalls(brand ? c.value.filter((x) => x.brand_slug === brand) : c.value)
+    if (r.status === "fulfilled") setReports(r.value)
+    setLoading(false)
+  }, [brand])
+
+  useEffect(() => { load() }, [load])
+
+  // série de custo por dia (a partir dos model-calls reais)
+  const costSeries = useMemo(() => {
+    const byDay = new Map<string, number>()
+    for (const c of calls) {
+      const day = c.created_at.slice(0, 10)
+      byDay.set(day, (byDay.get(day) ?? 0) + (c.estimated_cost_usd ?? 0))
+    }
+    const sorted = Array.from(byDay.entries()).sort((a, b) => a[0].localeCompare(b[0]))
+    return {
+      labels: sorted.map(([d]) => d.slice(5)),
+      points: sorted.map(([, v]) => Number((v * 100).toFixed(2))) // centavos de USD p/ visual
+    }
+  }, [calls])
+
+  const callsByAgent = useMemo(
+    () => (summary?.by_agent ?? []).map((a) => ({ label: a.key, value: a.calls })).slice(0, 6),
+    [summary]
+  )
+  const costByAgent = useMemo(
+    () => (summary?.by_agent ?? []).map((a) => ({ label: a.key, value: Number((a.cost * 100).toFixed(2)) })).slice(0, 6),
+    [summary]
+  )
+  const tokensByModel = useMemo(
+    () => (summary?.by_model ?? []).map((m, i) => ({ label: m.key.replace("~", ""), value: m.tokens, color: DONUT_COLORS[i % DONUT_COLORS.length] })),
+    [summary]
+  )
+
+  const stats = summary
+    ? [
+        { icon: <DollarIcon className="h-5 w-5" />, tone: "purple" as const, label: "Custo estimado", value: usd(summary.estimated_cost_usd) },
+        { icon: <PhoneIcon className="h-5 w-5" />, tone: "blue" as const, label: "Chamadas de modelo", value: num(summary.total_calls) },
+        { icon: <DatabaseIcon className="h-5 w-5" />, tone: "teal" as const, label: "Tokens totais", value: num(summary.total_tokens) },
+        { icon: <ZapIcon className="h-5 w-5" />, tone: "amber" as const, label: "Tokens entrada/saída", value: `${num(summary.total_input_tokens)} / ${num(summary.total_output_tokens)}` },
+        { icon: <CheckCircleIcon className="h-5 w-5" />, tone: "green" as const, label: "Concluídas", value: `${summary.completed_calls}/${summary.total_calls}` },
+        { icon: <RefreshIcon className="h-5 w-5" />, tone: "pink" as const, label: "Latência média", value: summary.avg_latency_ms ? `${(summary.avg_latency_ms / 1000).toFixed(1)}s` : "—" }
+      ]
+    : []
+
+  const totalTokens = summary?.total_tokens ?? 0
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-[30px] font-extrabold tracking-[-0.04em] text-ink">Relatórios</h1>
-        <p className="mt-1 text-sm text-muted">Acompanhe o desempenho, os custos e o uso de IA em todo o workspace.</p>
-      </div>
-
-      <div className="flex flex-wrap items-end gap-3">
-        {[
-          { label: "Período", value: "Últimos 30 dias" },
-          { label: "Workspace", value: "Workspace Growth" },
-          { label: "Marca", value: "Todas as marcas" },
-          { label: "Agente", value: "Todos os agentes" },
-          { label: "Modelo", value: "Todos os modelos" }
-        ].map((f) => (
-          <label key={f.label} className="flex min-w-[150px] flex-1 flex-col gap-1">
-            <span className="text-xs font-semibold text-muted">{f.label}</span>
-            <div className="flex h-10 items-center justify-between rounded-xl border border-line bg-white px-3 text-sm font-medium text-ink">
-              {f.value}
-              <svg viewBox="0 0 24 24" className="h-4 w-4 text-muted" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6" strokeLinecap="round" /></svg>
-            </div>
-          </label>
-        ))}
-        <button className="flex h-10 items-center gap-2 rounded-xl bg-purple px-4 text-sm font-semibold text-white shadow-lg shadow-purple/20 transition hover:bg-purple-deep">
-          <DownloadIcon className="h-4 w-4" /> Exportar relatório
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-[30px] font-extrabold tracking-[-0.04em] text-ink">Relatórios</h1>
+          <p className="mt-1 text-sm text-muted">Custos e uso de IA reais — dados do OpenRouter via model_calls.{brand ? ` Marca: ${brand}.` : " Todas as marcas."}</p>
+        </div>
+        <button onClick={load} className="flex h-10 items-center gap-2 rounded-xl border border-line bg-white px-4 text-sm font-semibold text-ink hover:border-purple/40 hover:text-purple">
+          <RefreshIcon className="h-4 w-4" /> Atualizar
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        {reportStats.map((s) => {
-          const Icon = statIcons[s.icon]
-          return (
-            <StatCard key={s.label} icon={<Icon className="h-5 w-5" />} iconTone={s.tone} label={s.label} value={s.value} delta={s.delta} deltaDir={s.dir} />
-          )
-        })}
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <ChartCard title="Custo ao longo do tempo" sub="Valores em Reais (R$)" right={<GhostButton className="text-xs">Diário ⌄</GhostButton>}>
-          <AreaLineChart points={costOverTime.points} labels={costOverTime.labels} height={210} format={(v) => `${Math.round(v / 1000)}k`} />
-        </ChartCard>
-        <ChartCard title="Chamadas por agente" sub="Top 6 agentes por número de chamadas">
-          <div className="pt-2">
-            <HBarChart data={callsByAgent} />
-          </div>
-        </ChartCard>
-        <ChartCard title="Tokens por modelo" sub="Distribuição do consumo de tokens">
-          <div className="flex items-center gap-6 pt-2">
-            <DonutChart segments={tokensByModel} centerTop="145,2M" centerBottom="tokens" />
-            <div className="flex-1"><Legend segments={tokensByModel} format={(v) => `${v}%`} /></div>
-          </div>
-        </ChartCard>
-        <ChartCard title="Uso por fluxo de trabalho" sub="Custo por fluxo (R$)">
-          <div className="pt-2">
-            <HBarChart data={costByWorkflow} format={brl} />
-          </div>
-        </ChartCard>
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <TableCard title="Desempenho por agente">
-          <table className="w-full min-w-[520px] text-sm">
-            <thead>
-              <tr className="border-b border-line text-left text-xs font-semibold text-muted">
-                <th className="py-2 pr-3">Agente</th><th className="py-2 pr-3">Chamadas</th><th className="py-2 pr-3">Tokens</th><th className="py-2 pr-3">Custo</th><th className="py-2 pr-3">Eficiência</th><th className="py-2">Sucesso</th>
-              </tr>
-            </thead>
-            <tbody>
-              {agentPerformance.map((a) => (
-                <tr key={a.agent} className="border-b border-line/70 last:border-0">
-                  <td className="py-2.5 pr-3 font-semibold text-ink">{a.agent}</td>
-                  <td className="py-2.5 pr-3 text-muted">{a.calls}</td>
-                  <td className="py-2.5 pr-3 text-muted">{a.tokens}</td>
-                  <td className="py-2.5 pr-3 text-ink">{a.cost}</td>
-                  <td className="py-2.5 pr-3"><Delta value={a.eff} delta={a.delta} dir={a.dir} /></td>
-                  <td className="py-2.5 text-muted">{a.success}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <button className="mt-3 text-sm font-semibold text-purple">Ver todos os agentes →</button>
-        </TableCard>
-
-        <TableCard title="Modelos OpenRouter">
-          <table className="w-full min-w-[560px] text-sm">
-            <thead>
-              <tr className="border-b border-line text-left text-xs font-semibold text-muted">
-                <th className="py-2 pr-3">Modelo</th><th className="py-2 pr-3">Tokens</th><th className="py-2 pr-3">% total</th><th className="py-2 pr-3">Custo</th><th className="py-2 pr-3">Custo/1M</th><th className="py-2">Eficiência</th>
-              </tr>
-            </thead>
-            <tbody>
-              {modelTable.map((m) => (
-                <tr key={m.model} className="border-b border-line/70 last:border-0">
-                  <td className="py-2.5 pr-3 font-semibold text-ink">{m.model}</td>
-                  <td className="py-2.5 pr-3 text-muted">{m.tokens}</td>
-                  <td className="py-2.5 pr-3 text-muted">{m.pct}</td>
-                  <td className="py-2.5 pr-3 text-ink">{m.cost}</td>
-                  <td className="py-2.5 pr-3 text-muted">{m.per1m}</td>
-                  <td className="py-2.5"><Delta value={m.eff} delta={m.delta} dir={m.dir} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <button className="mt-3 text-sm font-semibold text-purple">Ver todos os modelos →</button>
-        </TableCard>
-      </div>
-
-      <div>
-        <h2 className="mb-3 text-lg font-bold tracking-[-0.02em] text-ink">Insights principais</h2>
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-5">
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:col-span-4 xl:grid-cols-4">
-            {reportInsights.map((ins) => {
-              const Icon = insightIcons[ins.icon] ?? ShareIcon
-              return (
-                <div key={ins.title} className="duofy-card rounded-2xl p-4">
-                  <span className="grid h-9 w-9 place-items-center rounded-lg bg-purple-soft text-purple"><Icon className="h-5 w-5" /></span>
-                  <p className="mt-3 text-sm font-bold text-ink">{ins.title}</p>
-                  <p className="mt-1 text-xs leading-relaxed text-muted">{ins.text}</p>
-                  <button className="mt-2 text-xs font-semibold text-purple">{ins.link}</button>
-                </div>
-              )
-            })}
-          </div>
-          <div className="rounded-2xl bg-purple p-5 text-white shadow-lg shadow-purple/20 lg:col-span-1">
-            <p className="flex items-center gap-2 text-sm font-semibold text-white/90"><PiggyIcon className="h-5 w-5" /> Economia potencial</p>
-            <p className="mt-2 text-xs text-white/70">Com as otimizações sugeridas, é possível economizar até</p>
-            <p className="mt-3 text-3xl font-extrabold">{potentialSaving.value}</p>
-            <p className="text-xs text-white/70">{potentialSaving.window}</p>
-            <button className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-white/15 py-2.5 text-sm font-semibold text-white transition hover:bg-white/25">
-              Ver plano de otimização <ArrowRightIcon className="h-4 w-4" />
-            </button>
-          </div>
+      {loading ? (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
+          {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-24 animate-pulse rounded-2xl bg-line/50" />)}
         </div>
-      </div>
+      ) : !summary ? (
+        <div className="duofy-card grid place-items-center rounded-2xl py-16 text-sm text-muted">Não foi possível carregar as métricas.</div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+            {stats.map((s) => (
+              <StatCard key={s.label} icon={s.icon} iconTone={s.tone} label={s.label} value={s.value} />
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+            <ChartCard title="Custo ao longo do tempo" sub="Centavos de USD por dia (model_calls reais)" right={<GhostButton className="text-xs">Diário</GhostButton>}>
+              {costSeries.points.length === 0 ? (
+                <Empty />
+              ) : (
+                <AreaLineChart points={costSeries.points} labels={costSeries.labels} height={210} format={(v) => `¢${Math.round(v)}`} />
+              )}
+            </ChartCard>
+
+            <ChartCard title="Chamadas por agente" sub="Distribuição real por agente">
+              {callsByAgent.length === 0 ? <Empty /> : <div className="pt-2"><HBarChart data={callsByAgent} /></div>}
+            </ChartCard>
+
+            <ChartCard title="Tokens por modelo" sub="Consumo real de tokens">
+              {tokensByModel.length === 0 ? (
+                <Empty />
+              ) : (
+                <div className="flex items-center gap-6 pt-2">
+                  <DonutChart segments={tokensByModel} centerTop={num(totalTokens)} centerBottom="tokens" />
+                  <div className="flex-1"><Legend segments={tokensByModel} format={(v) => `${Math.round((v / (totalTokens || 1)) * 100)}%`} /></div>
+                </div>
+              )}
+            </ChartCard>
+
+            <ChartCard title="Custo por agente" sub="Centavos de USD por agente">
+              {costByAgent.length === 0 ? <Empty /> : <div className="pt-2"><HBarChart data={costByAgent} format={(v) => `¢${v.toFixed(1)}`} /></div>}
+            </ChartCard>
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+            <TableCard title="Desempenho por agente">
+              <table className="w-full min-w-[460px] text-sm">
+                <thead>
+                  <tr className="border-b border-line text-left text-xs font-semibold text-muted">
+                    <th className="py-2 pr-3">Agente</th><th className="py-2 pr-3">Chamadas</th><th className="py-2 pr-3">Tokens</th><th className="py-2">Custo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(summary.by_agent ?? []).map((a) => (
+                    <tr key={a.key} className="border-b border-line/70 last:border-0">
+                      <td className="py-2.5 pr-3 font-semibold text-ink">{a.key}</td>
+                      <td className="py-2.5 pr-3 text-muted">{num(a.calls)}</td>
+                      <td className="py-2.5 pr-3 text-muted">{num(a.tokens)}</td>
+                      <td className="py-2.5 text-ink">{usd(a.cost)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TableCard>
+
+            <TableCard title="Modelos / Provedores">
+              <table className="w-full min-w-[460px] text-sm">
+                <thead>
+                  <tr className="border-b border-line text-left text-xs font-semibold text-muted">
+                    <th className="py-2 pr-3">Modelo</th><th className="py-2 pr-3">Chamadas</th><th className="py-2 pr-3">Tokens</th><th className="py-2">Custo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(summary.by_model ?? []).map((m) => (
+                    <tr key={m.key} className="border-b border-line/70 last:border-0">
+                      <td className="py-2.5 pr-3 font-semibold text-ink">{m.key.replace("~", "")}</td>
+                      <td className="py-2.5 pr-3 text-muted">{num(m.calls)}</td>
+                      <td className="py-2.5 pr-3 text-muted">{num(m.tokens)}</td>
+                      <td className="py-2.5 text-ink">{usd(m.cost)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TableCard>
+          </div>
+
+          {/* Relatórios internos gerados */}
+          <div>
+            <h2 className="mb-3 text-lg font-bold tracking-[-0.02em] text-ink">Relatórios internos gerados</h2>
+            {reports.length === 0 ? (
+              <div className="duofy-card rounded-2xl p-6 text-center text-sm text-muted">
+                Nenhum relatório gerado ainda. Os relatórios criados pelo agente de métricas aparecem aqui.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {reports.map((r) => (
+                  <div key={r.id} className="duofy-card rounded-2xl p-4">
+                    <span className="grid h-9 w-9 place-items-center rounded-lg bg-purple-soft text-purple"><ChartIcon className="h-5 w-5" /></span>
+                    <p className="mt-3 line-clamp-1 text-sm font-bold text-ink">{r.title}</p>
+                    <p className="mt-0.5 text-xs text-muted">{r.report_type} · {r.brand_slug ?? "—"}</p>
+                    <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-xs leading-relaxed text-muted">{r.content}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -205,21 +230,12 @@ function TableCard({ title, children }: { title: string; children: React.ReactNo
     <section className="duofy-card rounded-2xl p-5">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="flex items-center gap-1.5 text-base font-bold text-ink"><ChartIcon className="h-4 w-4 text-muted" /> {title}</h3>
-        <button className="text-muted"><MoreIcon className="h-5 w-5" /></button>
       </div>
       <div className="overflow-x-auto duofy-scroll">{children}</div>
     </section>
   )
 }
 
-function Delta({ value, delta, dir }: { value: string; delta: string; dir: string }) {
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      <span className="text-ink">{value}</span>
-      <span className={`inline-flex items-center gap-0.5 text-xs font-semibold ${dir === "up" ? "text-green" : "text-red"}`}>
-        {dir === "up" ? <TrendUpIcon className="h-3 w-3" /> : <TrendDownIcon className="h-3 w-3" />}
-        {delta}
-      </span>
-    </span>
-  )
+function Empty() {
+  return <div className="grid h-[180px] place-items-center text-sm text-muted">Sem dados no período.</div>
 }

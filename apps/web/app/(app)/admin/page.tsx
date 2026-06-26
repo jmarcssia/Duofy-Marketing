@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { Badge } from "@/components/ui"
-import {
-  SparklesIcon, PlusIcon, ChevronDownIcon, RefreshIcon,
-  SettingsIcon, ShieldCheckIcon, CloseIcon
-} from "@/components/icons"
+import { PlusIcon } from "@/components/icons"
+import { apiFetch } from "@/lib/api"
+import { getTokenFromCookie } from "@/lib/auth"
+import { useBrand } from "@/lib/brand-context"
 
 // ── API types ──────────────────────────────────────────────────────────────
 
@@ -81,6 +81,7 @@ const FLUXOS = [
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
+  const { selected: selectedBrand } = useBrand()
   const [tab, setTab] = useState<Tab>("agentes")
 
   // Data
@@ -106,31 +107,32 @@ export default function AdminPage() {
 
   // Load agents + providers + settings
   useEffect(() => {
+    const token = getTokenFromCookie()
+    if (!token) { setLoading(false); return }
     const load = async () => {
       setLoading(true)
-      try {
-        const [ar, pr, sr] = await Promise.all([
-          fetch("/api/admin/agents", { credentials: "include" }),
-          fetch("/api/admin/providers", { credentials: "include" }),
-          fetch("/api/admin/agent-settings", { credentials: "include" }),
-        ])
-        if (ar.ok) {
-          const data: Agent[] = await ar.json()
-          setAgents(data)
-          if (data.length > 0) setSelectedAgent(data[0])
-        }
-        if (pr.ok) setProviders(await pr.json())
-        if (sr.ok) setAgentSettings(await sr.json())
-      } catch { /* network error — show empty state */ }
+      const [ag, pv, st] = await Promise.allSettled([
+        apiFetch<Agent[]>("/api/admin/agents", token),
+        apiFetch<Provider[]>("/api/admin/providers", token),
+        apiFetch<AgentSettings>("/api/admin/agent-settings", token),
+      ])
+      if (ag.status === "fulfilled") {
+        setAgents(ag.value)
+        if (ag.value.length > 0) setSelectedAgent(ag.value[0])
+      }
+      if (pv.status === "fulfilled") setProviders(pv.value)
+      if (st.status === "fulfilled") setAgentSettings(st.value)
       setLoading(false)
     }
     load()
   }, [])
 
   const loadRuns = useCallback(async (slug: string) => {
+    const token = getTokenFromCookie()
+    if (!token) return
     try {
-      const res = await fetch(`/api/agents/runs?agent_slug=${slug}&limit=10`, { credentials: "include" })
-      if (res.ok) setRuns(await res.json())
+      const data = await apiFetch<AgentRun[]>(`/api/agents/runs?agent_slug=${slug}&limit=10`, token)
+      setRuns(data)
     } catch { /* ignore */ }
   }, [])
 
@@ -144,23 +146,21 @@ export default function AdminPage() {
 
   const runAgent = async () => {
     if (!selectedAgent || !testPrompt.trim()) return
+    const token = getTokenFromCookie()
+    if (!token) { setTestError("Sessão expirada. Faça login novamente."); return }
     setTestLoading(true)
     setTestError(null)
     setTestResult(null)
     try {
-      const res = await fetch("/api/agents/run", {
+      const data = await apiFetch<AgentRun>("/api/agents/run", token, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({
           agent_slug: selectedAgent.slug,
           prompt: testPrompt,
-          brand_slug: brandSlug || undefined,
+          brand_slug: (brandSlug || selectedBrand) || undefined,
         }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.detail || JSON.stringify(data))
-      setTestResult(data as AgentRun)
+      setTestResult(data)
       loadRuns(selectedAgent.slug)
     } catch (e: unknown) {
       setTestError(e instanceof Error ? e.message : "Erro desconhecido")
@@ -170,16 +170,16 @@ export default function AdminPage() {
 
   const searchMemory = async () => {
     if (!memQuery.trim()) return
+    const token = getTokenFromCookie()
+    if (!token) return
     setMemLoading(true)
     try {
-      const res = await fetch("/api/memory/search", {
+      const data = await apiFetch<MemoryHit[]>("/api/memory/search", token, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ query: memQuery, limit: 5 }),
+        body: JSON.stringify({ query: memQuery, brand_slug: selectedBrand || undefined, limit: 5 }),
       })
-      if (res.ok) setMemResults(await res.json())
-    } catch { /* ignore */ }
+      setMemResults(data)
+    } catch { setMemResults([]) }
     setMemLoading(false)
   }
 

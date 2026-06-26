@@ -1,87 +1,278 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
-import { Badge, ChecklistRow, GhostButton } from "@/components/ui"
+import { Badge, GhostButton } from "@/components/ui"
 import {
   AlertTriangleIcon,
   BookIcon,
   CheckCircleIcon,
   CopyIcon,
   FileIcon,
-  FilterIcon,
   PlusIcon,
+  RefreshIcon,
   SendIcon,
   SettingsIcon,
   ShieldCheckIcon,
-  ShuffleIcon,
-  SparklesIcon,
-  TargetIcon,
-  UsersIcon
+  SparklesIcon
 } from "@/components/icons"
 import {
-  cocriacaoAngles,
-  cocriacaoPrompts,
-  formatRules,
-  operationsGuardian,
-  orchestratorMessages,
-  researchCards,
-  researchDetail
-} from "@/lib/mock"
+  apiFetch,
+  type AgentRun,
+  type ContentOutputDetail,
+  type ResearchReport
+} from "@/lib/api"
+import { getTokenFromCookie } from "@/lib/auth"
+import { useBrand } from "@/lib/brand-context"
 
-const columns = [
-  { id: "analise" as const, label: "Em análise" },
-  { id: "revisao" as const, label: "Em revisão" },
-  { id: "aprovado" as const, label: "Aprovado" }
+type ChatMsg = { id: string; role: "user" | "assistant"; text: string; time: string; pending?: boolean; error?: boolean }
+
+type ColId = "analise" | "revisao" | "aprovado"
+
+const COLUMNS: { id: ColId; label: string }[] = [
+  { id: "analise", label: "Em análise" },
+  { id: "revisao", label: "Em revisão" },
+  { id: "aprovado", label: "Aprovado" }
 ]
 
-const formatIcons: Record<string, typeof FileIcon> = {
-  post: FileIcon,
-  carousel: BookIcon,
-  linkedin: UsersIcon,
-  blog: FileIcon
+const STATUS_TO_COL: Record<string, ColId> = {
+  draft: "analise",
+  needs_adjustment: "analise",
+  rejected: "analise",
+  review: "revisao",
+  approved: "aprovado",
+  archived: "aprovado"
 }
 
-const formatSub: Record<string, string> = {
-  "Post único": "Imagem + legenda",
-  Carrossel: "Até 10 slides",
-  LinkedIn: "Post profissional",
-  Blog: "Artigo completo"
+const STATUS_LABEL: Record<string, { label: string; tone: "amber" | "blue" | "green" | "slate" }> = {
+  draft: { label: "Rascunho", tone: "amber" },
+  review: { label: "Em revisão", tone: "blue" },
+  approved: { label: "Aprovado", tone: "green" },
+  needs_adjustment: { label: "Ajuste", tone: "amber" },
+  rejected: { label: "Rejeitado", tone: "slate" },
+  archived: { label: "Arquivado", tone: "slate" }
+}
+
+function now() {
+  return new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+}
+
+function summarize(content: string, max = 420): string {
+  if (!content) return "Sem conteúdo gerado ainda."
+  // pega o primeiro parágrafo de texto real (ignora cabeçalhos markdown e tabelas)
+  const lines = content
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith("#") && !l.startsWith("|") && !l.startsWith("---") && !l.startsWith("-"))
+  const text = lines.join(" ")
+  return text.length > max ? `${text.slice(0, max)}…` : text || "Documento estruturado — abra os detalhes."
 }
 
 export default function OperationsPage() {
-  const [selected, setSelected] = useState("r3")
-  const [activeFormat, setActiveFormat] = useState("Carrossel")
-  const [activeTab, setActiveTab] = useState<"Resumo" | "Insights" | "Anexos">("Resumo")
+  const { selected: brand } = useBrand()
+
+  // ── Orquestrador ──
+  const [messages, setMessages] = useState<ChatMsg[]>([
+    {
+      id: "intro",
+      role: "assistant",
+      text: "Olá! Sou o Orquestrador. Posso disparar pesquisas, gerar conteúdo e coordenar os agentes. O que você precisa?",
+      time: now()
+    }
+  ])
+  const [input, setInput] = useState("")
+  const [sending, setSending] = useState(false)
+  const chatEndRef = useRef<HTMLDivElement>(null)
+
+  // ── Kanban ──
+  const [reports, setReports] = useState<ResearchReport[]>([])
+  const [loadingReports, setLoadingReports] = useState(true)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [detail, setDetail] = useState<ContentOutputDetail | null>(null)
+  const [acting, setActing] = useState(false)
+
+  // ── Cocriação ──
+  const [genLoading, setGenLoading] = useState(false)
+  const [genResult, setGenResult] = useState<string | null>(null)
+  const [genError, setGenError] = useState<string | null>(null)
+
+  const loadReports = useCallback(async () => {
+    const token = getTokenFromCookie()
+    if (!token) { setLoadingReports(false); return }
+    setLoadingReports(true)
+    try {
+      const data = await apiFetch<ResearchReport[]>(`/api/research/reports?limit=50`, token)
+      const filtered = brand ? data.filter((r) => r.brand_slug === brand) : data
+      setReports(filtered)
+      if (filtered.length > 0 && !filtered.some((r) => r.id === selectedId)) {
+        setSelectedId(filtered[0].id)
+      }
+    } catch {
+      setReports([])
+    }
+    setLoadingReports(false)
+  }, [brand, selectedId])
+
+  useEffect(() => { loadReports() }, [brand]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages])
+
+  // load detail of selected report
+  useEffect(() => {
+    if (selectedId == null) { setDetail(null); return }
+    const token = getTokenFromCookie()
+    if (!token) return
+    setDetail(null)
+    setGenResult(null)
+    setGenError(null)
+    apiFetch<ContentOutputDetail>(`/api/outputs/${selectedId}`, token)
+      .then(setDetail)
+      .catch(() => setDetail(null))
+  }, [selectedId])
+
+  const selectedReport = reports.find((r) => r.id === selectedId) ?? null
+
+  async function sendMessage(prompt?: string) {
+    const text = (prompt ?? input).trim()
+    if (!text || sending) return
+    const token = getTokenFromCookie()
+    if (!token) return
+    const userMsg: ChatMsg = { id: `u${Date.now()}`, role: "user", text, time: now() }
+    const pendingMsg: ChatMsg = { id: `p${Date.now()}`, role: "assistant", text: "Pensando…", time: now(), pending: true }
+    setMessages((m) => [...m, userMsg, pendingMsg])
+    setInput("")
+    setSending(true)
+    try {
+      const run = await apiFetch<AgentRun>("/api/agents/run", token, {
+        method: "POST",
+        body: JSON.stringify({ agent_slug: "orchestrator", prompt: text, brand_slug: brand || undefined })
+      })
+      setMessages((m) =>
+        m.map((msg) =>
+          msg.id === pendingMsg.id
+            ? { ...msg, text: run.output || run.error || "(sem resposta)", time: now(), pending: false, error: run.status === "failed" }
+            : msg
+        )
+      )
+    } catch (e: unknown) {
+      const detail = e instanceof Error ? e.message : "Erro ao executar o agente."
+      setMessages((m) =>
+        m.map((msg) => (msg.id === pendingMsg.id ? { ...msg, text: detail, time: now(), pending: false, error: true } : msg))
+      )
+    }
+    setSending(false)
+  }
+
+  async function approveReport() {
+    if (!selectedReport) return
+    const token = getTokenFromCookie()
+    if (!token) return
+    setActing(true)
+    try {
+      await apiFetch(`/api/outputs/${selectedReport.id}/approve`, token, { method: "POST", body: JSON.stringify({}) })
+      await loadReports()
+      const fresh = await apiFetch<ContentOutputDetail>(`/api/outputs/${selectedReport.id}`, token)
+      setDetail(fresh)
+    } catch { /* surfaced via reload */ }
+    setActing(false)
+  }
+
+  async function saveToMemory() {
+    if (!selectedReport) return
+    const token = getTokenFromCookie()
+    if (!token) return
+    setActing(true)
+    try {
+      await apiFetch(`/api/research/reports/${selectedReport.id}/save-memory`, token, { method: "POST", body: JSON.stringify({}) })
+    } catch { /* ignore */ }
+    setActing(false)
+  }
+
+  async function generateContent() {
+    if (!selectedReport) return
+    const token = getTokenFromCookie()
+    if (!token) return
+    setGenLoading(true)
+    setGenError(null)
+    setGenResult(null)
+    const prompt = `Com base nesta pesquisa de mercado, gere um conteúdo pronto para publicação.\n\nTítulo da pesquisa: ${selectedReport.title}\nBriefing: ${selectedReport.briefing}\n\nEntregue uma legenda envolvente com CTA e hashtags para Instagram.`
+    try {
+      const run = await apiFetch<AgentRun>("/api/agents/run", token, {
+        method: "POST",
+        body: JSON.stringify({ agent_slug: "content_agent", prompt, brand_slug: brand || undefined })
+      })
+      if (run.status === "failed") setGenError(run.error || "Falha na geração.")
+      else setGenResult(run.output)
+    } catch (e: unknown) {
+      setGenError(e instanceof Error ? e.message : "Erro ao gerar conteúdo.")
+    }
+    setGenLoading(false)
+  }
+
+  const QUICK = [
+    { icon: <PlusIcon className="h-4 w-4" />, label: "Nova pesquisa", prompt: "Faça uma pesquisa de mercado rápida sobre tendências relevantes para a nossa marca." },
+    { icon: <SparklesIcon className="h-4 w-4" />, label: "Gerar conteúdo", prompt: "Gere uma ideia de carrossel para Instagram com base nas pesquisas recentes." },
+    { icon: <RefreshIcon className="h-4 w-4" />, label: "Refinar tema", prompt: "Sugira 3 ângulos diferentes para abordar o último tema pesquisado." }
+  ]
 
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[336px_minmax(0,1fr)_372px]">
         {/* Orquestrador */}
-        <section className="duofy-card flex flex-col rounded-2xl p-5">
+        <section className="duofy-card flex flex-col rounded-2xl p-5" style={{ maxHeight: "calc(100vh - 130px)" }}>
           <div className="mb-4 flex items-center gap-2">
             <SparklesIcon className="h-5 w-5 text-purple" />
             <h2 className="text-base font-bold tracking-[-0.02em] text-ink">Orquestrador</h2>
+            <Badge tone="green">conectado</Badge>
           </div>
-          <div className="flex-1 space-y-3">
-            {orchestratorMessages.map((m) => (
-              <div key={m.id} className={`max-w-[88%] ${m.me ? "ml-auto" : ""}`}>
-                <div className={`rounded-2xl px-4 py-3 text-sm ${m.me ? "bg-purple text-white" : "bg-purple-soft/70 text-ink"}`}>
+          <div className="flex-1 space-y-3 overflow-y-auto duofy-scroll pr-1">
+            {messages.map((m) => (
+              <div key={m.id} className={`max-w-[90%] ${m.role === "user" ? "ml-auto" : ""}`}>
+                <div
+                  className={`whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm ${
+                    m.role === "user"
+                      ? "bg-purple text-white"
+                      : m.error
+                        ? "bg-red-50 text-red-700"
+                        : "bg-purple-soft/70 text-ink"
+                  } ${m.pending ? "animate-pulse" : ""}`}
+                >
                   {m.text}
                 </div>
-                <p className={`mt-1 text-[11px] text-muted ${m.me ? "text-right" : ""}`}>{m.time}</p>
+                <p className={`mt-1 text-[11px] text-muted ${m.role === "user" ? "text-right" : ""}`}>{m.time}</p>
               </div>
             ))}
+            <div ref={chatEndRef} />
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
-            <GhostButton className="text-xs"><PlusIcon className="h-4 w-4" /> Nova pesquisa</GhostButton>
-            <GhostButton className="text-xs"><SparklesIcon className="h-4 w-4" /> Gerar conteúdo</GhostButton>
-            <GhostButton className="text-xs"><ShuffleIcon className="h-4 w-4" /> Refinar tema</GhostButton>
+            {QUICK.map((q) => (
+              <GhostButton key={q.label} className="text-xs" onClick={() => sendMessage(q.prompt)}>
+                {q.icon} {q.label}
+              </GhostButton>
+            ))}
           </div>
           <div className="mt-3 flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2">
-            <input className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-muted" placeholder="Pergunte algo ao Orquestrador..." />
-            <button className="grid h-8 w-8 place-items-center rounded-lg bg-purple text-white" aria-label="Enviar">
-              <SendIcon className="h-4 w-4" />
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+              disabled={sending}
+              className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-muted disabled:opacity-60"
+              placeholder="Pergunte algo ao Orquestrador..."
+            />
+            <button
+              onClick={() => sendMessage()}
+              disabled={sending || !input.trim()}
+              className="grid h-8 w-8 place-items-center rounded-lg bg-purple text-white disabled:opacity-50"
+              aria-label="Enviar"
+            >
+              {sending ? (
+                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
+              ) : (
+                <SendIcon className="h-4 w-4" />
+              )}
             </button>
           </div>
         </section>
@@ -90,99 +281,136 @@ export default function OperationsPage() {
         <section className="duofy-card rounded-2xl p-5">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-base font-bold tracking-[-0.02em] text-ink">Kanban de Pesquisas</h2>
-            <button className="flex items-center gap-1.5 text-sm font-medium text-muted hover:text-purple">
-              <FilterIcon className="h-4 w-4" /> Filtrar
+            <button onClick={loadReports} className="flex items-center gap-1.5 text-sm font-medium text-muted hover:text-purple">
+              <RefreshIcon className="h-4 w-4" /> Atualizar
             </button>
           </div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            {columns.map((col) => {
-              const cards = researchCards.filter((c) => c.column === col.id)
-              return (
-                <div key={col.id} className="flex flex-col">
-                  <div className="mb-3 flex items-center justify-between px-1">
-                    <span className="text-sm font-semibold text-ink">{col.label}</span>
-                    <span className="grid h-5 min-w-[20px] place-items-center rounded-full bg-line/70 px-1 text-xs font-semibold text-muted">{cards.length}</span>
+          {loadingReports ? (
+            <div className="grid grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => <div key={i} className="h-32 animate-pulse rounded-xl bg-line/50" />)}
+            </div>
+          ) : reports.length === 0 ? (
+            <div className="grid place-items-center rounded-xl border border-dashed border-line py-16 text-center">
+              <p className="text-sm text-muted">Nenhuma pesquisa para esta marca ainda.</p>
+              <button onClick={() => sendMessage(QUICK[0].prompt)} className="mt-2 text-sm font-semibold text-purple">
+                Disparar primeira pesquisa →
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              {COLUMNS.map((col) => {
+                const cards = reports.filter((r) => (STATUS_TO_COL[r.status] ?? "analise") === col.id)
+                return (
+                  <div key={col.id} className="flex flex-col">
+                    <div className="mb-3 flex items-center justify-between px-1">
+                      <span className="text-sm font-semibold text-ink">{col.label}</span>
+                      <span className="grid h-5 min-w-[20px] place-items-center rounded-full bg-line/70 px-1 text-xs font-semibold text-muted">{cards.length}</span>
+                    </div>
+                    <div className="space-y-3">
+                      {cards.map((card) => {
+                        const active = selectedId === card.id
+                        const st = STATUS_LABEL[card.status] ?? { label: card.status, tone: "slate" as const }
+                        return (
+                          <button
+                            key={card.id}
+                            onClick={() => setSelectedId(card.id)}
+                            className={`w-full rounded-xl border bg-white p-3.5 text-left transition ${active ? "border-purple shadow-soft ring-1 ring-purple/30" : "border-line hover:border-purple/40"}`}
+                          >
+                            <p className="text-sm font-semibold leading-snug text-ink">{card.title}</p>
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              <Badge tone={st.tone}>{st.label}</Badge>
+                              <Badge tone="slate">{card.category}</Badge>
+                            </div>
+                            <p className="mt-2.5 line-clamp-2 text-xs text-muted">{card.briefing}</p>
+                            <div className="mt-2 flex items-center justify-between border-t border-line pt-2">
+                              <span className="text-xs font-medium text-ink">{card.sources?.length ?? 0} fontes</span>
+                              <span className="text-xs text-muted">#{card.id}</span>
+                            </div>
+                          </button>
+                        )
+                      })}
+                      {cards.length === 0 && <p className="px-1 text-xs text-muted">—</p>}
+                    </div>
                   </div>
-                  <div className="space-y-3">
-                    {cards.map((card) => {
-                      const active = selected === card.id
-                      return (
-                        <button
-                          key={card.id}
-                          onClick={() => setSelected(card.id)}
-                          className={`w-full rounded-xl border bg-white p-3.5 text-left transition ${active ? "border-purple shadow-soft ring-1 ring-purple/30" : "border-line hover:border-purple/40"}`}
-                        >
-                          <p className="text-sm font-semibold leading-snug text-ink">{card.title}</p>
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            {card.tags.map((t) => (
-                              <Badge key={t.label} tone={t.tone}>{t.label}</Badge>
-                            ))}
-                          </div>
-                          <p className="mt-2.5 text-xs text-muted">Fonte: {card.source}</p>
-                          <div className="mt-2 flex items-center justify-between">
-                            <span className="text-xs font-medium text-ink">{card.owner}</span>
-                            <span className="text-xs text-muted">{card.date}</span>
-                          </div>
-                          <div className="mt-2.5 border-t border-line pt-2">
-                            <span className={`text-xs font-semibold ${card.guardian.tone === "green" ? "text-green" : "text-amber"}`}>◈ {card.guardian.label}</span>
-                          </div>
-                        </button>
-                      )
-                    })}
-                    <button className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-line py-2.5 text-xs font-medium text-muted transition hover:border-purple/40 hover:text-purple">
-                      <PlusIcon className="h-4 w-4" /> Adicionar pesquisa
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          )}
         </section>
 
         {/* Detalhe */}
-        <section className="duofy-card flex flex-col rounded-2xl p-5">
-          <div className="mb-3 flex items-start justify-between gap-3">
-            <h2 className="text-lg font-bold leading-snug tracking-[-0.02em] text-ink">{researchDetail.title}</h2>
-            <button className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-muted hover:bg-purple-soft hover:text-purple" aria-label="Fechar">
-              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 6l12 12M18 6 6 18" strokeLinecap="round" /></svg>
-            </button>
-          </div>
-          <p className="text-xs text-muted">Fonte: {researchDetail.source} · Criada em {researchDetail.createdAt} por {researchDetail.author}</p>
-
-          <div className="mt-4 flex items-center gap-5 border-b border-line">
-            {(["Resumo", "Insights", "Anexos"] as const).map((tab) => (
-              <button key={tab} onClick={() => setActiveTab(tab)} className={`relative -mb-px pb-2.5 text-sm font-semibold transition ${activeTab === tab ? "text-purple" : "text-muted hover:text-ink"}`}>
-                {tab}
-                {activeTab === tab ? <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-purple" /> : null}
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-4 flex-1">
-            <p className="text-sm leading-relaxed text-ink/80">{researchDetail.summary}</p>
-            <dl className="mt-4 space-y-2.5">
-              {researchDetail.meta.map((m) => (
-                <div key={m.label} className="flex gap-2 text-sm">
-                  <dt className="font-semibold text-ink">{m.label}:</dt>
-                  <dd className="text-muted">{m.value}</dd>
-                </div>
-              ))}
-            </dl>
-            <button className="mt-4 flex items-center gap-1 text-sm font-semibold text-purple">
-              Ver mais detalhes
-              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6" strokeLinecap="round" /></svg>
-            </button>
-          </div>
-
-          <div className="mt-4 space-y-2.5">
-            <button className="flex w-full items-center justify-center gap-2 rounded-xl bg-green py-3 text-sm font-semibold text-white transition hover:brightness-105">
-              <CheckCircleIcon className="h-5 w-5" /> Aprovar
-            </button>
-            <div className="grid grid-cols-2 gap-2.5">
-              <GhostButton className="justify-center"><SettingsIcon className="h-4 w-4" /> Solicitar ajuste</GhostButton>
-              <GhostButton className="justify-center"><BookIcon className="h-4 w-4" /> Salvar na memória</GhostButton>
+        <section className="duofy-card flex flex-col rounded-2xl p-5" style={{ maxHeight: "calc(100vh - 130px)" }}>
+          {!selectedReport ? (
+            <div className="grid flex-1 place-items-center text-center text-sm text-muted">
+              Selecione uma pesquisa no kanban.
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <h2 className="text-lg font-bold leading-snug tracking-[-0.02em] text-ink">{selectedReport.title}</h2>
+                <Badge tone={(STATUS_LABEL[selectedReport.status]?.tone) ?? "slate"}>{STATUS_LABEL[selectedReport.status]?.label ?? selectedReport.status}</Badge>
+              </div>
+              <p className="text-xs text-muted">
+                {selectedReport.channel} · {selectedReport.provider}/{selectedReport.model.replace("~", "")} · #{selectedReport.id}
+              </p>
+
+              <div className="mt-4 flex-1 overflow-y-auto duofy-scroll pr-1">
+                <p className="text-sm leading-relaxed text-ink/80">{summarize(detail?.current_content ?? selectedReport.current_content)}</p>
+
+                {selectedReport.sources && selectedReport.sources.length > 0 && (
+                  <div className="mt-4">
+                    <p className="mb-2 text-sm font-semibold text-ink">Fontes ({selectedReport.sources.length})</p>
+                    <ul className="space-y-2">
+                      {selectedReport.sources.slice(0, 8).map((s) => (
+                        <li key={s.id} className="rounded-lg border border-line bg-white p-2.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="truncate text-xs font-semibold text-ink">{s.title}</span>
+                            <Badge tone={s.reliability === "high" ? "green" : s.reliability === "low" ? "amber" : "slate"}>{s.reliability}</Badge>
+                          </div>
+                          {s.url && (
+                            <a href={s.url} target="_blank" rel="noreferrer" className="mt-0.5 block truncate text-[11px] text-purple hover:underline">
+                              {s.url}
+                            </a>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {detail?.quality_notes && detail.quality_notes.length > 0 && (
+                  <div className="mt-4">
+                    <p className="mb-1.5 text-sm font-semibold text-ink">Notas de qualidade</p>
+                    <ul className="space-y-1">
+                      {detail.quality_notes.map((n, i) => (
+                        <li key={i} className="flex gap-2 text-xs text-muted">
+                          <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber" />{n}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-4 space-y-2.5">
+                <button
+                  onClick={approveReport}
+                  disabled={acting || selectedReport.status === "approved"}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-green py-3 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-50"
+                >
+                  <CheckCircleIcon className="h-5 w-5" /> {selectedReport.status === "approved" ? "Aprovado" : "Aprovar"}
+                </button>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <GhostButton className="justify-center" onClick={() => sendMessage(`Refine e melhore a pesquisa "${selectedReport.title}".`)}>
+                    <SettingsIcon className="h-4 w-4" /> Solicitar ajuste
+                  </GhostButton>
+                  <GhostButton className="justify-center" onClick={saveToMemory}>
+                    <BookIcon className="h-4 w-4" /> Salvar na memória
+                  </GhostButton>
+                </div>
+              </div>
+            </>
+          )}
         </section>
       </div>
 
@@ -190,132 +418,102 @@ export default function OperationsPage() {
       <section className="duofy-card rounded-2xl p-5">
         <div className="mb-4 flex items-center gap-3">
           <h2 className="text-lg font-bold tracking-[-0.02em] text-ink">Cocriação contextual</h2>
-          <Badge tone="purple">Baseada na pesquisa selecionada</Badge>
+          {selectedReport ? (
+            <Badge tone="purple">Baseada em: {selectedReport.title}</Badge>
+          ) : (
+            <Badge tone="slate">Selecione uma pesquisa</Badge>
+          )}
         </div>
 
-        <div className="flex flex-wrap items-end gap-3">
-          {[
-            { label: "Marca", value: "Duofy" },
-            { label: "Canal", value: "Instagram" },
-            { label: "Tipo de entrega", value: "Carrossel" },
-            { label: "Objetivo", value: "Engajamento" }
-          ].map((f) => (
-            <label key={f.label} className="flex flex-col gap-1">
-              <span className="text-xs font-semibold text-muted">{f.label}</span>
-              <div className="flex h-10 min-w-[150px] items-center justify-between gap-2 rounded-xl border border-line bg-white px-3 text-sm font-medium text-ink">
-                {f.value}
-                <svg viewBox="0 0 24 24" className="h-4 w-4 text-muted" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6" strokeLinecap="round" /></svg>
-              </div>
-            </label>
-          ))}
-          <button className="ml-auto flex h-10 items-center gap-1.5 rounded-xl border border-line bg-white px-3.5 text-sm font-medium text-muted hover:text-purple">
-            <ShuffleIcon className="h-4 w-4" /> Redefinir filtros
-          </button>
-        </div>
-
-        <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[200px_minmax(0,1fr)_300px]">
-          <div className="space-y-2.5">
-            {formatRules.map((f) => {
-              const Icon = formatIcons[f.icon] ?? FileIcon
-              const active = f.format === activeFormat
-              return (
-                <button key={f.format} onClick={() => setActiveFormat(f.format)} className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition ${active ? "border-purple bg-purple-soft/50" : "border-line bg-white hover:border-purple/40"}`}>
-                  <span className={`grid h-9 w-9 place-items-center rounded-lg ${active ? "bg-purple text-white" : "bg-purple-soft text-purple"}`}>
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <span>
-                    <span className="block text-sm font-semibold text-ink">{f.format}</span>
-                    <span className="block text-xs text-muted">{formatSub[f.format]}</span>
-                  </span>
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="space-y-4">
+            <div className="rounded-xl border border-line bg-white p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-bold text-ink">Gerar conteúdo com o agente de Cocriação</p>
+                <button
+                  onClick={generateContent}
+                  disabled={!selectedReport || genLoading}
+                  className="flex items-center gap-1.5 rounded-lg bg-purple px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-purple-deep disabled:opacity-50"
+                >
+                  {genLoading ? (
+                    <>
+                      <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
+                      Gerando…
+                    </>
+                  ) : (
+                    <><SparklesIcon className="h-4 w-4" /> Gerar conteúdo</>
+                  )}
                 </button>
-              )
-            })}
+              </div>
+              <p className="mt-1 text-xs text-muted">
+                O agente <span className="font-medium text-ink">content_agent</span> usa a pesquisa selecionada como contexto e gera uma entrega pronta.
+              </p>
+
+              {genError && (
+                <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">{genError}</div>
+              )}
+              {genResult && (
+                <div className="mt-3 rounded-lg border border-green-200 bg-green-50/50 p-3">
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-ink">Conteúdo gerado</span>
+                    <button
+                      onClick={() => navigator.clipboard?.writeText(genResult)}
+                      className="flex items-center gap-1 text-xs font-semibold text-purple"
+                    >
+                      <CopyIcon className="h-3.5 w-3.5" /> Copiar
+                    </button>
+                  </div>
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink">{genResult}</p>
+                </div>
+              )}
+              {!genResult && !genError && !genLoading && (
+                <div className="mt-3 grid place-items-center rounded-lg border border-dashed border-line py-8 text-center text-xs text-muted">
+                  {selectedReport ? "Clique em “Gerar conteúdo” para criar uma entrega real a partir desta pesquisa." : "Selecione uma pesquisa no kanban acima."}
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <AngleCard icon={<TargetIcon className="h-4 w-4" />} title="a) Ângulo estratégico" text={cocriacaoAngles.strategic} />
-              <AngleCard icon={<UsersIcon className="h-4 w-4" />} title="b) Persona utilizada" text={cocriacaoAngles.persona} />
-              <AngleCard icon={<FileIcon className="h-4 w-4" />} title="c) Legenda sugerida" text={cocriacaoAngles.legend} />
-              <AngleCard icon={<SparklesIcon className="h-4 w-4" />} title="d) CTA e hashtags" text={`${cocriacaoAngles.cta} ${cocriacaoAngles.hashtags}`} />
+          {/* Guardião */}
+          <div className="rounded-xl border border-line bg-white p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <ShieldCheckIcon className="h-5 w-5 text-purple" />
+              <p className="text-sm font-bold text-ink">Guardião de Qualidade</p>
             </div>
-
-            <div className="rounded-xl border border-line bg-white">
-              <div className="flex items-center justify-between border-b border-line px-4 py-3">
-                <p className="text-sm font-bold text-ink">Prompts refinados para geração externa</p>
-                <button className="flex items-center gap-1.5 text-xs font-semibold text-purple"><CopyIcon className="h-4 w-4" /> Copiar todos</button>
+            {detail?.latest_quality_review ? (
+              <>
+                <div className="flex items-end gap-2">
+                  <span className={`text-4xl font-extrabold leading-none ${detail.latest_quality_review.passed ? "text-green" : "text-amber"}`}>
+                    {Math.round(detail.latest_quality_review.score)}
+                  </span>
+                  <span className="pb-1 text-sm text-muted">/100</span>
+                </div>
+                <p className="text-xs text-muted">{detail.latest_quality_review.summary}</p>
+                {detail.latest_quality_review.required_fixes?.length > 0 && (
+                  <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber/10 p-2.5">
+                    <AlertTriangleIcon className="mt-0.5 h-4 w-4 shrink-0 text-amber" />
+                    <p className="text-xs text-ink">
+                      <span className="font-semibold">Correções:</span> {detail.latest_quality_review.required_fixes.slice(0, 2).join("; ")}
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="grid place-items-center rounded-lg border border-dashed border-line py-8 text-center">
+                <FileIcon className="h-6 w-6 text-muted" />
+                <p className="mt-1.5 text-xs text-muted">Sem revisão de qualidade ainda.</p>
+                <button
+                  onClick={() => selectedReport && sendMessage(`Acione o Guardião de Qualidade para avaliar a pesquisa "${selectedReport.title}".`)}
+                  disabled={!selectedReport}
+                  className="mt-1 text-xs font-semibold text-purple disabled:opacity-50"
+                >
+                  Solicitar avaliação →
+                </button>
               </div>
-              <ul className="divide-y divide-line">
-                {cocriacaoPrompts.map((p) => (
-                  <li key={p.id} className="flex items-start gap-3 px-4 py-3">
-                    <span className="w-32 shrink-0 text-sm font-semibold text-ink">{p.label}</span>
-                    <span className="flex-1 text-sm text-muted">{p.text}</span>
-                    <button className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-line text-muted hover:text-purple" aria-label="Copiar"><CopyIcon className="h-4 w-4" /></button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="rounded-xl border border-line bg-white p-4">
-              <p className="mb-3 text-sm font-bold text-ink">Regras por formato</p>
-              <ul className="space-y-3">
-                {formatRules.map((f) => {
-                  const Icon = formatIcons[f.icon] ?? FileIcon
-                  return (
-                    <li key={f.format} className="flex gap-3">
-                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-purple-soft text-purple"><Icon className="h-4 w-4" /></span>
-                      <span>
-                        <span className="block text-sm font-semibold text-ink">{f.format}</span>
-                        <span className="block text-xs leading-snug text-muted">{f.text}</span>
-                      </span>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-
-            <div className="rounded-xl border border-line bg-white p-4">
-              <div className="mb-2 flex items-center gap-2">
-                <ShieldCheckIcon className="h-5 w-5 text-purple" />
-                <p className="text-sm font-bold text-ink">Guardião</p>
-              </div>
-              <div className="flex items-end gap-2">
-                <span className="text-4xl font-extrabold leading-none text-green">{operationsGuardian.score}</span>
-                <span className="pb-1 text-sm text-muted">/100</span>
-              </div>
-              <p className="text-xs text-muted">Qualidade da entrega</p>
-              <ul className="mt-3 space-y-2">
-                {operationsGuardian.checklist.map((c) => (
-                  <ChecklistRow key={c} label={c} state="done" />
-                ))}
-              </ul>
-              <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber/10 p-2.5">
-                <AlertTriangleIcon className="mt-0.5 h-4 w-4 shrink-0 text-amber" />
-                <p className="text-xs text-ink"><span className="font-semibold">Sugestão:</span> {operationsGuardian.suggestion}.</p>
-              </div>
-              <button className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-purple py-2.5 text-sm font-semibold text-white transition hover:bg-purple-deep">
-                Abrir revisão
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14m0 0-6-6m6 6-6 6" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              </button>
-              <p className="mt-2 text-center text-[11px] text-muted">Última verificação: {operationsGuardian.lastCheck}</p>
-            </div>
+            )}
           </div>
         </div>
       </section>
-    </div>
-  )
-}
-
-function AngleCard({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
-  return (
-    <div className="rounded-xl border border-line bg-white p-3.5">
-      <p className="flex items-center gap-2 text-sm font-bold text-ink">
-        <span className="grid h-6 w-6 place-items-center rounded-md bg-purple-soft text-purple">{icon}</span>
-        {title}
-      </p>
-      <p className="mt-2 text-xs leading-relaxed text-muted">{text}</p>
     </div>
   )
 }

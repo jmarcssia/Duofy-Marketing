@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react"
 import { apiFetch, type AuditEvent, type ContentOutput, type MemorySearchResult, type User } from "@/lib/api"
 import { clearTokenCookie, getTokenFromCookie } from "@/lib/auth"
 import { DuofyLogo } from "@/components/duofy-logo"
-import { currentUser, workspaces } from "@/lib/mock"
+import { useBrand } from "@/lib/brand-context"
 import {
   BellIcon,
   CalendarIcon,
@@ -196,7 +196,8 @@ function UserMenu({ user }: { user: User | null }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
-  const name = user?.name ?? currentUser.name
+  const name = user?.name ?? "Usuário"
+  const roleLabel = user?.role === "admin" ? "Administrador" : user?.role === "manager" ? "Gerente" : "—"
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -219,7 +220,7 @@ function UserMenu({ user }: { user: User | null }) {
         </span>
         <span className="hidden text-left leading-tight md:block">
           <span className="block text-sm font-semibold text-ink">{name}</span>
-          <span className="block text-xs text-muted">{currentUser.role}</span>
+          <span className="block text-xs text-muted">{roleLabel}</span>
         </span>
         <ChevronDownIcon className="hidden h-4 w-4 text-muted md:block" />
       </button>
@@ -279,9 +280,9 @@ function SidebarBody({ pathname, onNavigate }: { pathname: string; onNavigate?: 
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const { brands, selected, setSelected } = useBrand()
   const [user, setUser] = useState<User | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [workspace, setWorkspace] = useState(workspaces[0])
 
   useEffect(() => {
     const token = getTokenFromCookie()
@@ -329,12 +330,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
 
           <label className="hidden h-11 shrink-0 items-center gap-2 rounded-xl border border-line bg-white px-3 text-sm font-semibold shadow-soft sm:flex">
-            <select value={workspace} onChange={(e) => setWorkspace(e.target.value)} className="max-w-[170px] bg-transparent pr-1 outline-none">
-              {workspaces.map((w) => (
-                <option key={w} value={w}>
-                  {w}
-                </option>
-              ))}
+            <select
+              value={selected}
+              onChange={(e) => setSelected(e.target.value)}
+              className="max-w-[200px] bg-transparent pr-1 outline-none"
+            >
+              {brands.length === 0 ? (
+                <option value="">Carregando marcas…</option>
+              ) : (
+                brands.map((b) => (
+                  <option key={b.slug} value={b.slug}>
+                    {b.name}
+                  </option>
+                ))
+              )}
             </select>
           </label>
 
