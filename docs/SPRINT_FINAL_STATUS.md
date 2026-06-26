@@ -1,49 +1,43 @@
-# Sprint Final - Controle de Execução
+# Status do Projeto — DUOFY V1
 
-## Baseline
+Atualizado em 2026-06-26.
 
-- Commit: `79896e2001d292658737fe8f1a629b0344f868b4`
-- Tag: `baseline-pre-final-sprint`
-- Data: `2026-06-26 01:59:20 -03:00`
-- Backup: `C:\DUOFY_BACKUPS\DUOFY_V1_MARKETING_AI_PRE_GIT_20260626-015251`
-
-## Consolidação de fluxo único
+## Fluxo de trabalho atual
 
 - Pasta oficial única: `C:\DUOFY_V1_MARKETING_AI`.
-- Branch atual de trabalho: `sprint/codex-stabilization`.
-- Codex e Cloud Code podem alterar qualquer área do projeto.
-- Regra operacional: apenas uma ferramenta trabalha por vez.
-- Antes de trocar de ferramenta:
-  - rodar checks relevantes;
-  - commitar a mudança;
-  - confirmar `git status --short` limpo;
-  - informar último commit e arquivos tocados.
-- Commit Cloud incorporado: `c8deb26 chore(web): prepare Cloud Code development environment`.
-- Worktree auxiliar anterior: `C:\DUOFY_V1_MARKETING_AI_CLOUD`.
-- Script atual de frontend dev: `scripts/start-frontend-dev.ps1`.
-- Porta padrão do frontend dev sequencial: `3001`.
-- Porta `3000`: reservada ao frontend Docker.
-- Branches antigas permanecem temporariamente como backup.
+- **Branch única de trabalho: `main`.** As branches de sprint/worktree paralelas foram consolidadas e removidas.
+- Não há mais modelo de "duas ferramentas em paralelo": o trabalho acontece direto na `main`, na pasta oficial.
+- Antes de mudanças relevantes: rodar os checks pertinentes, commitar pequeno e descritivo, confirmar `git status --short` limpo.
 
-## Checks recentes
+## Baseline e backup
 
-- `python -m ruff check apps/api/app apps/api/alembic apps/api/tests`: passou no baseline.
-- `$env:PYTHONPATH='apps/api'; python -m pytest`: passou no baseline, `14 passed`.
-- `npm.cmd --prefix apps/web run lint`: passou após consolidação.
-- `npm.cmd --prefix apps/web run build`: passou no baseline.
-- `docker compose ps`: serviços principais em execução no baseline.
-- `Invoke-RestMethod http://localhost:8000/health`: `api`, `postgres` e `redis` ok no baseline.
+- Commit baseline: `79896e2` (tag `baseline-pre-final-sprint`).
+- Backup completo pré-Git: `C:\DUOFY_BACKUPS\DUOFY_V1_MARKETING_AI_PRE_GIT_20260626-015251`.
 
-## Arquivos de coordenação
+## Checks de referência
 
-- `docs/WORKFLOW_DESENVOLVIMENTO_PARALELO.md`: regra atual de fluxo sequencial em pasta única.
-- `docs/CLOUDCODE_ENVIRONMENT_READY.md`: registro histórico da preparação anterior da worktree Cloud.
-- `scripts/start-frontend-dev.ps1`: script atual para iniciar frontend dev local na pasta oficial.
+```powershell
+python -m ruff check apps/api/app apps/api/alembic apps/api/tests
+$env:PYTHONPATH='apps/api'; python -m pytest        # 14 passed no baseline
+npm.cmd --prefix apps/web run lint
+npm.cmd --prefix apps/web run build                  # 17 rotas
+docker compose ps
+Invoke-RestMethod http://localhost:8000/health       # api, postgres, redis ok
+```
 
-## Segurança
+- Script de frontend dev local: `scripts/start-frontend-dev.ps1` (porta `3001`; porta `3000` é do frontend Docker).
 
-- `.env`, `.env.local`, uploads, dumps, dependências, caches e validações locais permanecem ignorados.
+## Correções de estabilização aplicadas
+
+- **Persistência de uploads**: adicionado bind mount `./storage:/app/storage` em `api` e `worker` no `docker-compose.yml`, para os documentos enviados sobreviverem a rebuild/recreate. Aplicar com `docker compose up -d --force-recreate api worker`.
+
+## Dívidas técnicas conhecidas
+
+- **Cookie JWT sem HttpOnly**: o token é legível por JavaScript (`apps/web/lib/auth.ts`). Corrigir "de verdade" exige refactor de auth (server-side/proxy); adiado conscientemente. Risco XSS baixo no contexto local-first.
+- **Vulnerabilidades npm (BLOQUEADOR PARA PRODUÇÃO)**: `npm audit` na época apontou `next` (alta — DoS/SSRF/cache poisoning/XSS), `postcss` (moderada) e `glob` (alta, em devDependencies). A correção automática puxa Next.js 16 (breaking). Deve ser tratada em **tarefa isolada com testes de regressão** (lint, build, smoke, validação visual), não em conserto pontual.
+
+## Segurança operacional
+
+- `.env`, `.env.local`, uploads, dumps, dependências, caches e validações locais permanecem ignorados pelo Git.
 - `apps/web/.env.local` deve existir localmente com `NEXT_PUBLIC_API_URL=http://localhost:8000`.
 - Nenhum segredo deve ser commitado.
-- Nenhum commit de workflow deve alterar funcionalidade, banco, migrations, prompts ou agentes.
-
