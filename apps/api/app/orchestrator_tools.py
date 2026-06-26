@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 
@@ -19,6 +20,29 @@ from app.schemas import (
 )
 
 LogFn = Callable[[str], Awaitable[None]]
+
+
+def _with_rollback(db: AsyncSession, coro_fn: Callable) -> Callable:
+    """Wrap an async tool coroutine so that any exception triggers db.rollback().
+
+    This prevents a failed transaction from poisoning the shared AsyncSession:
+    tools_node still catches the re-raised exception and converts it to a
+    ToolMessage, while the session is left in a clean (rolled-back) state.
+
+    functools.wraps copies __name__, __doc__, __annotations__, and __wrapped__
+    so that StructuredTool.from_function can still infer the argument schema
+    from the original coroutine's signature.
+    """
+
+    @functools.wraps(coro_fn)
+    async def wrapper(*args, **kwargs):
+        try:
+            return await coro_fn(*args, **kwargs)
+        except Exception:
+            await db.rollback()
+            raise
+
+    return wrapper
 
 
 async def _submit_to_guardian(db: AsyncSession, output) -> str:
@@ -121,7 +145,7 @@ def build_tools(
 
     return [
         StructuredTool.from_function(
-            coroutine=research_market,
+            coroutine=_with_rollback(db, research_market),
             name="research_market",
             description=(
                 "Pesquisa de mercado: coleta fontes externas e gera um relatorio."
@@ -129,7 +153,7 @@ def build_tools(
             ),
         ),
         StructuredTool.from_function(
-            coroutine=create_content,
+            coroutine=_with_rollback(db, create_content),
             name="create_content",
             description=(
                 "Gera conteudo (post, carrossel, artigo) como rascunho e envia ao Guardiao."
@@ -137,7 +161,7 @@ def build_tools(
             ),
         ),
         StructuredTool.from_function(
-            coroutine=create_press,
+            coroutine=_with_rollback(db, create_press),
             name="create_press",
             description=(
                 "Gera material de assessoria de imprensa (release/pauta/comunicado)"
@@ -145,7 +169,7 @@ def build_tools(
             ),
         ),
         StructuredTool.from_function(
-            coroutine=create_calendar,
+            coroutine=_with_rollback(db, create_calendar),
             name="create_calendar",
             description=(
                 "Gera um calendario editorial com eventos para um periodo (period_days)."
@@ -153,7 +177,7 @@ def build_tools(
             ),
         ),
         StructuredTool.from_function(
-            coroutine=search_memory,
+            coroutine=_with_rollback(db, search_memory),
             name="search_memory",
             description=(
                 "Consulta a memoria/documentos da marca (RAG)."

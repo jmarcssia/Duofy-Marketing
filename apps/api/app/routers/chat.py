@@ -176,6 +176,8 @@ async def create_message(
         session_id=session.id,
         user_id=current_user.id,
         brand_slug=brand_slug,
+        # intentionally "orchestrate" (task queue token); model_calls/output_type use
+        # "orchestrator" — different namespaces, nothing filters on either in V1.
         task_type="orchestrate",
         status="queued",
         input=payload.content,
@@ -183,7 +185,7 @@ async def create_message(
     db.add(task)
     await db.flush()
     message.agent_task_id = task.id
-    await add_task_log(db, task.id, "Tarefa classificada e enfileirada.")
+    await add_task_log(db, task.id, "Tarefa enfileirada para o orquestrador.")
     if session.title == "Nova conversa":
         session.title = payload.content[:80]
     await db.commit()

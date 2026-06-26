@@ -3,6 +3,42 @@ from langchain_core.messages import AIMessage, ToolMessage
 from langchain_core.tools import StructuredTool
 
 from app import orchestrator_graph
+from app.orchestrator_graph import _message_text  # noqa: F401 (used below)
+
+# ---------------------------------------------------------------------------
+# _message_text — IMPORTANT 2
+# ---------------------------------------------------------------------------
+
+def test_message_text_str_content():
+    """Plain string content is returned unchanged."""
+
+    class _Msg:
+        content = "olá mundo"
+
+    assert _message_text(_Msg()) == "olá mundo"
+
+
+def test_message_text_list_content_blocks():
+    """List of content blocks (Claude via OpenRouter) is joined into a str."""
+
+    class _Msg:
+        content = [
+            {"type": "text", "text": "Parte um. "},
+            {"type": "text", "text": "Parte dois."},
+        ]
+
+    result = _message_text(_Msg())
+    assert result == "Parte um. Parte dois."
+
+
+def test_message_text_list_with_non_dict_parts():
+    """Non-dict parts fall back to str()."""
+
+    class _Msg:
+        content = [{"type": "text", "text": "ok"}, 42]
+
+    result = _message_text(_Msg())
+    assert result == "ok42"
 
 
 def test_psycopg_dsn_from_async_url():
@@ -58,7 +94,6 @@ async def test_graph_runs_tool_then_finishes():
             "brand_slug": "duofy_solucoes",
             "task_id": 1,
             "step_count": 0,
-            "created": [],
         },
         config={"configurable": {"thread_id": "1"}},
     )

@@ -44,7 +44,26 @@ class OrchestratorState(TypedDict):
     brand_slug: str
     task_id: int
     step_count: int
-    created: list[dict]
+
+
+def _message_text(message) -> str:
+    """Coerce a message's .content to a plain str.
+
+    Some models (e.g. Claude via OpenRouter) return content as a list of
+    content blocks rather than a bare string.  This helper extracts the text
+    so downstream code always receives a str.
+    """
+    content = message.content
+    if isinstance(content, str):
+        return content
+    # list of content blocks, e.g. [{"type": "text", "text": "..."}]
+    parts = []
+    for part in content:
+        if isinstance(part, dict) and "text" in part:
+            parts.append(part["text"])
+        else:
+            parts.append(str(part))
+    return "".join(parts)
 
 
 def _provider_for_model(model: str) -> str:
@@ -148,8 +167,7 @@ async def run_orchestrator(
             "brand_slug": brand_slug,
             "task_id": task_id,
             "step_count": 0,
-            "created": [],
         },
         config={"configurable": {"thread_id": str(task_id)}},
     )
-    return state["messages"][-1].content
+    return _message_text(state["messages"][-1])

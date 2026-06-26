@@ -7,6 +7,9 @@ class _FakeDb:
     async def commit(self):
         pass
 
+    async def rollback(self):
+        pass
+
 
 class _FakeOutput:
     def __init__(self, id, status="draft"):
@@ -59,6 +62,38 @@ async def test_create_content_tool_creates_draft_and_runs_guardian(monkeypatch):
 
 
 @pytest.mark.anyio
+async def test_tool_rollback_on_service_error(monkeypatch):
+    """IMPORTANT 1: wrapper calls db.rollback() and re-raises when the underlying service raises."""
+    rollback_calls = []
+
+    class _TrackingDb:
+        async def rollback(self):
+            rollback_calls.append(True)
+
+        async def commit(self):
+            pass
+
+    async def exploding_research(db, payload):
+        raise RuntimeError("DB connection lost")
+
+    async def fake_log(msg):
+        pass
+
+    monkeypatch.setattr(orchestrator_tools, "run_market_research", exploding_research)
+
+    db = _TrackingDb()
+    tools = orchestrator_tools.build_tools(
+        db=db, brand_slug="duofy_solucoes", task_id=1, log=fake_log
+    )
+    research = {t.name: t for t in tools}["research_market"]
+
+    with pytest.raises(RuntimeError, match="DB connection lost"):
+        await research.ainvoke({"theme": "inteligencia artificial"})
+
+    assert rollback_calls, "db.rollback() deve ter sido chamado ao propagar a excecao"
+
+
+@pytest.mark.anyio
 async def test_research_tool_maps_params(monkeypatch):
     calls = {}
 
@@ -72,7 +107,7 @@ async def test_research_tool_maps_params(monkeypatch):
     monkeypatch.setattr(orchestrator_tools, "run_market_research", fake_research)
 
     tools = orchestrator_tools.build_tools(
-        db=object(), brand_slug="duofy_solucoes", task_id=1, log=fake_log
+        db=_FakeDb(), brand_slug="duofy_solucoes", task_id=1, log=fake_log
     )
     research = {t.name: t for t in tools}["research_market"]
 

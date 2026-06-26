@@ -57,6 +57,15 @@ async def _complete_task(
 
 
 async def _fail_task(db: AsyncSession, task: AgentTask, exc: Exception) -> AgentTask:
+    # Roll back any poisoned transaction before writing the failure record.
+    # A DB error inside a tool leaves the session in a failed-transaction state;
+    # without this rollback the subsequent db.commit() would raise PendingRollbackError
+    # and the task would never be marked failed.
+    try:
+        await db.rollback()
+    except Exception:
+        pass
+
     task.status = "failed"
     task.error = str(exc)
     task.result = f"Falha ao executar a tarefa: {exc}"
