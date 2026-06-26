@@ -10,17 +10,6 @@ def anyio_backend() -> str:
     return "asyncio"
 
 
-class _FakeDb:
-    """db.execute(select(Setting)...).scalar_one_or_none() devolve um Setting ou None."""
-    def __init__(self, value_by_key=None):
-        self._values = value_by_key or {}
-
-    async def execute(self, stmt):
-        # heurística: o resolver chama _setting_value(db, key); aqui devolvemos
-        # um objeto cujo .scalar_one_or_none() reflete o último key consultado.
-        # Para simplificar, monkeypatch _setting_value diretamente nos testes.
-        raise NotImplementedError
-
 
 @pytest.mark.anyio
 async def test_token_budget_from_db(monkeypatch):
@@ -73,3 +62,20 @@ async def test_research_depth_unknown_uses_quick(monkeypatch):
     monkeypatch.setattr(agent_limits, "_setting_value", fake_setting)
     result = await agent_limits.get_research_depth_limits(object(), "xpto")
     assert result == {"sources": 8, "excerpt": 1800}
+
+
+@pytest.mark.anyio
+async def test_research_depth_invalid_db_falls_back_to_config(monkeypatch):
+    import json
+    async def fake_setting(db, key):
+        if key == agent_limits.RESEARCH_DEPTH_LIMITS_KEY:
+            db_data = {
+                "deep": {"sources": 0, "excerpt": 100},
+                "quick": {"sources": 5, "excerpt": 600},
+            }
+            return json.dumps(db_data)
+        return None
+    monkeypatch.setattr(agent_limits, "_setting_value", fake_setting)
+    # DB "deep" is invalid -> must use config "deep" (15/4000), NOT DB "quick"
+    result = await agent_limits.get_research_depth_limits(object(), "deep")
+    assert result == {"sources": 15, "excerpt": 4000}

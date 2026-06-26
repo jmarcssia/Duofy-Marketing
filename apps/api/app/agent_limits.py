@@ -49,12 +49,23 @@ async def get_research_depth_limits(db, depth: str) -> dict:
     cfg = _config().get("research_depth", {})
     db_map = _db_json(await _setting_value(db, RESEARCH_DEPTH_LIMITS_KEY))
     for source in (db_map, cfg):
-        entry = source.get(depth) or source.get("quick")
+        entry = source.get(depth)
         if isinstance(entry, dict):
             sources = entry.get("sources")
             excerpt = entry.get("excerpt")
-            valid_sources = isinstance(sources, int) and 1 <= sources <= 30
-            valid_excerpt = isinstance(excerpt, int) and 500 <= excerpt <= 20000
-            if valid_sources and valid_excerpt:
+            valid = (
+                isinstance(sources, int) and 1 <= sources <= 30
+                and isinstance(excerpt, int) and 500 <= excerpt <= 20000
+            )
+            if valid:
                 return {"sources": sources, "excerpt": excerpt}
+    quick = cfg.get("quick", {})
+    sources = quick.get("sources")
+    excerpt = quick.get("excerpt")
+    valid = (
+        isinstance(sources, int) and 1 <= sources <= 30
+        and isinstance(excerpt, int) and 500 <= excerpt <= 20000
+    )
+    if valid:
+        return {"sources": sources, "excerpt": excerpt}
     return dict(_FALLBACK_DEPTH)
