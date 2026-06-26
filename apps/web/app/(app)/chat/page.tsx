@@ -1,6 +1,7 @@
 "use client"
 
 import { FormEvent, useEffect, useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 
 import { EmptyState, PageTitle, PurpleButton, SectionCard, SoftButton } from "@/components/page-primitives"
@@ -16,6 +17,50 @@ import {
 import { getTokenFromCookie } from "@/lib/auth"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+
+const ARTIFACT_LINKS: Array<{ pattern: RegExp; href: string }> = [
+  { pattern: /\/research/g, href: "/research" },
+  { pattern: /\/approvals/g, href: "/approvals" },
+  { pattern: /\/content/g, href: "/content" },
+  { pattern: /\/calendar/g, href: "/calendar" },
+]
+
+function LogMessage({ message }: { message: string }) {
+  const parts: Array<{ text: string; href?: string }> = []
+  let remaining = message
+  while (remaining.length > 0) {
+    let earliest: { index: number; text: string; href: string } | null = null
+    for (const { pattern, href } of ARTIFACT_LINKS) {
+      pattern.lastIndex = 0
+      const match = pattern.exec(remaining)
+      if (match && (earliest === null || match.index < earliest.index)) {
+        earliest = { index: match.index, text: match[0], href }
+      }
+    }
+    if (!earliest) {
+      parts.push({ text: remaining })
+      break
+    }
+    if (earliest.index > 0) {
+      parts.push({ text: remaining.slice(0, earliest.index) })
+    }
+    parts.push({ text: earliest.text, href: earliest.href })
+    remaining = remaining.slice(earliest.index + earliest.text.length)
+  }
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.href ? (
+          <Link key={i} href={part.href} className="font-semibold underline hover:text-purple">
+            {part.text}
+          </Link>
+        ) : (
+          <span key={i}>{part.text}</span>
+        )
+      )}
+    </>
+  )
+}
 
 function statusLabel(status: string) {
   const labels: Record<string, string> = {
@@ -235,7 +280,19 @@ export default function ChatPage() {
               ))}
               {activeTask && !["completed", "failed"].includes(activeTask.status) ? (
                 <div className="rounded-2xl border border-purple/20 bg-purple-soft p-4 text-sm text-purple">
-                  {statusLabel(activeTask.status)}: {activeTask.task_type}
+                  <p className="font-semibold">{statusLabel(activeTask.status)}: {activeTask.task_type}</p>
+                  {activeTask.logs.length > 0 ? (
+                    <ol className="mt-3 space-y-1.5 border-t border-purple/20 pt-3">
+                      {activeTask.logs.map((log) => (
+                        <li key={log.id} className="flex items-start gap-2 text-xs">
+                          <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-purple" />
+                          <span>
+                            <LogMessage message={log.message} />
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -288,14 +345,23 @@ export default function ChatPage() {
                   </p>
                 </div>
               ) : null}
-              <div className="space-y-2">
-                {activeTask.logs.map((log) => (
-                  <div key={log.id} className="rounded-xl border border-line bg-white p-3 text-xs">
-                    <strong>{log.level}</strong>
-                    <p className="mt-1 text-muted">{log.message}</p>
-                  </div>
-                ))}
-              </div>
+              {activeTask.logs.length > 0 ? (
+                <div className="rounded-2xl border border-purple/20 bg-purple-soft p-3">
+                  <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-purple">
+                    Progresso
+                  </p>
+                  <ol className="space-y-2">
+                    {activeTask.logs.map((log) => (
+                      <li key={log.id} className="flex items-start gap-2 text-xs">
+                        <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-purple" />
+                        <span className="text-ink">
+                          <LogMessage message={log.message} />
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              ) : null}
             </div>
           ) : (
             <EmptyState title="Sem tarefa ativa" description="Envie uma mensagem para criar uma tarefa." />

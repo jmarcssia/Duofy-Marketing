@@ -94,6 +94,26 @@ async def test_tool_rollback_on_service_error(monkeypatch):
 
 
 @pytest.mark.anyio
+async def test_create_content_logs_start_and_finish(monkeypatch):
+    logs = []
+    async def fake_log(msg): logs.append(msg)
+    async def fake_generate(db, payload):
+        return _FakeOutput(id=51, status=payload.status)
+    async def fake_review(db, output, *, force=False):
+        return _FakeReview(passed=True, score=88)
+    monkeypatch.setattr(orchestrator_tools, "generate_content_output", fake_generate)
+    monkeypatch.setattr(orchestrator_tools, "review_output_quality", fake_review)
+    tools = orchestrator_tools.build_tools(
+        db=_FakeDb(), brand_slug="duofy_solucoes", task_id=1, log=fake_log
+    )
+    await {t.name: t for t in tools}["create_content"].ainvoke(
+        {"channel": "LinkedIn", "format": "Post LinkedIn", "briefing": "tema x para o post"}
+    )
+    assert any("#51" in m for m in logs)        # log de conclusão tem o id
+    assert len(logs) >= 2                          # início + conclusão
+
+
+@pytest.mark.anyio
 async def test_research_tool_maps_params(monkeypatch):
     calls = {}
 

@@ -74,6 +74,7 @@ def build_tools(
                 depth=depth,  # type: ignore[arg-type]  # mypy rejects str→Literal; Pydantic validates at runtime
             ),
         )
+        await log(f"✅ Pesquisa #{output.id} criada — ver em /research")
         return f"Pesquisa concluida. Output #{output.id} (relatorio de mercado salvo)."
 
     async def create_content(
@@ -95,6 +96,7 @@ def build_tools(
             ),
         )
         guardian = await _submit_to_guardian(db, output)
+        await log(f"✅ Conteúdo #{output.id} em revisão ({guardian}) — ver em /approvals")
         return f"Conteudo criado. Output #{output.id} ({guardian})."
 
     async def create_press(
@@ -114,6 +116,7 @@ def build_tools(
             ),
         )
         guardian = await _submit_to_guardian(db, output)
+        await log(f"✅ Press #{output.id} em revisão ({guardian}) — ver em /approvals")
         return f"Press criado. Output #{output.id} ({guardian})."
 
     async def create_calendar(
@@ -135,6 +138,7 @@ def build_tools(
                 channels=channels or ["LinkedIn", "Instagram", "Assessoria"],
             ),
         )
+        await log(f"✅ Calendário criado: {len(events)} eventos — ver em /calendar")
         linhas = "; ".join(f"#{e.id} {e.title}" for e in events)
         return f"Calendario criado com {len(events)} eventos: {linhas}"
 
