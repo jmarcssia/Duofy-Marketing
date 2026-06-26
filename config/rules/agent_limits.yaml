@@ -1,0 +1,11 @@
+token_budgets:
+  research_agent: 6000
+  content_agent: 4000
+  press_agent: 3000
+  quality_guardian: 2000
+  orchestrator: 2000
+  default: 1500
+research_depth:
+  quick:    { sources: 8,  excerpt: 1800 }
+  standard: { sources: 12, excerpt: 3000 }
+  deep:     { sources: 15, excerpt: 4000 }
