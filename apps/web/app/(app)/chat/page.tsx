@@ -18,23 +18,22 @@ import { getTokenFromCookie } from "@/lib/auth"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
 
-const ARTIFACT_LINKS: Array<{ pattern: RegExp; href: string }> = [
-  { pattern: /\/research/g, href: "/research" },
-  { pattern: /\/approvals/g, href: "/approvals" },
-  { pattern: /\/content/g, href: "/content" },
-  { pattern: /\/calendar/g, href: "/calendar" },
+const ARTIFACT_LINKS: Array<{ token: string; href: string }> = [
+  { token: "/research", href: "/research" },
+  { token: "/approvals", href: "/approvals" },
+  { token: "/content", href: "/content" },
+  { token: "/calendar", href: "/calendar" },
 ]
 
 function LogMessage({ message }: { message: string }) {
   const parts: Array<{ text: string; href?: string }> = []
   let remaining = message
   while (remaining.length > 0) {
-    let earliest: { index: number; text: string; href: string } | null = null
-    for (const { pattern, href } of ARTIFACT_LINKS) {
-      pattern.lastIndex = 0
-      const match = pattern.exec(remaining)
-      if (match && (earliest === null || match.index < earliest.index)) {
-        earliest = { index: match.index, text: match[0], href }
+    let earliest: { index: number; token: string; href: string } | null = null
+    for (const { token, href } of ARTIFACT_LINKS) {
+      const index = remaining.indexOf(token)
+      if (index !== -1 && (earliest === null || index < earliest.index)) {
+        earliest = { index, token, href }
       }
     }
     if (!earliest) {
@@ -44,8 +43,8 @@ function LogMessage({ message }: { message: string }) {
     if (earliest.index > 0) {
       parts.push({ text: remaining.slice(0, earliest.index) })
     }
-    parts.push({ text: earliest.text, href: earliest.href })
-    remaining = remaining.slice(earliest.index + earliest.text.length)
+    parts.push({ text: earliest.token, href: earliest.href })
+    remaining = remaining.slice(earliest.index + earliest.token.length)
   }
   return (
     <>

@@ -109,8 +109,8 @@ async def test_create_content_logs_start_and_finish(monkeypatch):
     await {t.name: t for t in tools}["create_content"].ainvoke(
         {"channel": "LinkedIn", "format": "Post LinkedIn", "briefing": "tema x para o post"}
     )
-    assert any("#51" in m for m in logs)        # log de conclusão tem o id
-    assert len(logs) >= 2                          # início + conclusão
+    assert any("#51" in m and "/approvals" in m for m in logs)  # log de conclusão tem id e área
+    assert len(logs) >= 2                                         # início + conclusão
 
 
 @pytest.mark.anyio
