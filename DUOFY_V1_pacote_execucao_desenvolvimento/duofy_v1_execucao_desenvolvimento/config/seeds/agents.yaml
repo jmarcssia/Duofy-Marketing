@@ -1,0 +1,19 @@
+agents:
+  - name: Orquestrador
+    slug: orchestrator
+    default_model: anthropic/claude-3.5-sonnet
+  - name: Pesquisa de Mercado
+    slug: research_agent
+    default_model: anthropic/claude-3.5-sonnet
+  - name: Co-criação de Conteúdo
+    slug: content_agent
+    default_model: anthropic/claude-3.5-sonnet
+  - name: Calendário Editorial
+    slug: calendar_agent
+    default_model: anthropic/claude-3.5-sonnet
+  - name: Assessoria de Imprensa
+    slug: press_agent
+    default_model: anthropic/claude-3.5-sonnet
+  - name: Métricas Internas
+    slug: metrics_agent
+    default_model: openai/gpt-4o-mini

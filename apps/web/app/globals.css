@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #fbfbfd;
+  --foreground: #11131a;
+  --muted: #6b7280;
+  --line: #e9e8ef;
+  --purple: #6d35ee;
+  --purple-soft: #f4efff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: var(--background);
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  color: var(--foreground);
+  background: var(--background);
+  font-feature-settings:
+    "cv02",
+    "cv03",
+    "cv04",
+    "cv11";
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.duofy-card {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 18px 45px rgba(18, 20, 30, 0.035);
+}
+
+.duofy-focus {
+  outline: none;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.duofy-focus:focus {
+  border-color: rgba(109, 53, 238, 0.55);
+  box-shadow: 0 0 0 4px rgba(109, 53, 238, 0.08);
+}

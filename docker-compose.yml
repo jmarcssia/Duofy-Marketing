@@ -1,0 +1,102 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: duofy-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-duofy_v1}
+      POSTGRES_USER: ${POSTGRES_USER:-duofy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-duofy}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: duofy-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: ./apps/api/Dockerfile
+    container_name: duofy-api
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://duofy:duofy@postgres:5432/duofy_v1}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-local-dev-only-32-bytes-minimum}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-720}
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:3000}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@duofy.com.br}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123456}
+      ADMIN_NAME: ${ADMIN_NAME:-Admin Duofy}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5).read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: ./apps/web
+    container_name: duofy-web
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_started
+
+  worker:
+    build:
+      context: .
+      dockerfile: ./apps/api/Dockerfile
+    container_name: duofy-worker
+    command: ["celery", "-A", "app.worker.celery_app", "worker", "--loglevel=INFO", "--pool=solo"]
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://duofy:duofy@postgres:5432/duofy_v1}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-local-dev-only-32-bytes-minimum}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-720}
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:3000}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@duofy.com.br}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123456}
+      ADMIN_NAME: ${ADMIN_NAME:-Admin Duofy}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:

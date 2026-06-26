@@ -1,0 +1,24 @@
+statuses:
+  draft:
+    label: Rascunho
+    can_edit: true
+    can_approve: false
+  review:
+    label: Em revisão
+    can_edit: true
+    can_approve: true
+  approved:
+    label: Aprovado
+    can_edit: false
+    creates_memory: true
+  rejected:
+    label: Rejeitado
+    can_edit: false
+    creates_temporary_learning: true
+    temporary_days: 30
+  needs_adjustment:
+    label: Ajustar
+    can_edit: true
+  archived:
+    label: Arquivado
+    can_edit: false

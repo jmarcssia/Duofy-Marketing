@@ -1,0 +1,37 @@
+categories:
+  - branding
+  - tone_of_voice
+  - persona
+  - pain
+  - objection
+  - product
+  - journey
+  - case
+  - source
+  - document
+  - research
+  - output_approved
+  - feedback_rejected
+  - press_release
+  - calendar
+  - rule
+
+brands:
+  - duofy_solucoes
+  - postos_combustiveis
+  - deathcare
+
+retrieval:
+  default_top_k: 8
+  min_score: 0.72
+  require_brand_filter: true
+  prefer_approved_memory: true
+  include_temporary_feedback_days: 30
+  max_context_chunks: 12
+
+source_priority:
+  official_duofy_documents: 1
+  approved_outputs: 2
+  internal_research: 3
+  external_sources: 4
+  temporary_feedback: 5

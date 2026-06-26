@@ -1,0 +1,22 @@
+agents:
+  - name: Orquestrador
+    slug: orchestrator
+    default_model: ~anthropic/claude-sonnet-latest
+  - name: Pesquisa de Mercado
+    slug: research_agent
+    default_model: ~anthropic/claude-sonnet-latest
+  - name: Cocriação de Conteúdo
+    slug: content_agent
+    default_model: ~anthropic/claude-sonnet-latest
+  - name: Calendário Editorial
+    slug: calendar_agent
+    default_model: ~anthropic/claude-sonnet-latest
+  - name: Assessoria de Imprensa
+    slug: press_agent
+    default_model: ~anthropic/claude-sonnet-latest
+  - name: Métricas Internas
+    slug: metrics_agent
+    default_model: openai/gpt-4o-mini
+  - name: Guardião de Qualidade
+    slug: quality_guardian
+    default_model: ~anthropic/claude-sonnet-latest

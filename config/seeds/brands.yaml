@@ -1,0 +1,13 @@
+brands:
+  - name: Duofy Soluções
+    slug: duofy_solucoes
+    niche: institucional
+    description: Marca institucional da Duofy.
+  - name: TOTVS Postos de Combustíveis by Duofy
+    slug: postos_combustiveis
+    niche: postos_combustiveis
+    description: Frente de soluções para postos, redes de combustíveis e conveniência.
+  - name: TOTVS Gestão DeathCare by Duofy
+    slug: deathcare
+    niche: deathcare
+    description: Frente de soluções para funerárias, planos, cemitérios e crematórios.
