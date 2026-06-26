@@ -201,7 +201,7 @@ export function DocumentEditor({
       value={value}
       onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}
-      className="duofy-focus min-h-[640px] w-full resize-y rounded-[24px] border border-line bg-[#0f1220] px-6 py-5 font-mono text-[13px] leading-7 text-white shadow-[0_24px_70px_rgba(18,20,30,0.18)] placeholder:text-white/40"
+      className="duofy-focus min-h-[640px] w-full resize-y rounded-[24px] border border-line bg-white px-6 py-5 font-mono text-[13px] leading-7 text-ink shadow-[0_18px_45px_rgba(18,20,30,0.06)] placeholder:text-muted"
     />
   )
 }

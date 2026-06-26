@@ -2,10 +2,11 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
-import { apiFetch, type Brand, type User } from "@/lib/api"
+import { apiFetch, type AuditEvent, type ContentOutput, type MemorySearchResult, type User } from "@/lib/api"
 import { clearTokenCookie, getTokenFromCookie } from "@/lib/auth"
+import { useBrand } from "@/lib/brand-context"
 import { LogoutButton } from "@/components/logout-button"
 import { DuofyLogo } from "@/components/duofy-logo"
 import {
@@ -24,6 +25,7 @@ import {
 } from "@/components/icons"
 
 const navItems = [
+  { href: "/workspace", label: "Workspace", icon: GridIcon },
   { href: "/dashboard", label: "Visão Geral", icon: GridIcon },
   { href: "/chat", label: "Chat", icon: BotIcon },
   { href: "/research", label: "Pesquisas", icon: SearchIcon },
@@ -38,21 +40,207 @@ const navItems = [
   { href: "/memory", label: "Memória / Documentos", icon: DatabaseIcon }
 ]
 
+type SearchResults = {
+  outputs: ContentOutput[]
+  memory: MemorySearchResult[]
+}
+
+function GlobalSearch() {
+  const [query, setQuery] = useState("")
+  const [results, setResults] = useState<SearchResults | null>(null)
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  async function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter" || !query.trim()) return
+    const token = getTokenFromCookie()
+    if (!token) return
+    setLoading(true)
+    setOpen(true)
+    try {
+      const [outputs, memory] = await Promise.all([
+        apiFetch<ContentOutput[]>(`/api/outputs?query=${encodeURIComponent(query.trim())}`, token),
+        apiFetch<MemorySearchResult[]>("/api/memory/search", token, {
+          method: "POST",
+          body: JSON.stringify({ query: query.trim(), limit: 8 })
+        })
+      ])
+      setResults({ outputs, memory })
+    } catch {
+      setResults({ outputs: [], memory: [] })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const hasResults = results && (results.outputs.length > 0 || results.memory.length > 0)
+
+  return (
+    <div ref={wrapperRef} className="relative hidden md:block">
+      <div className="flex h-12 w-[320px] items-center gap-3 rounded-xl border border-line bg-white px-4 text-muted">
+        <SearchIcon className="h-5 w-5 shrink-0" />
+        <input
+          className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-muted"
+          placeholder="Buscar..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onFocus={() => results && setOpen(true)}
+        />
+      </div>
+
+      {open && (
+        <div className="absolute left-0 top-[calc(100%+8px)] z-50 w-[380px] rounded-xl border border-line bg-white shadow-lg">
+          {loading && (
+            <p className="px-4 py-3 text-sm text-muted">Buscando...</p>
+          )}
+
+          {!loading && !hasResults && results && (
+            <p className="px-4 py-3 text-sm text-muted">Nada encontrado.</p>
+          )}
+
+          {!loading && results && results.outputs.length > 0 && (
+            <div className="border-b border-line px-4 py-2">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">Conteúdos</p>
+              {results.outputs.slice(0, 5).map((output) => (
+                <Link
+                  key={output.id}
+                  href={`/content/${output.id}`}
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-ink hover:bg-purple-soft"
+                >
+                  <FileIcon className="h-4 w-4 shrink-0 text-muted" />
+                  <span className="truncate">{output.title}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {!loading && results && results.memory.length > 0 && (
+            <div className="px-4 py-2">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">Memória</p>
+              {results.memory.slice(0, 4).map((item) => (
+                <Link
+                  key={item.id}
+                  href={`/memory`}
+                  onClick={() => setOpen(false)}
+                  className="flex flex-col rounded-lg px-2 py-2 hover:bg-purple-soft"
+                >
+                  <span className="truncate text-sm font-medium text-ink">{item.title}</span>
+                  <span className="truncate text-xs text-muted">{item.content.slice(0, 80)}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function BellPopover() {
+  const [open, setOpen] = useState(false)
+  const [events, setEvents] = useState<AuditEvent[]>([])
+  const [loaded, setLoaded] = useState(false)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  async function handleOpen() {
+    setOpen((prev) => !prev)
+    if (!loaded) {
+      const token = getTokenFromCookie()
+      if (!token) return
+      try {
+        const data = await apiFetch<AuditEvent[]>("/api/operations/audit-events?limit=10", token)
+        setEvents(data)
+      } catch {
+        setEvents([])
+      } finally {
+        setLoaded(true)
+      }
+    }
+  }
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <button
+        onClick={handleOpen}
+        className="relative rounded-full p-2 text-ink/80 hover:bg-purple-soft"
+        aria-label="Notificações"
+      >
+        <BellIcon className="h-6 w-6" />
+        {events.length > 0 && (
+          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-purple" />
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-[340px] rounded-xl border border-line bg-white shadow-lg">
+          <div className="border-b border-line px-4 py-3">
+            <p className="text-sm font-semibold text-ink">Eventos recentes</p>
+          </div>
+
+          {!loaded && (
+            <p className="px-4 py-3 text-sm text-muted">Carregando...</p>
+          )}
+
+          {loaded && events.length === 0 && (
+            <p className="px-4 py-3 text-sm text-muted">Nenhum evento recente.</p>
+          )}
+
+          {loaded && events.length > 0 && (
+            <ul className="max-h-[320px] overflow-y-auto">
+              {events.map((event) => (
+                <li key={event.id} className="border-b border-line/60 px-4 py-3 last:border-0">
+                  <p className="text-sm text-ink">{event.summary}</p>
+                  <p className="mt-0.5 text-xs text-muted">
+                    {new Date(event.created_at).toLocaleString("pt-BR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit"
+                    })}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const [brands, setBrands] = useState<Brand[]>([])
   const [user, setUser] = useState<User | null>(null)
-  const [brand, setBrand] = useState("")
+  const { brands, selected, setSelected } = useBrand()
 
   useEffect(() => {
     const token = getTokenFromCookie()
     if (!token) return
-    Promise.all([apiFetch<User>("/api/auth/me", token), apiFetch<Brand[]>("/api/brands", token)])
-      .then(([currentUser, brandList]) => {
-        setUser(currentUser)
-        setBrands(brandList)
-        setBrand(brandList[0]?.slug ?? "")
-      })
+    apiFetch<User>("/api/auth/me", token)
+      .then(setUser)
       .catch(() => clearTokenCookie())
   }, [pathname])
 
@@ -98,8 +286,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <label className="hidden h-12 min-w-[210px] items-center gap-3 rounded-xl border border-line bg-white px-4 text-sm font-semibold md:flex">
             <BuildingIcon className="h-5 w-5 text-ink/70" />
             <select
-              value={brand}
-              onChange={(event) => setBrand(event.target.value)}
+              value={selected}
+              onChange={(e) => setSelected(e.target.value)}
               className="w-full bg-transparent outline-none"
             >
               {brands.map((item) => (
@@ -110,15 +298,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </select>
           </label>
 
-          <div className="hidden h-12 w-[320px] items-center gap-3 rounded-xl border border-line bg-white px-4 text-muted md:flex">
-            <SearchIcon className="h-5 w-5" />
-            <input className="w-full bg-transparent outline-none" placeholder="Buscar..." />
-          </div>
+          <GlobalSearch />
 
-          <button className="relative rounded-full p-2 text-ink/80">
-            <BellIcon className="h-6 w-6" />
-            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-purple" />
-          </button>
+          <BellPopover />
 
           <div className="flex items-center gap-3">
             <div className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-orange/30 to-purple/30 text-sm font-bold">
