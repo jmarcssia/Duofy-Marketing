@@ -5,6 +5,15 @@ from langchain_core.tools import StructuredTool
 from app import orchestrator_graph
 
 
+def test_psycopg_dsn_from_async_url():
+    from app.orchestrator_graph import psycopg_dsn_from_async_url
+
+    out = psycopg_dsn_from_async_url(
+        "postgresql+asyncpg://duofy:duofy@postgres:5432/duofy_v1"
+    )
+    assert out == "postgresql://duofy:duofy@postgres:5432/duofy_v1"
+
+
 class ScriptedModel:
     """Chat model falso: devolve uma sequência roteirizada de AIMessages."""
 

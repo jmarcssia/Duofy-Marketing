@@ -15,6 +15,44 @@ from app.models import Agent, ProviderCredential
 from app.orchestrator_llm import build_orchestrator_chat_model
 from app.orchestrator_tools import build_tools
 
+
+def psycopg_dsn_from_async_url(async_url: str) -> str:
+    """Convert a postgresql+asyncpg:// URL to a plain postgresql:// DSN.
+
+    psycopg (sync/async) expects ``postgresql://`` scheme; SQLAlchemy async
+    drivers use ``postgresql+asyncpg://``.  This helper strips the driver
+    suffix so the DSN can be handed directly to AsyncPostgresSaver.
+    """
+    return async_url.replace("postgresql+asyncpg://", "postgresql://")
+
+
+def build_postgres_checkpointer():
+    """Return a factory coroutine that yields an AsyncPostgresSaver.
+
+    NOTE (V1): This factory is intentionally NOT activated in run_orchestrator.
+    AsyncPostgresSaver.from_conn_string is an @asynccontextmanager — it owns
+    its connection lifetime and must be used as ``async with ... as saver``.
+    Entering it once per message would leak a DB connection on every chat
+    request.  A clean solution requires a module-level, lazily-initialised
+    context that is entered once per worker process.  That lifecycle is
+    deferred to V2 when true state resumption is needed.
+
+    Usage (when Postgres activation is desired):
+
+        async with AsyncPostgresSaver.from_conn_string(dsn) as saver:
+            await saver.setup()
+            graph = build_graph(chat_model, tools, checkpointer=saver)
+            ...
+
+    The DSN should be obtained via::
+
+        psycopg_dsn_from_async_url(get_settings().database_url)
+    """
+    from app.settings import get_settings  # local import avoids circular deps at module load
+
+    dsn = psycopg_dsn_from_async_url(get_settings().database_url)
+    return dsn
+
 MAX_STEPS = 5
 
 LogFn = Callable[[str], Awaitable[None]]
