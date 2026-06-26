@@ -58,8 +58,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <main className="min-h-screen bg-panel text-ink">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[245px] border-r border-slate-800/70 bg-[#080914] px-5 py-7 text-white lg:flex lg:flex-col">
-        <div className="rounded-2xl bg-[#11131f] px-4 py-3 shadow-lg shadow-black/20">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[245px] border-r border-line bg-white px-5 py-7 text-ink lg:flex lg:flex-col">
+        <div className="rounded-2xl border border-line bg-panel px-4 py-3">
           <DuofyLogo />
         </div>
 
@@ -73,8 +73,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 href={item.href}
                 className={`flex items-center gap-4 rounded-xl px-4 py-3 text-[15px] transition ${
                   active
-                    ? "bg-white/10 text-white"
-                    : "text-white/78 hover:bg-white/10 hover:text-white"
+                    ? "bg-purple-soft font-semibold text-purple"
+                    : "text-muted hover:bg-purple-soft/60 hover:text-purple"
                 }`}
               >
                 <Icon className="h-5 w-5" />
@@ -85,7 +85,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="space-y-5">
-          <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white">
+          <div className="flex items-center justify-between rounded-xl border border-line bg-panel px-4 py-3 text-sm font-semibold text-ink">
             <span>Novidades</span>
             <span className="h-2 w-2 rounded-full bg-purple" />
           </div>

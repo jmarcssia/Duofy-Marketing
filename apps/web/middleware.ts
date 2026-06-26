@@ -1,6 +1,19 @@
 import { NextResponse, type NextRequest } from "next/server"
 
-const protectedPrefixes = ["/dashboard", "/admin", "/approvals", "/content", "/memory", "/research"]
+const protectedPrefixes = [
+  "/dashboard",
+  "/admin",
+  "/approvals",
+  "/content",
+  "/memory",
+  "/research",
+  "/chat",
+  "/calendar",
+  "/insights",
+  "/costs",
+  "/operations",
+  "/workspace"
+]
 
 export function middleware(request: NextRequest) {
   const token = request.cookies.get("duofy_token")?.value
@@ -28,6 +41,12 @@ export const config = {
     "/approvals/:path*",
     "/content/:path*",
     "/memory/:path*",
-    "/research/:path*"
+    "/research/:path*",
+    "/chat/:path*",
+    "/calendar/:path*",
+    "/insights/:path*",
+    "/costs/:path*",
+    "/operations/:path*",
+    "/workspace/:path*"
   ]
 }
