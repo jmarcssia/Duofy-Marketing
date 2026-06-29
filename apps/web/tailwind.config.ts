@@ -27,8 +27,22 @@ const config: Config = {
         slatex: "#64748b"
       },
       fontFamily: {
-        sans: ["Inter", "Aptos", "Segoe UI", "ui-sans-serif", "system-ui", "sans-serif"],
-        display: ["Inter", "Aptos", "Segoe UI", "ui-sans-serif", "system-ui", "sans-serif"]
+        sans: ["var(--font-inter)", "Inter", "Aptos", "Segoe UI", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["var(--font-inter)", "Inter", "Aptos", "Segoe UI", "ui-sans-serif", "system-ui", "sans-serif"]
+      },
+      keyframes: {
+        "fade-in": {
+          from: { opacity: "0", transform: "translateY(4px)" },
+          to: { opacity: "1", transform: "translateY(0)" }
+        },
+        "scale-in": {
+          from: { opacity: "0", transform: "scale(0.97)" },
+          to: { opacity: "1", transform: "scale(1)" }
+        }
+      },
+      animation: {
+        "fade-in": "fade-in 220ms cubic-bezier(0.16,1,0.3,1)",
+        "scale-in": "scale-in 180ms cubic-bezier(0.16,1,0.3,1)"
       },
       borderRadius: {
         "2xl": "1rem",

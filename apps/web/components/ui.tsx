@@ -88,7 +88,7 @@ export function StatCard({
   hint?: string
 }) {
   return (
-    <div className="duofy-card flex items-start gap-4 rounded-2xl p-5">
+    <div className="duofy-card duofy-card-hover flex items-start gap-4 rounded-2xl p-5">
       <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${TONE[iconTone]}`}>
         {icon}
       </div>
@@ -265,7 +265,7 @@ export function IconButton({
     <button
       onClick={onClick}
       aria-label={label}
-      className={`grid h-9 w-9 place-items-center rounded-lg border border-line bg-white text-muted transition hover:border-purple/40 hover:text-purple ${className}`}
+      className={`duofy-tap grid h-9 w-9 place-items-center rounded-lg border border-line bg-white text-muted hover:border-purple/40 hover:text-purple ${className}`}
     >
       {children}
     </button>
@@ -287,10 +287,138 @@ export function GhostButton({
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex items-center gap-2 rounded-xl border border-line bg-white px-3.5 py-2 text-sm font-semibold text-ink transition hover:border-purple/40 hover:text-purple disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+      className={`duofy-tap inline-flex items-center gap-2 rounded-xl border border-line bg-white px-3.5 py-2 text-sm font-semibold text-ink hover:border-purple/40 hover:text-purple disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
     >
       {children}
     </button>
+  )
+}
+
+/* ---------------- Spinner ---------------- */
+
+export function Spinner({ size = 16, className = "" }: { size?: number; className?: string }) {
+  return (
+    <svg
+      className={`animate-spin ${className}`}
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+    </svg>
+  )
+}
+
+/* ---------------- Skeleton ---------------- */
+
+export function Skeleton({ className = "" }: { className?: string }) {
+  return <div className={`duofy-skeleton ${className}`} aria-hidden="true" />
+}
+
+export function SkeletonGroup({
+  count = 3,
+  className = "h-16",
+  gap = "space-y-2"
+}: {
+  count?: number
+  className?: string
+  gap?: string
+}) {
+  return (
+    <div className={gap}>
+      {Array.from({ length: count }).map((_, i) => (
+        <Skeleton key={i} className={`${className} rounded-xl`} />
+      ))}
+    </div>
+  )
+}
+
+/* ---------------- Page / Section headers ---------------- */
+
+export function PageHeader({
+  title,
+  subtitle,
+  icon,
+  right
+}: {
+  title: string
+  subtitle?: string
+  icon?: ReactNode
+  right?: ReactNode
+}) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex items-start gap-3">
+        {icon ? (
+          <span className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-purple-soft text-purple">
+            {icon}
+          </span>
+        ) : null}
+        <div>
+          <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.035em] text-ink">{title}</h1>
+          {subtitle ? <p className="mt-0.5 text-sm text-muted">{subtitle}</p> : null}
+        </div>
+      </div>
+      {right}
+    </div>
+  )
+}
+
+export function SectionHeader({
+  title,
+  subtitle,
+  right,
+  className = ""
+}: {
+  title: string
+  subtitle?: string
+  right?: ReactNode
+  className?: string
+}) {
+  return (
+    <div className={`flex items-start justify-between gap-3 ${className}`}>
+      <div>
+        <h2 className="text-base font-bold tracking-[-0.02em] text-ink">{title}</h2>
+        {subtitle ? <p className="mt-0.5 text-xs text-muted">{subtitle}</p> : null}
+      </div>
+      {right}
+    </div>
+  )
+}
+
+/* ---------------- Empty state ---------------- */
+
+export function EmptyState({
+  icon,
+  title,
+  subtitle,
+  action,
+  className = ""
+}: {
+  icon?: ReactNode
+  title: string
+  subtitle?: string
+  action?: ReactNode
+  className?: string
+}) {
+  return (
+    <div
+      className={`grid place-items-center rounded-2xl border border-dashed border-line bg-panel/60 px-6 py-14 text-center animate-fade-in ${className}`}
+    >
+      {icon ? (
+        <span className="mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-purple-soft text-purple">
+          {icon}
+        </span>
+      ) : null}
+      <h3 className="text-sm font-bold text-ink">{title}</h3>
+      {subtitle ? <p className="mt-1 max-w-sm text-xs leading-relaxed text-muted">{subtitle}</p> : null}
+      {action ? <div className="mt-4">{action}</div> : null}
+    </div>
   )
 }
 

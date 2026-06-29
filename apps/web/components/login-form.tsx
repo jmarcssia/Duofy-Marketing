@@ -40,13 +40,13 @@ export function LoginForm() {
           <div className="text-lg font-semibold tracking-[-0.03em]">DUOFY V1</div>
           <div>
             <h1 className="font-display text-5xl leading-[0.95] tracking-[-0.05em] md:text-7xl">
-              Operacao de marketing com base autenticada.
+              Marketing com IA, sob supervisão humana.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-8 text-ink/70">
-              Fase 2: login JWT, roles simples, marcas e agentes iniciais persistidos no banco.
+              Orquestre pesquisa, cocriação, calendário e governança de conteúdo das suas marcas — com agentes especializados e dados reais.
             </p>
           </div>
-          <p className="text-sm text-ink/50">Sem agentes executaveis nesta fase.</p>
+          <p className="text-sm text-ink/50">Pesquisa · Cocriação · Calendário · Revisão · Relatórios</p>
         </div>
 
         <div className="bg-ink p-8 text-linen md:p-12">

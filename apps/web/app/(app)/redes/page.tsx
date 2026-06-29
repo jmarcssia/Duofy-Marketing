@@ -204,7 +204,7 @@ export default function RedesPage() {
                 <path d="M17 2H7a5 5 0 0 0-5 5v10a5 5 0 0 0 5 5h10a5 5 0 0 0 5-5V7a5 5 0 0 0-5-5z"/>
                 <path d="M8.56 2.75c4.37 6.03 6.02 9.42 8.03 17.72m2.54-15.38c-3.72 4.35-8.94 5.66-16.88 5.85m19.5 1.9c-3.5-.93-6.63-.82-8.94 0-2.58.92-5.01 2.86-7.44 6.32"/>
               </svg>
-              <h1 className="text-xl font-bold text-ink">Redes & Tráfego</h1>
+              <h1 className="text-2xl font-extrabold tracking-[-0.03em] text-ink">Redes & Tráfego</h1>
             </div>
             <p className="mt-0.5 text-sm text-muted">Acompanhe insights do Instagram e dados do Gerenciador de Anúncios com supervisão humana.</p>
           </div>
