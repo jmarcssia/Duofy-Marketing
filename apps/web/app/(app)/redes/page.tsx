@@ -225,7 +225,10 @@ export default function RedesPage() {
                 <ChevronDownIcon className="w-3.5 h-3.5 text-muted" />
               </button>
             ))}
-            <button className="ml-auto flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-1.5 text-sm text-ink hover:border-purple-deep/30 transition-colors">
+            <button
+              onClick={() => typeof window !== "undefined" && window.print()}
+              className="duofy-tap ml-auto flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-1.5 text-sm text-ink hover:border-purple-deep/30"
+            >
               <DownloadIcon className="w-3.5 h-3.5" /> Exportar PDF
             </button>
           </div>
@@ -233,7 +236,7 @@ export default function RedesPage() {
           {/* Organic KPIs */}
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Métricas orgânicas (Instagram)</p>
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               {ORGANIC_KPIS.map((k) => <KpiCard key={k.label} {...k} />)}
             </div>
           </div>
@@ -241,13 +244,13 @@ export default function RedesPage() {
           {/* Paid KPIs */}
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Métricas mídia paga (Meta Ads)</p>
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               {PAID_KPIS.map((k) => <KpiCard key={k.label} {...k} />)}
             </div>
           </div>
 
           {/* Charts row */}
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
 
             {/* Performance chart */}
             <div className="lg:col-span-2 rounded-xl border border-line bg-white p-5 shadow-card">
@@ -330,7 +333,7 @@ export default function RedesPage() {
           </div>
 
           {/* Instagram Insights */}
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 
             {/* Melhores posts */}
             <div className="rounded-xl border border-line bg-white p-5 shadow-card">
@@ -472,7 +475,7 @@ export default function RedesPage() {
       </div>
 
       {/* ── Agente de insights sidebar ── */}
-      <div className="hidden w-72 shrink-0 overflow-y-auto duofy-scroll border-l border-line bg-white xl:flex xl:flex-col">
+      <div className="hidden w-64 shrink-0 overflow-y-auto duofy-scroll border-l border-line bg-white lg:flex lg:flex-col xl:w-72">
         <div className="border-b border-line px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">

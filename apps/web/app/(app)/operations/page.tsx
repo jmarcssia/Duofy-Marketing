@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { Badge, GhostButton } from "@/components/ui"
+import { Markdown } from "@/components/markdown"
 import {
   AlertTriangleIcon,
   BookIcon,
@@ -219,7 +220,7 @@ export default function OperationsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[336px_minmax(0,1fr)_372px]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[336px_minmax(0,1fr)_372px]">
         {/* Orquestrador */}
         <section className="duofy-card flex flex-col rounded-2xl p-5" style={{ maxHeight: "calc(100vh - 130px)" }}>
           <div className="mb-4 flex items-center gap-2">
@@ -231,7 +232,7 @@ export default function OperationsPage() {
             {messages.map((m) => (
               <div key={m.id} className={`max-w-[90%] ${m.role === "user" ? "ml-auto" : ""}`}>
                 <div
-                  className={`whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm ${
+                  className={`rounded-2xl px-4 py-3 text-sm ${
                     m.role === "user"
                       ? "bg-purple text-white"
                       : m.error
@@ -239,7 +240,11 @@ export default function OperationsPage() {
                         : "bg-purple-soft/70 text-ink"
                   } ${m.pending ? "animate-pulse" : ""}`}
                 >
-                  {m.text}
+                  {m.role === "assistant" && !m.pending && !m.error ? (
+                    <Markdown content={m.text} className="text-ink/90" />
+                  ) : (
+                    <span className="whitespace-pre-wrap">{m.text}</span>
+                  )}
                 </div>
                 <p className={`mt-1 text-[11px] text-muted ${m.role === "user" ? "text-right" : ""}`}>{m.time}</p>
               </div>
@@ -286,8 +291,8 @@ export default function OperationsPage() {
             </button>
           </div>
           {loadingReports ? (
-            <div className="grid grid-cols-3 gap-4">
-              {[1, 2, 3].map((i) => <div key={i} className="h-32 animate-pulse rounded-xl bg-line/50" />)}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              {[1, 2, 3].map((i) => <div key={i} className="duofy-skeleton h-32 rounded-xl" />)}
             </div>
           ) : reports.length === 0 ? (
             <div className="grid place-items-center rounded-xl border border-dashed border-line py-16 text-center">
@@ -425,7 +430,7 @@ export default function OperationsPage() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-4">
             <div className="rounded-xl border border-line bg-white p-4">
               <div className="flex items-center justify-between">
@@ -463,7 +468,7 @@ export default function OperationsPage() {
                       <CopyIcon className="h-3.5 w-3.5" /> Copiar
                     </button>
                   </div>
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink">{genResult}</p>
+                  <Markdown content={genResult} />
                 </div>
               )}
               {!genResult && !genError && !genLoading && (

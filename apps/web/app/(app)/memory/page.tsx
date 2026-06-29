@@ -6,6 +6,7 @@ import { Badge, GhostButton, StatCard } from "@/components/ui"
 import {
   BookIcon,
   ClockIcon,
+  DownloadIcon,
   FileIcon,
   LayersIcon,
   RefreshIcon,
@@ -21,6 +22,23 @@ import {
 } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
 import { useBrand } from "@/lib/brand-context"
+import { downloadFile, exportPath } from "@/lib/download"
+
+async function downloadDoc(id: number, name: string) {
+  const token = getTokenFromCookie()
+  if (!token) return
+  try {
+    await downloadFile(`/api/documents/${id}/download`, token, name)
+  } catch { /* erro silencioso */ }
+}
+
+async function exportDoc(id: number, name: string) {
+  const token = getTokenFromCookie()
+  if (!token) return
+  try {
+    await downloadFile(exportPath(`/api/documents/${id}`, "pdf"), token, `${name}.pdf`)
+  } catch { /* erro silencioso */ }
+}
 
 type MemoryEntry = {
   id: number
@@ -166,13 +184,13 @@ export default function MemoryPage() {
         <p className="mt-1 text-sm text-muted">Base de conhecimento confiável para agentes e para todo o time.</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (
           <StatCard key={s.label} icon={s.icon} iconTone={s.tone} label={s.label} value={s.value} hint={s.hint} />
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_400px]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
         <div className="space-y-5">
           {/* Busca semântica (RAG) */}
           <section className="duofy-card rounded-2xl p-5">
@@ -248,16 +266,17 @@ export default function MemoryPage() {
                     <th className="py-2.5 pr-4">Marca</th>
                     <th className="py-2.5 pr-4">Tamanho</th>
                     <th className="py-2.5 pr-4">Status</th>
-                    <th className="py-2.5">Criado</th>
+                    <th className="py-2.5 pr-4">Criado</th>
+                    <th className="py-2.5 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
                     [1, 2, 3, 4].map((i) => (
-                      <tr key={i}><td colSpan={6} className="py-3"><div className="h-8 animate-pulse rounded bg-line/50" /></td></tr>
+                      <tr key={i}><td colSpan={7} className="py-3"><div className="h-8 animate-pulse rounded bg-line/50" /></td></tr>
                     ))
                   ) : visibleDocs.length === 0 ? (
-                    <tr><td colSpan={6} className="py-10 text-center text-muted">Nenhum documento {filter ? "para esse filtro" : "para esta marca"}.</td></tr>
+                    <tr><td colSpan={7} className="py-10 text-center text-muted">Nenhum documento {filter ? "para esse filtro" : "para esta marca"}.</td></tr>
                   ) : (
                     visibleDocs.map((d) => {
                       const active = selectedDoc?.id === d.id
@@ -276,7 +295,25 @@ export default function MemoryPage() {
                           <td className="py-3 pr-4">
                             <Badge tone={d.status === "indexed" ? "green" : d.status === "error" ? "red" : "amber"}>{d.status}</Badge>
                           </td>
-                          <td className="py-3 text-xs text-muted">{fmtDate(d.created_at)}</td>
+                          <td className="py-3 pr-4 text-xs text-muted">{fmtDate(d.created_at)}</td>
+                          <td className="py-3 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); downloadDoc(d.id, d.filename) }}
+                                title="Baixar original"
+                                className="duofy-tap grid h-7 w-7 place-items-center rounded-lg border border-line text-muted hover:border-purple/40 hover:text-purple"
+                              >
+                                <DownloadIcon className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); exportDoc(d.id, d.filename) }}
+                                title="Exportar PDF"
+                                className="duofy-tap rounded-lg border border-line px-2 py-1 text-[11px] font-semibold text-muted hover:border-purple/40 hover:text-purple"
+                              >
+                                PDF
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       )
                     })
@@ -287,7 +324,7 @@ export default function MemoryPage() {
             <p className="mt-4 text-sm text-muted">Exibindo {visibleDocs.length} de {docs.length} documentos</p>
           </section>
 
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <section className="duofy-card rounded-2xl p-5">
               <h3 className="text-base font-bold text-ink">Coleções e contexto</h3>
               <ul className="mt-4 space-y-4">

@@ -93,7 +93,7 @@ function GlobalSearch() {
       </div>
 
       {open && (
-        <div className="absolute left-0 top-[calc(100%+8px)] z-50 w-[420px] rounded-2xl border border-line bg-white shadow-pop">
+        <div className="absolute left-0 top-[calc(100%+8px)] z-50 w-[min(420px,92vw)] rounded-2xl border border-line bg-white shadow-pop">
           {loading && <p className="px-4 py-3 text-sm text-muted">Buscando...</p>}
           {!loading && !hasResults && results && <p className="px-4 py-3 text-sm text-muted">Nada encontrado.</p>}
           {!loading && results && results.outputs.length > 0 && (
@@ -168,7 +168,7 @@ function BellPopover() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-[340px] rounded-2xl border border-line bg-white shadow-pop">
+        <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-[min(340px,92vw)] rounded-2xl border border-line bg-white shadow-pop">
           <div className="border-b border-line px-4 py-3">
             <p className="text-sm font-semibold text-ink">Eventos recentes</p>
           </div>

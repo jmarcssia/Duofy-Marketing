@@ -6,6 +6,7 @@ import { PlusIcon } from "@/components/icons"
 import { apiFetch } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
 import { useBrand } from "@/lib/brand-context"
+import { Markdown } from "@/components/markdown"
 
 // ── API types ──────────────────────────────────────────────────────────────
 
@@ -305,7 +306,7 @@ export default function AdminPage() {
                   </div>
 
                   {/* Stats */}
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     {[
                       { label: "Modelo padrão", value: selectedAgent.default_model || "—" },
                       { label: "Status", value: selectedAgent.is_active ? "Ativo" : "Inativo" },
@@ -413,8 +414,8 @@ export default function AdminPage() {
                           </div>
                           {testResult.output && (
                             <div className="rounded-md bg-white border border-green-200 p-3">
-                              <p className="text-xs font-medium text-muted mb-1">Saída do agente</p>
-                              <p className="whitespace-pre-wrap text-sm text-ink leading-relaxed">{testResult.output}</p>
+                              <p className="text-xs font-medium text-muted mb-1.5">Saída do agente</p>
+                              <Markdown content={testResult.output} />
                             </div>
                           )}
                           {testResult.error && (
@@ -510,7 +511,7 @@ export default function AdminPage() {
             </div>
 
             {/* Right: providers + fluxos */}
-            <div className="hidden w-72 shrink-0 flex-col overflow-hidden border-l border-line bg-white xl:flex">
+            <div className="hidden w-64 shrink-0 flex-col overflow-hidden border-l border-line bg-white lg:flex xl:w-72">
               <div className="overflow-y-auto duofy-scroll flex-1">
 
                 {/* Providers */}

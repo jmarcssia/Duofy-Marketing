@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { AreaLineChart, DonutChart, HBarChart, Legend } from "@/components/charts"
-import { GhostButton, StatCard } from "@/components/ui"
+import { Segmented, StatCard } from "@/components/ui"
+import { Markdown } from "@/components/markdown"
 import {
   ChartIcon,
   CheckCircleIcon,
   DatabaseIcon,
   DollarIcon,
+  DownloadIcon,
   MoreIcon,
   PhoneIcon,
   RefreshIcon,
@@ -17,6 +19,21 @@ import {
 import { apiFetch, type MetricsSummary, type ModelCall, type InternalReport } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
 import { useBrand } from "@/lib/brand-context"
+import { downloadFile, exportPath } from "@/lib/download"
+
+type Period = "7" | "30" | "90" | "all"
+const PERIOD_OPTIONS: { id: Period; label: string }[] = [
+  { id: "7", label: "7 dias" },
+  { id: "30", label: "30 dias" },
+  { id: "90", label: "90 dias" },
+  { id: "all", label: "Tudo" }
+]
+
+function startFor(period: Period, nowMs: number): string | null {
+  if (period === "all") return null
+  const days = Number(period)
+  return new Date(nowMs - days * 86400000).toISOString()
+}
 
 const usd = (v: number) => `US$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`
 const num = (v: number) => v.toLocaleString("pt-BR")
@@ -28,24 +45,38 @@ export default function RelatoriosPage() {
   const [calls, setCalls] = useState<ModelCall[]>([])
   const [reports, setReports] = useState<InternalReport[]>([])
   const [loading, setLoading] = useState(true)
+  const [period, setPeriod] = useState<Period>("30")
 
   const load = useCallback(async () => {
     const token = getTokenFromCookie()
     if (!token) { setLoading(false); return }
     setLoading(true)
-    const qs = brand ? `?brand_slug=${brand}` : ""
+    const params = new URLSearchParams()
+    if (brand) params.set("brand_slug", brand)
+    const start = startFor(period, Date.now())
+    if (start) params.set("start", start)
+    const qs = params.toString() ? `?${params.toString()}` : ""
+    const callsQs = `?limit=300${params.toString() ? `&${params.toString()}` : ""}`
     const [s, c, r] = await Promise.allSettled([
       apiFetch<MetricsSummary>(`/api/metrics/summary${qs}`, token),
-      apiFetch<ModelCall[]>(`/api/metrics/model-calls?limit=300`, token),
+      apiFetch<ModelCall[]>(`/api/metrics/model-calls${callsQs}`, token),
       apiFetch<InternalReport[]>(`/api/reports?limit=10`, token)
     ])
     if (s.status === "fulfilled") setSummary(s.value)
-    if (c.status === "fulfilled") setCalls(brand ? c.value.filter((x) => x.brand_slug === brand) : c.value)
+    if (c.status === "fulfilled") setCalls(c.value)
     if (r.status === "fulfilled") setReports(r.value)
     setLoading(false)
-  }, [brand])
+  }, [brand, period])
 
   useEffect(() => { load() }, [load])
+
+  async function exportReport(id: number, format: "pdf" | "md") {
+    const token = getTokenFromCookie()
+    if (!token) return
+    try {
+      await downloadFile(exportPath(`/api/reports/${id}`, format), token, `duofy-relatorio-${id}.${format}`)
+    } catch { /* erro silencioso */ }
+  }
 
   // série de custo por dia (a partir dos model-calls reais)
   const costSeries = useMemo(() => {
@@ -89,32 +120,35 @@ export default function RelatoriosPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-[30px] font-extrabold tracking-[-0.04em] text-ink">Relatórios</h1>
           <p className="mt-1 text-sm text-muted">Custos e uso de IA reais — dados do OpenRouter via model_calls.{brand ? ` Marca: ${brand}.` : " Todas as marcas."}</p>
         </div>
-        <button onClick={load} className="flex h-10 items-center gap-2 rounded-xl border border-line bg-white px-4 text-sm font-semibold text-ink hover:border-purple/40 hover:text-purple">
-          <RefreshIcon className="h-4 w-4" /> Atualizar
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Segmented options={PERIOD_OPTIONS} value={period} onChange={setPeriod} />
+          <button onClick={load} className="duofy-tap flex h-10 items-center gap-2 rounded-xl border border-line bg-white px-4 text-sm font-semibold text-ink hover:border-purple/40 hover:text-purple">
+            <RefreshIcon className="h-4 w-4" /> Atualizar
+          </button>
+        </div>
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
-          {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-24 animate-pulse rounded-2xl bg-line/50" />)}
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+          {Array.from({ length: 6 }).map((_, i) => <div key={i} className="duofy-skeleton h-24 rounded-2xl" />)}
         </div>
       ) : !summary ? (
         <div className="duofy-card grid place-items-center rounded-2xl py-16 text-sm text-muted">Não foi possível carregar as métricas.</div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
             {stats.map((s) => (
               <StatCard key={s.label} icon={s.icon} iconTone={s.tone} label={s.label} value={s.value} />
             ))}
           </div>
 
-          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-            <ChartCard title="Custo ao longo do tempo" sub="Centavos de USD por dia (model_calls reais)" right={<GhostButton className="text-xs">Diário</GhostButton>}>
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <ChartCard title="Custo ao longo do tempo" sub={`Centavos de USD por dia · ${PERIOD_OPTIONS.find((p) => p.id === period)?.label}`} right={<span className="rounded-lg bg-purple-soft px-2.5 py-1 text-xs font-semibold text-purple-deep">Diário</span>}>
               {costSeries.points.length === 0 ? (
                 <Empty />
               ) : (
@@ -142,9 +176,9 @@ export default function RelatoriosPage() {
             </ChartCard>
           </div>
 
-          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <TableCard title="Desempenho por agente">
-              <table className="w-full min-w-[460px] text-sm">
+              <table className="w-full min-w-[420px] text-sm">
                 <thead>
                   <tr className="border-b border-line text-left text-xs font-semibold text-muted">
                     <th className="py-2 pr-3">Agente</th><th className="py-2 pr-3">Chamadas</th><th className="py-2 pr-3">Tokens</th><th className="py-2">Custo</th>
@@ -164,7 +198,7 @@ export default function RelatoriosPage() {
             </TableCard>
 
             <TableCard title="Modelos / Provedores">
-              <table className="w-full min-w-[460px] text-sm">
+              <table className="w-full min-w-[420px] text-sm">
                 <thead>
                   <tr className="border-b border-line text-left text-xs font-semibold text-muted">
                     <th className="py-2 pr-3">Modelo</th><th className="py-2 pr-3">Chamadas</th><th className="py-2 pr-3">Tokens</th><th className="py-2">Custo</th>
@@ -192,13 +226,21 @@ export default function RelatoriosPage() {
                 Nenhum relatório gerado ainda. Os relatórios criados pelo agente de métricas aparecem aqui.
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
                 {reports.map((r) => (
-                  <div key={r.id} className="duofy-card rounded-2xl p-4">
-                    <span className="grid h-9 w-9 place-items-center rounded-lg bg-purple-soft text-purple"><ChartIcon className="h-5 w-5" /></span>
+                  <div key={r.id} className="duofy-card flex flex-col rounded-2xl p-4">
+                    <div className="flex items-start justify-between">
+                      <span className="grid h-9 w-9 place-items-center rounded-lg bg-purple-soft text-purple"><ChartIcon className="h-5 w-5" /></span>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => exportReport(r.id, "pdf")} title="Exportar PDF" className="duofy-tap rounded-lg border border-line px-2 py-1 text-[11px] font-semibold text-muted hover:border-purple/40 hover:text-purple">PDF</button>
+                        <button onClick={() => exportReport(r.id, "md")} title="Exportar Markdown" className="duofy-tap grid h-7 w-7 place-items-center rounded-lg border border-line text-muted hover:border-purple/40 hover:text-purple"><DownloadIcon className="h-3.5 w-3.5" /></button>
+                      </div>
+                    </div>
                     <p className="mt-3 line-clamp-1 text-sm font-bold text-ink">{r.title}</p>
                     <p className="mt-0.5 text-xs text-muted">{r.report_type} · {r.brand_slug ?? "—"}</p>
-                    <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-xs leading-relaxed text-muted">{r.content}</p>
+                    <div className="mt-2 max-h-40 overflow-hidden text-xs text-muted [mask-image:linear-gradient(to_bottom,#000_70%,transparent)]">
+                      <Markdown content={r.content} className="text-xs text-muted" />
+                    </div>
                   </div>
                 ))}
               </div>

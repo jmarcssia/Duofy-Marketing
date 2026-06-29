@@ -154,11 +154,11 @@ export default function CalendarPage() {
         <p className="mt-1 text-sm text-muted">Planeje e dispare conteúdos. Eventos reais do agente de calendário.{brand ? ` Marca: ${brand}.` : ""}</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => <StatCard key={s.label} icon={s.icon} iconTone={s.tone} label={s.label} value={s.value} />)}
       </div>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px]">
         {/* Calendário */}
         <section className="duofy-card rounded-2xl p-5">
           <div className="mb-4 flex items-center justify-between">

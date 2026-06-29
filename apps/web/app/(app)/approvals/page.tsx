@@ -18,6 +18,8 @@ import {
   type OutputWorkflowDetail
 } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
+import { Markdown } from "@/components/markdown"
+import { downloadFile, exportPath } from "@/lib/download"
 import { useBrand } from "@/lib/brand-context"
 import type { Tone } from "@/components/ui"
 
@@ -129,7 +131,7 @@ export default function ReviewPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[320px_minmax(0,1fr)_316px]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)_316px]">
         {/* Fila */}
         <section className="duofy-card h-fit rounded-2xl p-4">
           <div className="mb-3 flex items-center justify-between px-1">
@@ -175,11 +177,28 @@ export default function ReviewPage() {
             <div className="grid place-items-center py-20 text-center text-sm text-muted">Selecione um item da fila.</div>
           ) : (
             <>
-              <div className="flex items-start justify-between gap-3">
-                <h2 className="flex items-center gap-2 text-lg font-bold tracking-[-0.02em] text-ink">
-                  <ShieldCheckIcon className="h-5 w-5 text-purple" /> {selected.title}
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <h2 className="flex flex-wrap items-center gap-2 text-lg font-bold tracking-[-0.02em] text-ink">
+                  <ShieldCheckIcon className="h-5 w-5 shrink-0 text-purple" /> {selected.title}
                   <Badge tone={(STATUS_META[selected.status]?.tone) ?? "slate"}>{STATUS_META[selected.status]?.label ?? selected.status}</Badge>
                 </h2>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {(["pdf", "docx", "md"] as const).map((fmt) => (
+                    <button
+                      key={fmt}
+                      onClick={async () => {
+                        const token = getTokenFromCookie()
+                        if (!token) return
+                        try {
+                          await downloadFile(exportPath(`/api/outputs/${selected.id}`, fmt), token, `duofy-${selected.id}.${fmt}`)
+                        } catch { /* erro silencioso */ }
+                      }}
+                      className="duofy-tap rounded-lg border border-line bg-white px-2.5 py-1.5 text-xs font-semibold text-muted hover:border-purple/40 hover:text-purple"
+                    >
+                      {fmt.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-xs">
                 <Meta label="Agente" value={`run #${selected.agent_run_id ?? "—"}`} />
@@ -193,11 +212,11 @@ export default function ReviewPage() {
               {/* Conteúdo */}
               <div className="mt-4 rounded-xl border border-line bg-white p-4">
                 {!detail ? (
-                  <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-4 animate-pulse rounded bg-line/50" />)}</div>
+                  <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="duofy-skeleton h-4 rounded" />)}</div>
+                ) : detail.current_content ? (
+                  <Markdown content={detail.current_content} />
                 ) : (
-                  <article className="prose-sm max-w-none whitespace-pre-wrap text-sm leading-relaxed text-ink/85">
-                    {detail.current_content || "Sem conteúdo."}
-                  </article>
+                  <p className="text-sm text-muted">Sem conteúdo.</p>
                 )}
               </div>
 
