@@ -9,7 +9,7 @@ from unicodedata import combining, normalize
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agent_config import read_agent_prompt
+from app.agent_config import brand_voice_section, read_agent_prompt
 from app.agent_limits import get_token_budget
 from app.content_generation import generate_content_output
 from app.document_formatting import normalize_document_content
@@ -57,7 +57,7 @@ def _provider_for_model(model: str) -> str:
     return "openrouter"
 
 
-def _system_prompt(agent_prompt: str) -> str:
+def _system_prompt(agent_prompt: str, brand_slug: str | None = None) -> str:
     return "\n".join(
         [
             agent_prompt,
@@ -66,6 +66,7 @@ def _system_prompt(agent_prompt: str) -> str:
             f"- Data atual do sistema: {datetime.now(UTC).date().isoformat()}.",
             "- Use portugues do Brasil.",
             "- Nao publique nem envie nada externamente.",
+            brand_voice_section(brand_slug),
         ]
     )
 
@@ -212,7 +213,7 @@ async def generate_calendar_events(
         llm_result = await call_llm(
             credential=credential,
             model=credential.default_model or model,
-            system_prompt=_system_prompt(agent_prompt),
+            system_prompt=_system_prompt(agent_prompt, brand.slug),
             user_prompt=user_prompt,
             task_type="calendar_generation",
             agent_slug=agent.slug,
@@ -313,7 +314,7 @@ async def generate_press_output(
         llm_result = await call_llm(
             credential=credential,
             model=credential.default_model or model,
-            system_prompt=_system_prompt(agent_prompt),
+            system_prompt=_system_prompt(agent_prompt, brand.slug),
             user_prompt=user_prompt,
             task_type="press_generation",
             task_id=payload.event_id,

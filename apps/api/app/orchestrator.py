@@ -23,7 +23,7 @@ def _provider_for_model(model: str) -> str:
     return "openrouter"
 
 
-def _system_prompt(agent: Agent) -> str:
+def _system_prompt(agent: Agent, brand_slug: str | None = None) -> str:
     return agent_system_prompt(
         agent,
         [
@@ -32,6 +32,7 @@ def _system_prompt(agent: Agent) -> str:
             "Quando o usuário pedir informação atual, use fontes atuais.",
             "Se a fonte encontrada for antiga, diga explicitamente que não encontrou dado atual.",
         ],
+        brand_slug=brand_slug,
     )
 
 
@@ -111,7 +112,7 @@ async def run_agent(
         result = await call_llm(
             credential=credential,
             model=credential.default_model or model,
-            system_prompt=_system_prompt(agent),
+            system_prompt=_system_prompt(agent, brand_slug),
             user_prompt=user_prompt,
             use_web_search=_needs_current_info(agent, prompt, provider),
             task_type="agent_run",

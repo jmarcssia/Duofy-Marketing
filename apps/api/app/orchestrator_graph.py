@@ -162,7 +162,9 @@ async def run_orchestrator(
     tools = build_tools(db, brand_slug=brand_slug, task_id=task_id, log=log)
     graph = build_graph(chat_model, tools)
 
-    system = SystemMessage(content=agent_system_prompt(agent, [f"Marca ativa: {brand_slug}."]))
+    system = SystemMessage(
+        content=agent_system_prompt(agent, [f"Marca ativa: {brand_slug}."], brand_slug=brand_slug)
+    )
     state = await graph.ainvoke(
         {
             "messages": [system, HumanMessage(content=user_message)],

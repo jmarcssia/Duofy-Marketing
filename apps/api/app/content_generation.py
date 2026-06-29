@@ -6,7 +6,7 @@ from unicodedata import combining, normalize
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agent_config import read_agent_prompt, read_config_text
+from app.agent_config import brand_voice_section, read_agent_prompt, read_config_text
 from app.agent_limits import get_token_budget
 from app.document_formatting import normalize_document_content
 from app.llm import LLMConfigurationError, call_llm
@@ -54,7 +54,7 @@ def _template_name(channel: str, content_format: str) -> str:
     return "generic.md"
 
 
-def _system_prompt(agent_prompt: str) -> str:
+def _system_prompt(agent_prompt: str, brand_slug: str | None = None) -> str:
     return "\n".join(
         [
             agent_prompt,
@@ -63,6 +63,7 @@ def _system_prompt(agent_prompt: str) -> str:
             f"- Data atual do sistema: {date.today().isoformat()}.",
             "- A entrega deve ser estruturada, editavel e pronta para revisao.",
             "- Nunca afirme que uma informacao veio de memoria se ela nao estiver no contexto RAG.",
+            brand_voice_section(brand_slug),
         ]
     )
 
@@ -154,7 +155,7 @@ async def generate_content_output(
         llm_result = await call_llm(
             credential=credential,
             model=credential.default_model or model,
-            system_prompt=_system_prompt(agent_prompt),
+            system_prompt=_system_prompt(agent_prompt, brand.slug),
             user_prompt=user_prompt,
             task_type="content_generation",
             agent_slug=agent.slug,

@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agent_config import read_agent_prompt
+from app.agent_config import brand_voice_section, read_agent_prompt
 from app.agent_limits import get_research_depth_limits, get_token_budget
 from app.content_generation import _provider_for_model
 from app.crypto import decrypt_secret
@@ -327,7 +327,7 @@ def _sources_block(sources: list[CollectedSource]) -> str:
     return "\n\n".join(blocks)
 
 
-def _system_prompt(agent_prompt: str) -> str:
+def _system_prompt(agent_prompt: str, brand_slug: str | None = None) -> str:
     return "\n".join(
         [
             agent_prompt,
@@ -336,6 +336,7 @@ def _system_prompt(agent_prompt: str) -> str:
             f"- Data atual do sistema: {date.today().isoformat()}.",
             "- Sintetize apenas a partir das fontes, memoria e limitacoes informadas.",
             "- Nao invente URLs, datas, fontes ou numeros.",
+            brand_voice_section(brand_slug),
         ]
     )
 
@@ -433,7 +434,7 @@ async def run_market_research(
         llm_result = await call_llm(
             credential=credential,
             model=credential.default_model or model,
-            system_prompt=_system_prompt(agent_prompt),
+            system_prompt=_system_prompt(agent_prompt, brand.slug),
             user_prompt=user_prompt,
             task_type="research_generation",
             agent_slug=agent.slug,

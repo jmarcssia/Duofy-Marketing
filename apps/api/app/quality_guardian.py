@@ -8,7 +8,7 @@ from unicodedata import combining, normalize
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agent_config import read_agent_prompt, read_config_text
+from app.agent_config import brand_voice_section, read_agent_prompt, read_config_text
 from app.agent_limits import get_token_budget
 from app.llm import LLMConfigurationError, LLMResult, call_llm
 from app.models import (
@@ -492,7 +492,7 @@ async def assess_output_quality_hybrid(
         llm_result = await call_llm(
             credential=credential,
             model=model,
-            system_prompt=read_agent_prompt(REVIEWER_SLUG),
+            system_prompt=read_agent_prompt(REVIEWER_SLUG) + brand_voice_section(output.brand_slug),
             user_prompt=_llm_user_prompt(output, version, local),
             task_type="quality_review",
             task_id=output.id,
