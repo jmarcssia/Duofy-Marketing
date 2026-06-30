@@ -53,6 +53,21 @@ type AgentSettings = {
   research_depth: Record<string, { sources: number; excerpt: number }>
 }
 
+type QualitySettings = {
+  review_mode: "local_only" | "hybrid" | "llm_required"
+  provider: "openrouter" | "anthropic" | "openai" | null
+  model: string | null
+}
+
+type ProviderForm = {
+  provider: string
+  display_name: string
+  base_url: string
+  default_model: string
+  is_enabled: boolean
+  api_key: string
+}
+
 type Tab = "agentes" | "skills" | "modelos" | "automacoes" | "permissoes" | "integracoes"
 
 const AGENT_ICONS: Record<string, string> = {
@@ -106,27 +121,101 @@ export default function AdminPage() {
   const [memResults, setMemResults] = useState<MemoryHit[]>([])
   const [memLoading, setMemLoading] = useState(false)
 
-  // Load agents + providers + settings
-  useEffect(() => {
+  // Config (escrita real)
+  const [quality, setQuality] = useState<QualitySettings | null>(null)
+  const [editProvider, setEditProvider] = useState<ProviderForm | null>(null)
+  const [savingProvider, setSavingProvider] = useState(false)
+  const [savingSkills, setSavingSkills] = useState(false)
+  const [savingQuality, setSavingQuality] = useState(false)
+  const [adminMsg, setAdminMsg] = useState<string | null>(null)
+
+  const loadAll = useCallback(async (first = false) => {
     const token = getTokenFromCookie()
     if (!token) { setLoading(false); return }
-    const load = async () => {
-      setLoading(true)
-      const [ag, pv, st] = await Promise.allSettled([
-        apiFetch<Agent[]>("/api/admin/agents", token),
-        apiFetch<Provider[]>("/api/admin/providers", token),
-        apiFetch<AgentSettings>("/api/admin/agent-settings", token),
-      ])
-      if (ag.status === "fulfilled") {
-        setAgents(ag.value)
-        if (ag.value.length > 0) setSelectedAgent(ag.value[0])
-      }
-      if (pv.status === "fulfilled") setProviders(pv.value)
-      if (st.status === "fulfilled") setAgentSettings(st.value)
-      setLoading(false)
+    if (first) setLoading(true)
+    const [ag, pv, st, ql] = await Promise.allSettled([
+      apiFetch<Agent[]>("/api/admin/agents", token),
+      apiFetch<Provider[]>("/api/admin/providers", token),
+      apiFetch<AgentSettings>("/api/admin/agent-settings", token),
+      apiFetch<QualitySettings>("/api/admin/quality-settings", token),
+    ])
+    if (ag.status === "fulfilled") {
+      setAgents(ag.value)
+      if (first && ag.value.length > 0) setSelectedAgent(ag.value[0])
     }
-    load()
+    if (pv.status === "fulfilled") setProviders(pv.value)
+    if (st.status === "fulfilled") setAgentSettings(st.value)
+    if (ql.status === "fulfilled") setQuality(ql.value)
+    if (first) setLoading(false)
   }, [])
+
+  useEffect(() => { loadAll(true) }, [loadAll])
+
+  function flash(msg: string) {
+    setAdminMsg(msg)
+    setTimeout(() => setAdminMsg(null), 3000)
+  }
+
+  async function saveProvider() {
+    if (!editProvider) return
+    const token = getTokenFromCookie()
+    if (!token) return
+    setSavingProvider(true)
+    try {
+      const body: Record<string, unknown> = {
+        provider: editProvider.provider,
+        display_name: editProvider.display_name,
+        base_url: editProvider.base_url || null,
+        default_model: editProvider.default_model || null,
+        is_enabled: editProvider.is_enabled,
+      }
+      if (editProvider.api_key.trim()) body.api_key = editProvider.api_key.trim()
+      await apiFetch(`/api/admin/providers/${editProvider.provider}`, token, {
+        method: "PUT",
+        body: JSON.stringify(body),
+      })
+      setEditProvider(null)
+      await loadAll()
+      flash("Provedor atualizado.")
+    } catch (e: unknown) {
+      flash(e instanceof Error ? e.message : "Falha ao salvar provedor.")
+    }
+    setSavingProvider(false)
+  }
+
+  async function saveSkills() {
+    if (!agentSettings) return
+    const token = getTokenFromCookie()
+    if (!token) return
+    setSavingSkills(true)
+    try {
+      await apiFetch("/api/admin/agent-settings", token, {
+        method: "PUT",
+        body: JSON.stringify({ token_budgets: agentSettings.token_budgets, research_depth: agentSettings.research_depth }),
+      })
+      flash("Limites de agentes salvos.")
+    } catch (e: unknown) {
+      flash(e instanceof Error ? e.message : "Falha ao salvar limites.")
+    }
+    setSavingSkills(false)
+  }
+
+  async function saveQuality() {
+    if (!quality) return
+    const token = getTokenFromCookie()
+    if (!token) return
+    setSavingQuality(true)
+    try {
+      await apiFetch("/api/admin/quality-settings", token, {
+        method: "PUT",
+        body: JSON.stringify(quality),
+      })
+      flash("Configuração de qualidade salva.")
+    } catch (e: unknown) {
+      flash(e instanceof Error ? e.message : "Falha ao salvar qualidade.")
+    }
+    setSavingQuality(false)
+  }
 
   const loadRuns = useCallback(async (slug: string) => {
     const token = getTokenFromCookie()
@@ -589,27 +678,36 @@ export default function AdminPage() {
               <p className="text-sm text-muted">Orçamentos de tokens e profundidade de pesquisa por agente.</p>
             </div>
             {loading ? (
-              <div className="space-y-3">{[1,2,3].map(i=><div key={i} className="h-16 animate-pulse rounded-xl bg-line/60"/>)}</div>
+              <div className="space-y-3">{[1,2,3].map(i=><div key={i} className="duofy-skeleton h-16 rounded-xl"/>)}</div>
             ) : !agentSettings ? (
               <p className="text-sm text-muted">Configurações não disponíveis.</p>
             ) : (
               <div className="space-y-4">
                 <div className="rounded-xl border border-line bg-white p-5 shadow-card">
-                  <p className="mb-3 text-sm font-semibold text-ink">Orçamentos de tokens por agente</p>
-                  <div className="space-y-2">
+                  <p className="mb-1 text-sm font-semibold text-ink">Orçamentos de tokens por agente</p>
+                  <p className="mb-3 text-xs text-muted">Entre 256 e 32000 tokens por execução.</p>
+                  <div className="space-y-2.5">
                     {Object.entries(agentSettings.token_budgets).map(([slug, budget]) => (
                       <div key={slug} className="flex items-center gap-3">
-                        <span className="w-40 shrink-0 text-sm text-ink">{slug}</span>
-                        <div className="flex-1 h-2 rounded-full bg-line/70 overflow-hidden">
-                          <div className="h-full bg-purple-deep rounded-full" style={{ width: `${Math.min((budget / 32000) * 100, 100)}%` }} />
-                        </div>
-                        <span className="w-20 shrink-0 text-right text-xs font-mono font-semibold text-ink">{budget.toLocaleString()} tk</span>
+                        <span className="w-44 shrink-0 text-sm text-ink">{slug}</span>
+                        <input
+                          type="range" min={256} max={32000} step={256} value={budget}
+                          onChange={(e) => setAgentSettings({ ...agentSettings, token_budgets: { ...agentSettings.token_budgets, [slug]: Number(e.target.value) } })}
+                          className="flex-1 accent-purple-deep"
+                        />
+                        <input
+                          type="number" min={256} max={32000} value={budget}
+                          onChange={(e) => setAgentSettings({ ...agentSettings, token_budgets: { ...agentSettings.token_budgets, [slug]: Number(e.target.value) } })}
+                          className="w-24 shrink-0 rounded-lg border border-line px-2 py-1 text-right text-xs font-mono text-ink focus:border-purple-deep focus:outline-none"
+                        />
                       </div>
                     ))}
                   </div>
                 </div>
+
                 <div className="rounded-xl border border-line bg-white p-5 shadow-card">
-                  <p className="mb-3 text-sm font-semibold text-ink">Profundidade de pesquisa</p>
+                  <p className="mb-1 text-sm font-semibold text-ink">Profundidade de pesquisa</p>
+                  <p className="mb-3 text-xs text-muted">Fontes 1–30 · Excerpt 500–20000 chars.</p>
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-line text-[11px] font-semibold uppercase tracking-wide text-muted">
@@ -622,13 +720,80 @@ export default function AdminPage() {
                       {Object.entries(agentSettings.research_depth).map(([name, cfg]) => (
                         <tr key={name} className="border-b border-line last:border-0">
                           <td className="py-2 text-ink">{name}</td>
-                          <td className="py-2 text-right font-mono text-muted">{cfg.sources}</td>
-                          <td className="py-2 text-right font-mono text-muted">{cfg.excerpt.toLocaleString()}</td>
+                          <td className="py-2 text-right">
+                            <input type="number" min={1} max={30} value={cfg.sources}
+                              onChange={(e) => setAgentSettings({ ...agentSettings, research_depth: { ...agentSettings.research_depth, [name]: { ...cfg, sources: Number(e.target.value) } } })}
+                              className="w-16 rounded-lg border border-line px-2 py-1 text-right text-xs font-mono text-ink focus:border-purple-deep focus:outline-none" />
+                          </td>
+                          <td className="py-2 text-right">
+                            <input type="number" min={500} max={20000} step={100} value={cfg.excerpt}
+                              onChange={(e) => setAgentSettings({ ...agentSettings, research_depth: { ...agentSettings.research_depth, [name]: { ...cfg, excerpt: Number(e.target.value) } } })}
+                              className="w-24 rounded-lg border border-line px-2 py-1 text-right text-xs font-mono text-ink focus:border-purple-deep focus:outline-none" />
+                          </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+
+                <button
+                  onClick={saveSkills}
+                  disabled={savingSkills}
+                  className="duofy-tap flex items-center gap-2 rounded-lg bg-purple-deep px-4 py-2 text-sm font-semibold text-white hover:bg-purple-deep/90 disabled:opacity-50"
+                >
+                  {savingSkills ? "Salvando…" : "Salvar limites"}
+                </button>
+
+                {/* Qualidade */}
+                {quality && (
+                  <div className="rounded-xl border border-line bg-white p-5 shadow-card">
+                    <p className="mb-1 text-sm font-semibold text-ink">Guardião de Qualidade</p>
+                    <p className="mb-3 text-xs text-muted">Modo de revisão aplicado à cocriação e imprensa.</p>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <label className="text-xs font-medium text-muted">
+                        Modo
+                        <select
+                          value={quality.review_mode}
+                          onChange={(e) => setQuality({ ...quality, review_mode: e.target.value as QualitySettings["review_mode"] })}
+                          className="mt-1 w-full rounded-lg border border-line bg-white px-2 py-1.5 text-sm text-ink focus:border-purple-deep focus:outline-none"
+                        >
+                          <option value="local_only">Apenas local</option>
+                          <option value="hybrid">Híbrido</option>
+                          <option value="llm_required">LLM obrigatório</option>
+                        </select>
+                      </label>
+                      <label className="text-xs font-medium text-muted">
+                        Provedor LLM
+                        <select
+                          value={quality.provider ?? ""}
+                          onChange={(e) => setQuality({ ...quality, provider: (e.target.value || null) as QualitySettings["provider"] })}
+                          className="mt-1 w-full rounded-lg border border-line bg-white px-2 py-1.5 text-sm text-ink focus:border-purple-deep focus:outline-none"
+                        >
+                          <option value="">—</option>
+                          <option value="openrouter">openrouter</option>
+                          <option value="anthropic">anthropic</option>
+                          <option value="openai">openai</option>
+                        </select>
+                      </label>
+                      <label className="text-xs font-medium text-muted">
+                        Modelo
+                        <input
+                          value={quality.model ?? ""}
+                          onChange={(e) => setQuality({ ...quality, model: e.target.value || null })}
+                          placeholder="ex: ~anthropic/claude-sonnet-latest"
+                          className="mt-1 w-full rounded-lg border border-line bg-white px-2 py-1.5 text-sm text-ink placeholder:text-muted focus:border-purple-deep focus:outline-none"
+                        />
+                      </label>
+                    </div>
+                    <button
+                      onClick={saveQuality}
+                      disabled={savingQuality}
+                      className="duofy-tap mt-3 flex items-center gap-2 rounded-lg bg-purple-deep px-4 py-2 text-sm font-semibold text-white hover:bg-purple-deep/90 disabled:opacity-50"
+                    >
+                      {savingQuality ? "Salvando…" : "Salvar qualidade"}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -664,7 +829,17 @@ export default function AdminPage() {
                           <p className="mt-0.5 font-mono text-[11px] text-muted">{p.masked_api_key}</p>
                         )}
                       </div>
-                      <button className="rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-ink hover:bg-surface transition-colors">
+                      <button
+                        onClick={() => setEditProvider({
+                          provider: p.provider,
+                          display_name: p.display_name,
+                          base_url: p.base_url ?? "",
+                          default_model: p.default_model ?? "",
+                          is_enabled: p.is_enabled,
+                          api_key: "",
+                        })}
+                        className="duofy-tap rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-ink hover:border-purple/40 hover:text-purple"
+                      >
                         Configurar
                       </button>
                     </div>
@@ -801,6 +976,92 @@ export default function AdminPage() {
         )}
 
       </div>
+
+      {/* Toast de feedback */}
+      {adminMsg && (
+        <div className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-xl bg-ink px-4 py-2.5 text-sm font-medium text-white shadow-pop animate-fade-in">
+          {adminMsg}
+        </div>
+      )}
+
+      {/* Painel de configuração de provedor */}
+      {editProvider && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="absolute inset-0 bg-ink/30" onClick={() => setEditProvider(null)} aria-hidden="true" />
+          <div className="relative flex h-full w-full max-w-md flex-col overflow-y-auto duofy-scroll border-l border-line bg-white shadow-panel animate-scale-in">
+            <div className="flex items-center justify-between border-b border-line px-5 py-4">
+              <div>
+                <p className="text-sm font-bold text-ink">Configurar provedor</p>
+                <p className="text-xs text-muted">{editProvider.provider}</p>
+              </div>
+              <button onClick={() => setEditProvider(null)} className="text-muted hover:text-ink">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
+              </button>
+            </div>
+            <div className="flex-1 space-y-4 p-5">
+              <label className="block text-xs font-semibold text-muted">
+                Nome de exibição
+                <input
+                  value={editProvider.display_name}
+                  onChange={(e) => setEditProvider({ ...editProvider, display_name: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:border-purple-deep focus:outline-none"
+                />
+              </label>
+              <label className="block text-xs font-semibold text-muted">
+                Base URL
+                <input
+                  value={editProvider.base_url}
+                  onChange={(e) => setEditProvider({ ...editProvider, base_url: e.target.value })}
+                  placeholder="https://openrouter.ai/api/v1"
+                  className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-purple-deep focus:outline-none"
+                />
+              </label>
+              <label className="block text-xs font-semibold text-muted">
+                Modelo padrão
+                <input
+                  value={editProvider.default_model}
+                  onChange={(e) => setEditProvider({ ...editProvider, default_model: e.target.value })}
+                  placeholder="~anthropic/claude-sonnet-latest"
+                  className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-purple-deep focus:outline-none"
+                />
+              </label>
+              <label className="block text-xs font-semibold text-muted">
+                Chave de API <span className="font-normal normal-case">(deixe em branco para manter a atual)</span>
+                <input
+                  type="password"
+                  value={editProvider.api_key}
+                  onChange={(e) => setEditProvider({ ...editProvider, api_key: e.target.value })}
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                  className="mt-1 w-full rounded-lg border border-line px-3 py-2 font-mono text-sm text-ink placeholder:text-muted focus:border-purple-deep focus:outline-none"
+                />
+              </label>
+              <label className="flex items-center justify-between rounded-lg border border-line px-3 py-2.5">
+                <span className="text-sm font-medium text-ink">Habilitado</span>
+                <button
+                  type="button"
+                  onClick={() => setEditProvider({ ...editProvider, is_enabled: !editProvider.is_enabled })}
+                  className={`relative h-6 w-11 rounded-full transition-colors ${editProvider.is_enabled ? "bg-purple-deep" : "bg-line"}`}
+                >
+                  <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${editProvider.is_enabled ? "left-[22px]" : "left-0.5"}`} />
+                </button>
+              </label>
+            </div>
+            <div className="flex items-center gap-2 border-t border-line p-5">
+              <button
+                onClick={saveProvider}
+                disabled={savingProvider}
+                className="duofy-tap flex-1 rounded-lg bg-purple-deep py-2.5 text-sm font-semibold text-white hover:bg-purple-deep/90 disabled:opacity-50"
+              >
+                {savingProvider ? "Salvando…" : "Salvar provedor"}
+              </button>
+              <button onClick={() => setEditProvider(null)} className="duofy-tap rounded-lg border border-line px-4 py-2.5 text-sm font-medium text-ink hover:bg-surface">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
