@@ -107,7 +107,8 @@ services:
       api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:3000/login"]
+      # 127.0.0.1 (IPv4) — next dev escuta em 0.0.0.0; "localhost" resolveria ::1 e falharia.
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:3000/login"]
       interval: 15s
       timeout: 5s
       retries: 5
