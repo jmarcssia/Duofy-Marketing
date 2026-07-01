@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response, status
+from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -656,7 +657,8 @@ async def export_output(
     output = await _get_output_or_404(db, output_id)
     current_version = await _current_version_or_404(db, output)
     export_data = _output_export_document(output, current_version)
-    return _export_response(export_document(export_data, format))
+    exported = await run_in_threadpool(export_document, export_data, format)
+    return _export_response(exported)
 
 
 @router.patch("/{output_id}", response_model=OutputWorkflowDetail)

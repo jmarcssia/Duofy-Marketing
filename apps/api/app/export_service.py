@@ -1,3 +1,4 @@
+# ruff: noqa: E501  (este módulo contém templates CSS/HTML com linhas longas por natureza)
 from __future__ import annotations
 
 import re
@@ -5,15 +6,9 @@ from dataclasses import dataclass
 from html import escape
 from io import BytesIO
 from re import sub
-from textwrap import wrap
 
 from docx import Document as DocxDocument
 from docx.shared import Pt, RGBColor
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import cm
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from app.text_repair import repair_text
 
@@ -91,77 +86,26 @@ def build_duofy_markdown(document: ExportDocument) -> str:
     return "\n\n".join(block for block in blocks if block).strip() + "\n"
 
 
-def build_duofy_html(document: ExportDocument) -> str:
-    metadata_rows = "\n".join(
-        f"<tr><th>{escape(label)}</th><td>{escape(value)}</td></tr>"
-        for label, value in document.metadata
-    )
-    return f"""<!doctype html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{escape(document.title)}</title>
-  <style>
-    body {{
-      margin: 0;
-      background: #f7f7fb;
-      color: #11131a;
-      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }}
-    main {{
-      width: min(880px, calc(100% - 48px));
-      margin: 48px auto;
-      background: #fff;
-      border: 1px solid #e9e8ef;
-      border-radius: 28px;
-      box-shadow: 0 24px 70px rgba(18, 20, 30, .08);
-      padding: 56px;
-    }}
-    .brand {{ color: #6d35ee; font-weight: 800; letter-spacing: -.04em; }}
-    h1 {{ font-size: 42px; line-height: 1.05; letter-spacing: -.05em; margin: 14px 0 8px; }}
-    h2 {{ font-size: 22px; letter-spacing: -.03em; margin-top: 34px; }}
-    p, li, td, th {{ font-size: 15px; line-height: 1.72; }}
-    .subtitle {{ color: #6b7280; margin-bottom: 26px; }}
-    table {{ width: 100%; border-collapse: collapse; margin: 22px 0 34px; }}
-    th, td {{
-      border: 1px solid #e9e8ef;
-      padding: 12px 14px;
-      text-align: left;
-      vertical-align: top;
-    }}
-    th {{ width: 190px; background: #f4efff; }}
-    blockquote {{
-      margin: 18px 0;
-      padding: 14px 18px;
-      border-left: 4px solid #6d35ee;
-      background: #f8f6ff;
-    }}
-    code, pre {{ font-family: "SFMono-Regular", Consolas, monospace; }}
-  </style>
-</head>
-<body>
-  <main>
-    <div class="brand">Duofy</div>
-    <h1>{escape(document.title)}</h1>
-    <p class="subtitle">{escape(document.subtitle)}</p>
-    {"<table>" + metadata_rows + "</table>" if metadata_rows else ""}
-    {markdown_to_html(document.content)}
-  </main>
-</body>
-</html>
-"""
+# ---------------------------------------------------------------------------
+# Markdown -> HTML (compartilhado por HTML e PDF)
+# ---------------------------------------------------------------------------
 
 
 def markdown_to_html(content: str) -> str:
     html: list[str] = []
-    list_items: list[str] = []
+    ul_items: list[str] = []
+    ol_items: list[str] = []
     table_rows: list[list[str]] = []
 
-    def flush_list() -> None:
-        if list_items:
-            html.append("<ul>" + "".join(list_items) + "</ul>")
-            list_items.clear()
+    def flush_ul() -> None:
+        if ul_items:
+            html.append("<ul>" + "".join(ul_items) + "</ul>")
+            ul_items.clear()
+
+    def flush_ol() -> None:
+        if ol_items:
+            html.append("<ol>" + "".join(ol_items) + "</ol>")
+            ol_items.clear()
 
     def flush_table() -> None:
         if not table_rows:
@@ -172,34 +116,48 @@ def markdown_to_html(content: str) -> str:
             "<tr>" + "".join(f"<td>{_inline_markdown(cell)}</td>" for cell in row) + "</tr>"
             for row in rows
         )
-        html.append(f"<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>")
+        html.append(
+            f'<table class="md"><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>'
+        )
         table_rows.clear()
+
+    def flush_all() -> None:
+        flush_ul()
+        flush_ol()
+        flush_table()
 
     for raw_line in content.splitlines():
         line = raw_line.strip()
         if not line:
-            flush_list()
-            flush_table()
+            flush_all()
             continue
-        if line in {"---", "***"}:
-            flush_list()
-            flush_table()
+        if line in {"---", "***", "___"}:
+            flush_all()
             html.append("<hr>")
             continue
         if _is_markdown_table_row(line):
             cells = [cell.strip() for cell in line.strip("|").split("|")]
             if all(re.fullmatch(r":?-{3,}:?", cell) for cell in cells):
                 continue
-            flush_list()
+            flush_ul()
+            flush_ol()
             table_rows.append(cells)
             continue
-        if line.startswith(("- ", "* ")):
+        ordered = re.match(r"^\d+[.)]\s+(.*)$", line)
+        if ordered:
+            flush_ul()
             flush_table()
-            list_items.append(f"<li>{_inline_markdown(line[2:].strip())}</li>")
+            ol_items.append(f"<li>{_inline_markdown(ordered.group(1).strip())}</li>")
             continue
-        flush_list()
-        flush_table()
-        if line.startswith("### "):
+        if line.startswith(("- ", "* ", "+ ")):
+            flush_ol()
+            flush_table()
+            ul_items.append(f"<li>{_inline_markdown(line[2:].strip())}</li>")
+            continue
+        flush_all()
+        if line.startswith("#### ") or line.startswith("##### "):
+            html.append(f"<h4>{_inline_markdown(line.lstrip('#').strip())}</h4>")
+        elif line.startswith("### "):
             html.append(f"<h3>{_inline_markdown(line[4:])}</h3>")
         elif line.startswith("## "):
             html.append(f"<h2>{_inline_markdown(line[3:])}</h2>")
@@ -209,20 +167,195 @@ def markdown_to_html(content: str) -> str:
             html.append(f"<blockquote>{_inline_markdown(line.lstrip('>').strip())}</blockquote>")
         else:
             html.append(f"<p>{_inline_markdown(line)}</p>")
-    flush_list()
-    flush_table()
+    flush_all()
     return "\n".join(html)
 
 
 def _inline_markdown(value: str) -> str:
     escaped = escape(value)
-    escaped = sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", escaped)
-    escaped = sub(r"`(.+?)`", r"<code>\1</code>", escaped)
+    # links [texto](url) — só http(s)/mailto viram âncora
+    def _link(match: re.Match[str]) -> str:
+        text, url = match.group(1), match.group(2)
+        if re.match(r"^(https?:|mailto:)", url, re.IGNORECASE):
+            return f'<a href="{url}">{text}</a>'
+        return text
+
+    escaped = re.sub(r"\[([^\]]+)\]\(([^)\s]+)\)", _link, escaped)
+    escaped = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", escaped)
+    escaped = re.sub(r"__(.+?)__", r"<strong>\1</strong>", escaped)
+    escaped = re.sub(r"(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])", r"<em>\1</em>", escaped)
+    escaped = re.sub(r"(?<![\w_])_(?!\s)(.+?)(?<!\s)_(?![\w_])", r"<em>\1</em>", escaped)
+    escaped = re.sub(r"`(.+?)`", r"<code>\1</code>", escaped)
     return escaped
 
 
 def _is_markdown_table_row(line: str) -> bool:
     return line.startswith("|") and line.endswith("|") and line.count("|") >= 2
+
+
+# ---------------------------------------------------------------------------
+# HTML de tela (export .html)
+# ---------------------------------------------------------------------------
+
+_SCREEN_STYLE = """
+    body { margin: 0; background: #f7f7fb; color: #11131a;
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    main { width: min(880px, calc(100% - 48px)); margin: 48px auto; background: #fff;
+      border: 1px solid #e9e8ef; border-radius: 24px;
+      box-shadow: 0 24px 70px rgba(18,20,30,.08); padding: 56px; }
+    .brand { color: #6d35ee; font-weight: 800; letter-spacing: -.04em; }
+    h1 { font-size: 40px; line-height: 1.06; letter-spacing: -.04em; margin: 12px 0 8px; }
+    h2 { font-size: 21px; letter-spacing: -.02em; margin-top: 32px; border-bottom: 1px solid #eceaf4; padding-bottom: 6px; }
+    h3 { font-size: 16px; margin-top: 22px; }
+    p, li, td, th { font-size: 15px; line-height: 1.7; }
+    .subtitle { color: #6b7280; margin-bottom: 26px; }
+    table { width: 100%; border-collapse: collapse; margin: 18px 0 28px; table-layout: fixed; }
+    th, td { border: 1px solid #e9e8ef; padding: 10px 12px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+    thead th { background: #f6f3ff; color: #5b29d6; }
+    .meta th { width: 200px; background: #f4efff; }
+    blockquote { margin: 16px 0; padding: 12px 18px; border-left: 4px solid #6d35ee; background: #f8f6ff; border-radius: 0 8px 8px 0; }
+    a { color: #6d35ee; }
+    code { font-family: "SFMono-Regular", Consolas, monospace; background: #f4efff; color: #5b29d6; padding: 1px 5px; border-radius: 4px; }
+"""
+
+
+def build_duofy_html(document: ExportDocument) -> str:
+    metadata_rows = "\n".join(
+        f"<tr><th>{escape(label)}</th><td>{escape(value)}</td></tr>"
+        for label, value in document.metadata
+    )
+    meta_block = (
+        f'<table class="meta">{metadata_rows}</table>' if metadata_rows else ""
+    )
+    return f"""<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{escape(document.title)}</title>
+  <style>{_SCREEN_STYLE}</style>
+</head>
+<body>
+  <main>
+    <div class="brand">Duofy</div>
+    <h1>{escape(document.title)}</h1>
+    <p class="subtitle">{escape(document.subtitle)}</p>
+    {meta_block}
+    {markdown_to_html(document.content)}
+  </main>
+</body>
+</html>
+"""
+
+
+# ---------------------------------------------------------------------------
+# PDF profissional via WeasyPrint (HTML/CSS -> PDF, paginado, sem cortes)
+# ---------------------------------------------------------------------------
+
+_PDF_STYLE = """
+  @page {
+    size: A4;
+    margin: 20mm 16mm 18mm 16mm;
+    @top-left { content: "DUOFY"; font: 700 8pt "Liberation Sans", sans-serif; color: #6d35ee; letter-spacing: 1.5px; }
+    @top-right { content: string(doctitle); font: 8pt "Liberation Sans", sans-serif; color: #aab0bd; }
+    @bottom-left { content: "Documento gerado pela plataforma Duofy"; font: 7.5pt "Liberation Sans", sans-serif; color: #bcc0cb; }
+    @bottom-right { content: "Página " counter(page) " / " counter(pages); font: 7.5pt "Liberation Sans", sans-serif; color: #aab0bd; }
+  }
+  @page :first {
+    @top-left { content: ""; }
+    @top-right { content: ""; }
+  }
+
+  * { box-sizing: border-box; }
+  html { font-family: "Liberation Sans", "DejaVu Sans", sans-serif; color: #1a1c25; font-size: 10.5pt; line-height: 1.62; }
+  body { margin: 0; }
+
+  .cover { border-bottom: 3px solid #6d35ee; padding-bottom: 14px; margin-bottom: 22px; }
+  .wordmark { font-weight: 800; font-size: 11pt; letter-spacing: 0.5px; color: #6d35ee; text-transform: uppercase; }
+  h1.title { font-size: 24pt; line-height: 1.12; letter-spacing: -0.02em; margin: 9px 0 6px; color: #11131a;
+    string-set: doctitle content(text); }
+  .subtitle { color: #6b7280; font-size: 11pt; margin: 0; line-height: 1.45; }
+
+  .meta { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0 0 24px;
+    border: 1px solid #e9e8ef; border-radius: 8px; overflow: hidden; }
+  .meta th { width: 34%; background: #f6f3ff; color: #5b29d6; font-weight: 700; text-align: left;
+    padding: 8px 12px; font-size: 8.6pt; vertical-align: top; border-bottom: 1px solid #efedf6; overflow-wrap: anywhere; }
+  .meta td { padding: 8px 12px; font-size: 9.2pt; color: #1a1c25; vertical-align: top;
+    border-bottom: 1px solid #efedf6; overflow-wrap: anywhere; }
+  .meta tr:last-child th, .meta tr:last-child td { border-bottom: 0; }
+
+  h2 { font-size: 14pt; letter-spacing: -0.01em; margin: 22px 0 8px; padding-bottom: 5px;
+    border-bottom: 1px solid #eceaf4; color: #11131a; break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 16px 0 5px; color: #2a2140; break-after: avoid; }
+  h4 { font-size: 10pt; margin: 12px 0 4px; color: #4a4560; text-transform: uppercase; letter-spacing: 0.4px; break-after: avoid; }
+  p { margin: 0 0 8px; orphans: 2; widows: 2; }
+  strong { color: #11131a; font-weight: 700; }
+  em { font-style: italic; }
+  a { color: #6d35ee; text-decoration: none; }
+  code { font-family: "DejaVu Sans Mono", monospace; background: #f4efff; color: #5b29d6;
+    padding: 1px 4px; border-radius: 3px; font-size: 8.6pt; }
+
+  ul, ol { margin: 6px 0 12px; padding: 0; list-style: none; }
+  li { margin: 0 0 5px; padding-left: 18px; position: relative; orphans: 2; widows: 2; }
+  ul > li::before { content: ""; position: absolute; left: 3px; top: 6.5px; width: 5px; height: 5px;
+    border-radius: 50%; background: #8b5cf6; }
+  ol { counter-reset: item; }
+  ol > li { counter-increment: item; }
+  ol > li::before { content: counter(item) "."; position: absolute; left: 0; top: 0;
+    color: #6d35ee; font-weight: 700; font-size: 9.5pt; }
+
+  blockquote { margin: 12px 0; padding: 9px 16px; border-left: 3px solid #6d35ee;
+    background: #f8f6ff; border-radius: 0 6px 6px 0; color: #3a3550; break-inside: avoid; }
+
+  table.md { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 12px 0 18px; font-size: 8.8pt; }
+  table.md thead { display: table-header-group; }
+  table.md th { background: #f6f3ff; color: #5b29d6; text-align: left; font-weight: 700; }
+  table.md th, table.md td { border: 1px solid #e9e8ef; padding: 6px 8px; vertical-align: top;
+    overflow-wrap: anywhere; word-break: break-word; line-height: 1.4; }
+  table.md tr { break-inside: avoid; }
+
+  hr { border: 0; border-top: 1px solid #e9e8ef; margin: 18px 0; }
+"""
+
+
+def _pdf_html(document: ExportDocument) -> str:
+    metadata_rows = "\n".join(
+        f"<tr><th>{escape(label)}</th><td>{escape(value)}</td></tr>"
+        for label, value in document.metadata
+    )
+    meta_block = f'<table class="meta">{metadata_rows}</table>' if metadata_rows else ""
+    return f"""<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>{escape(document.title)}</title>
+  <style>{_PDF_STYLE}</style>
+</head>
+<body>
+  <header class="cover">
+    <div class="wordmark">Duofy</div>
+    <h1 class="title">{escape(document.title)}</h1>
+    <p class="subtitle">{escape(document.subtitle)}</p>
+  </header>
+  {meta_block}
+  <section class="content">
+    {markdown_to_html(document.content)}
+  </section>
+</body>
+</html>
+"""
+
+
+def build_duofy_pdf(document_data: ExportDocument) -> bytes:
+    # Import tardio: WeasyPrint depende de libs nativas presentes só no container da API.
+    from weasyprint import HTML
+
+    return HTML(string=_pdf_html(document_data)).write_pdf()
+
+
+# ---------------------------------------------------------------------------
+# DOCX (python-docx) — inalterado
+# ---------------------------------------------------------------------------
 
 
 def build_duofy_docx(document: ExportDocument) -> bytes:
@@ -298,172 +431,4 @@ def build_duofy_docx(document: ExportDocument) -> bytes:
 
     buffer = BytesIO()
     docx.save(buffer)
-    return buffer.getvalue()
-
-
-def _clean_pdf_text(value: str) -> str:
-    return escape(value).replace("\u2014", "-").replace("\u2013", "-")
-
-
-def _pdf_paragraphs(
-    content: str,
-    body_style: ParagraphStyle,
-    heading_style: ParagraphStyle,
-) -> list:
-    flowables: list = []
-    pending_table: list[list[str]] = []
-
-    def flush_pdf_table() -> None:
-        if not pending_table:
-            return
-        table = Table(
-            [[_clean_pdf_text(cell.replace("**", "")) for cell in row] for row in pending_table],
-            repeatRows=1,
-        )
-        table.setStyle(
-            TableStyle(
-                [
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F8F6FF")),
-                    ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#E9E8EF")),
-                    ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#E9E8EF")),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 6),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-                    ("TOPPADDING", (0, 0), (-1, -1), 5),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-                ]
-            )
-        )
-        flowables.append(table)
-        flowables.append(Spacer(1, 0.18 * cm))
-        pending_table.clear()
-
-    for raw_line in content.splitlines():
-        line = raw_line.strip()
-        if not line:
-            flush_pdf_table()
-            flowables.append(Spacer(1, 0.16 * cm))
-            continue
-        if line in {"---", "***"}:
-            flush_pdf_table()
-            flowables.append(Spacer(1, 0.24 * cm))
-            continue
-        if _is_markdown_table_row(line):
-            cells = [cell.strip() for cell in line.strip("|").split("|")]
-            if all(re.fullmatch(r":?-{3,}:?", cell) for cell in cells):
-                continue
-            pending_table.append(cells)
-            continue
-        if line.startswith("#"):
-            flush_pdf_table()
-            cleaned = line.strip("#").strip()
-            flowables.append(Spacer(1, 0.14 * cm))
-            flowables.append(Paragraph(_clean_pdf_text(cleaned), heading_style))
-        elif line.startswith(("- ", "* ")):
-            flush_pdf_table()
-            wrapped = wrap(line[2:].strip(), width=108) or [line[2:].strip()]
-            flowables.append(Paragraph(f"• {_clean_pdf_text(wrapped[0])}", body_style))
-            for continuation in wrapped[1:]:
-                flowables.append(
-                    Paragraph(
-                        f"&nbsp;&nbsp;&nbsp;{_clean_pdf_text(continuation)}",
-                        body_style,
-                    )
-                )
-        else:
-            flush_pdf_table()
-            flowables.append(Paragraph(_clean_pdf_text(line), body_style))
-    flush_pdf_table()
-    return flowables
-
-
-def build_duofy_pdf(document_data: ExportDocument) -> bytes:
-    buffer = BytesIO()
-    document = SimpleDocTemplate(
-        buffer,
-        pagesize=A4,
-        rightMargin=1.45 * cm,
-        leftMargin=1.45 * cm,
-        topMargin=1.6 * cm,
-        bottomMargin=1.35 * cm,
-        title=document_data.title,
-        author="Duofy",
-    )
-    styles = getSampleStyleSheet()
-    brand_style = ParagraphStyle(
-        "DuofyBrand",
-        parent=styles["BodyText"],
-        fontName="Helvetica-Bold",
-        fontSize=13,
-        textColor=colors.HexColor("#6D35EE"),
-        spaceAfter=8,
-    )
-    title_style = ParagraphStyle(
-        "DuofyTitle",
-        parent=styles["Title"],
-        fontName="Helvetica-Bold",
-        fontSize=25,
-        leading=30,
-        textColor=colors.HexColor("#11131A"),
-        spaceAfter=8,
-    )
-    subtitle_style = ParagraphStyle(
-        "DuofySubtitle",
-        parent=styles["BodyText"],
-        fontSize=10,
-        leading=14,
-        textColor=colors.HexColor("#6B7280"),
-        spaceAfter=14,
-    )
-    body_style = ParagraphStyle(
-        "DuofyBody",
-        parent=styles["BodyText"],
-        fontSize=9.6,
-        leading=14.4,
-        textColor=colors.HexColor("#11131A"),
-        spaceAfter=5,
-    )
-    heading_style = ParagraphStyle(
-        "DuofyHeading",
-        parent=styles["Heading2"],
-        fontName="Helvetica-Bold",
-        fontSize=13,
-        leading=17,
-        textColor=colors.HexColor("#11131A"),
-        spaceBefore=5,
-        spaceAfter=7,
-    )
-
-    story = [
-        Paragraph("Duofy", brand_style),
-        Paragraph(_clean_pdf_text(document_data.title), title_style),
-        Paragraph(_clean_pdf_text(document_data.subtitle), subtitle_style),
-    ]
-
-    if document_data.metadata:
-        table = Table(
-            [
-                [Paragraph(f"<b>{_clean_pdf_text(label)}</b>", body_style), _clean_pdf_text(value)]
-                for label, value in document_data.metadata
-            ],
-            colWidths=[4.0 * cm, 12.5 * cm],
-        )
-        table.setStyle(
-            TableStyle(
-                [
-                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F8F6FF")),
-                    ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#E9E8EF")),
-                    ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#E9E8EF")),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 8),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-                    ("TOPPADDING", (0, 0), (-1, -1), 6),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-                ]
-            )
-        )
-        story.extend([table, Spacer(1, 0.45 * cm)])
-
-    story.extend(_pdf_paragraphs(document_data.content, body_style, heading_style))
-    document.build(story)
     return buffer.getvalue()

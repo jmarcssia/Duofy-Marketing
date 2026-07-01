@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -117,4 +118,5 @@ async def export_report(
     format: Annotated[str, Query(pattern="^(pdf|docx|md|html)$")] = "pdf",
 ) -> Response:
     report = await _get_report_or_404(db, report_id)
-    return _export_response(export_document(_report_export_document(report), format))
+    exported = await run_in_threadpool(export_document, _report_export_document(report), format)
+    return _export_response(exported)
