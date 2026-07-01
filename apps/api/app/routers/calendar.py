@@ -3,11 +3,12 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit_service import record_audit_event
+from app.calendar_ics import build_ics
 from app.calendar_service import (
     create_calendar_event,
     execute_calendar_event,
@@ -86,6 +87,28 @@ async def list_calendar_events(
     statement = statement.order_by(CalendarEvent.start_at.asc()).limit(limit)
     result = await db.execute(statement)
     return [_event_read(event) for event in result.scalars().all()]
+
+
+@router.get("/export.ics")
+async def export_calendar_ics(
+    _current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    brand_slug: str | None = None,
+) -> Response:
+    statement = select(CalendarEvent).where(CalendarEvent.status != "cancelled")
+    if brand_slug:
+        statement = statement.where(CalendarEvent.brand_slug == brand_slug)
+    statement = statement.order_by(CalendarEvent.start_at.asc()).limit(500)
+    result = await db.execute(statement)
+    events = list(result.scalars().all())
+    name = f"Duofy — {brand_slug}" if brand_slug else "Duofy — Calendário Editorial"
+    ics = build_ics(events, name)
+    filename = f"duofy-calendario{('-' + brand_slug) if brand_slug else ''}.ics"
+    return Response(
+        content=ics,
+        media_type="text/calendar; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.post("", response_model=CalendarEventRead)
