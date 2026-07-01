@@ -1,0 +1,25 @@
+# Reverse proxy de produção da Duofy.
+# DUOFY_SITE_ADDRESS:
+#   - domínio real (ex.: app.duofy.com.br) => Caddy provisiona HTTPS automático (Let's Encrypt)
+#   - ":80" => somente HTTP (útil para testar por IP antes de apontar o domínio)
+{$DUOFY_SITE_ADDRESS::80} {
+	encode gzip zstd
+
+	# API e healthcheck vão para o backend FastAPI.
+	@backend path /api/* /health
+	handle @backend {
+		reverse_proxy api:8000
+	}
+
+	# Todo o resto (páginas, assets, _next) vai para o Next.js.
+	handle {
+		reverse_proxy web:3000
+	}
+
+	# Cabeçalhos de segurança básicos na borda.
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}
