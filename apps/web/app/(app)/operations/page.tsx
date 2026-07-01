@@ -8,219 +8,269 @@ import {
   AlertTriangleIcon,
   BookIcon,
   CheckCircleIcon,
+  CloseIcon,
   CopyIcon,
+  DownloadIcon,
   FileIcon,
   PlusIcon,
   RefreshIcon,
   SendIcon,
   SettingsIcon,
-  ShieldCheckIcon,
   SparklesIcon
 } from "@/components/icons"
 import {
   apiFetch,
   type AgentRun,
+  type ContentOutput,
   type ContentOutputDetail,
   type ResearchReport
 } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
 import { useBrand } from "@/lib/brand-context"
+import { downloadFile, exportPath } from "@/lib/download"
 
 type ChatMsg = { id: string; role: "user" | "assistant"; text: string; time: string; pending?: boolean; error?: boolean }
-
 type ColId = "analise" | "revisao" | "aprovado"
 
-const COLUMNS: { id: ColId; label: string }[] = [
-  { id: "analise", label: "Em análise" },
-  { id: "revisao", label: "Em revisão" },
-  { id: "aprovado", label: "Aprovado" }
+const COLUMNS: { id: ColId; label: string; status: string }[] = [
+  { id: "analise", label: "Em análise", status: "draft" },
+  { id: "revisao", label: "Em revisão", status: "review" },
+  { id: "aprovado", label: "Aprovado", status: "approved" }
+]
+const STATUS_TO_COL: Record<string, ColId> = {
+  draft: "analise", needs_adjustment: "analise", rejected: "analise",
+  review: "revisao", approved: "aprovado", archived: "aprovado"
+}
+const STATUS_LABEL: Record<string, { label: string; tone: "amber" | "blue" | "green" | "slate" }> = {
+  draft: { label: "Rascunho", tone: "amber" }, review: { label: "Em revisão", tone: "blue" },
+  approved: { label: "Aprovado", tone: "green" }, needs_adjustment: { label: "Ajuste", tone: "amber" },
+  rejected: { label: "Rejeitado", tone: "slate" }, archived: { label: "Arquivado", tone: "slate" }
+}
+const CONTENT_PRESETS = [
+  { label: "Instagram · Carrossel", channel: "Instagram", format: "Carrossel" },
+  { label: "Instagram · Reels", channel: "Instagram", format: "Reels" },
+  { label: "LinkedIn · Post", channel: "LinkedIn", format: "Post LinkedIn" },
+  { label: "Blog · Artigo", channel: "Blog", format: "Blog" },
+  { label: "E-mail", channel: "E-mail", format: "E-mail" }
 ]
 
-const STATUS_TO_COL: Record<string, ColId> = {
-  draft: "analise",
-  needs_adjustment: "analise",
-  rejected: "analise",
-  review: "revisao",
-  approved: "aprovado",
-  archived: "aprovado"
-}
-
-const STATUS_LABEL: Record<string, { label: string; tone: "amber" | "blue" | "green" | "slate" }> = {
-  draft: { label: "Rascunho", tone: "amber" },
-  review: { label: "Em revisão", tone: "blue" },
-  approved: { label: "Aprovado", tone: "green" },
-  needs_adjustment: { label: "Ajuste", tone: "amber" },
-  rejected: { label: "Rejeitado", tone: "slate" },
-  archived: { label: "Arquivado", tone: "slate" }
-}
-
-function now() {
-  return new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
-}
-
-function summarize(content: string, max = 420): string {
-  if (!content) return "Sem conteúdo gerado ainda."
-  // pega o primeiro parágrafo de texto real (ignora cabeçalhos markdown e tabelas)
-  const lines = content
-    .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l && !l.startsWith("#") && !l.startsWith("|") && !l.startsWith("---") && !l.startsWith("-"))
-  const text = lines.join(" ")
-  return text.length > max ? `${text.slice(0, max)}…` : text || "Documento estruturado — abra os detalhes."
+function now() { return new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }
+function isResearch(o: { format?: string; channel?: string; category?: string }) {
+  return o.format === "research_report" || o.channel === "Pesquisa" || o.category === "research"
 }
 
 export default function OperationsPage() {
   const { selected: brand } = useBrand()
 
-  // ── Orquestrador ──
+  // Orquestrador
   const [messages, setMessages] = useState<ChatMsg[]>([
-    {
-      id: "intro",
-      role: "assistant",
-      text: "Olá! Sou o Orquestrador. Posso disparar pesquisas, gerar conteúdo e coordenar os agentes. O que você precisa?",
-      time: now()
-    }
+    { id: "intro", role: "assistant", text: "Olá! Sou o Orquestrador. Posso disparar pesquisas e gerar conteúdo — o que criar aparece automaticamente no Kanban e em Conteúdos.", time: now() }
   ])
   const [input, setInput] = useState("")
   const [sending, setSending] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
-  // ── Kanban ──
+  // Dados
   const [reports, setReports] = useState<ResearchReport[]>([])
-  const [loadingReports, setLoadingReports] = useState(true)
-  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [content, setContent] = useState<ContentOutput[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Pesquisa (modal de criação)
+  const [researchOpen, setResearchOpen] = useState(false)
+  const [researchTheme, setResearchTheme] = useState("")
+  const [researchDepth, setResearchDepth] = useState<"quick" | "standard" | "deep">("quick")
+  const [researchBusy, setResearchBusy] = useState(false)
+
+  // Cocriação
+  const [selectedResearchId, setSelectedResearchId] = useState<number | null>(null)
+  const [preset, setPreset] = useState(0)
+  const [coNote, setCoNote] = useState("")
+  const [genBusy, setGenBusy] = useState(false)
+  const [genMsg, setGenMsg] = useState<string | null>(null)
+
+  // Modal de edição
+  const [editId, setEditId] = useState<number | null>(null)
   const [detail, setDetail] = useState<ContentOutputDetail | null>(null)
-  const [acting, setActing] = useState(false)
+  const [ef, setEf] = useState<{ title: string; content: string; status: string }>({ title: "", content: "", status: "draft" })
+  const [modalBusy, setModalBusy] = useState(false)
+  const [modalMsg, setModalMsg] = useState<string | null>(null)
 
-  // ── Cocriação ──
-  const [genLoading, setGenLoading] = useState(false)
-  const [genResult, setGenResult] = useState<string | null>(null)
-  const [genError, setGenError] = useState<string | null>(null)
+  // Drag & drop
+  const [dragId, setDragId] = useState<number | null>(null)
+  const [dragOver, setDragOver] = useState<ColId | null>(null)
+  const justDragged = useRef(false)
 
-  const loadReports = useCallback(async () => {
+  const loadData = useCallback(async () => {
     const token = getTokenFromCookie()
-    if (!token) { setLoadingReports(false); return }
-    setLoadingReports(true)
+    if (!token) { setLoading(false); return }
+    setLoading(true)
     try {
-      const data = await apiFetch<ResearchReport[]>(`/api/research/reports?limit=50`, token)
-      const filtered = brand ? data.filter((r) => r.brand_slug === brand) : data
-      setReports(filtered)
-      if (filtered.length > 0 && !filtered.some((r) => r.id === selectedId)) {
-        setSelectedId(filtered[0].id)
-      }
-    } catch {
-      setReports([])
-    }
-    setLoadingReports(false)
-  }, [brand, selectedId])
+      const [r, c] = await Promise.all([
+        apiFetch<ResearchReport[]>(`/api/research/reports?limit=60`, token),
+        apiFetch<ContentOutput[]>(`/api/content/outputs?limit=60${brand ? `&brand_slug=${brand}` : ""}`, token)
+      ])
+      setReports(brand ? r.filter((x) => x.brand_slug === brand) : r)
+      setContent(c.filter((x) => !isResearch(x)))
+    } catch { setReports([]); setContent([]) }
+    setLoading(false)
+  }, [brand])
 
-  useEffect(() => { loadReports() }, [brand]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadData() }, [brand]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages])
 
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
-
-  // load detail of selected report
-  useEffect(() => {
-    if (selectedId == null) { setDetail(null); return }
-    const token = getTokenFromCookie()
-    if (!token) return
-    setDetail(null)
-    setGenResult(null)
-    setGenError(null)
-    apiFetch<ContentOutputDetail>(`/api/outputs/${selectedId}`, token)
-      .then(setDetail)
-      .catch(() => setDetail(null))
-  }, [selectedId])
-
-  const selectedReport = reports.find((r) => r.id === selectedId) ?? null
+  const selectedResearch = reports.find((r) => r.id === selectedResearchId) ?? null
 
   async function sendMessage(prompt?: string) {
     const text = (prompt ?? input).trim()
     if (!text || sending) return
     const token = getTokenFromCookie()
     if (!token) return
-    const userMsg: ChatMsg = { id: `u${Date.now()}`, role: "user", text, time: now() }
-    const pendingMsg: ChatMsg = { id: `p${Date.now()}`, role: "assistant", text: "Pensando…", time: now(), pending: true }
-    setMessages((m) => [...m, userMsg, pendingMsg])
+    const u: ChatMsg = { id: `u${Date.now()}`, role: "user", text, time: now() }
+    const p: ChatMsg = { id: `p${Date.now()}`, role: "assistant", text: "Pensando…", time: now(), pending: true }
+    setMessages((m) => [...m, u, p])
     setInput("")
     setSending(true)
     try {
       const run = await apiFetch<AgentRun>("/api/agents/run", token, {
-        method: "POST",
-        body: JSON.stringify({ agent_slug: "orchestrator", prompt: text, brand_slug: brand || undefined })
+        method: "POST", body: JSON.stringify({ agent_slug: "orchestrator", prompt: text, brand_slug: brand || undefined })
       })
-      setMessages((m) =>
-        m.map((msg) =>
-          msg.id === pendingMsg.id
-            ? { ...msg, text: run.output || run.error || "(sem resposta)", time: now(), pending: false, error: run.status === "failed" }
-            : msg
-        )
-      )
+      setMessages((m) => m.map((x) => x.id === p.id ? { ...x, text: run.output || run.error || "(sem resposta)", time: now(), pending: false, error: run.status === "failed" } : x))
+      loadData()
     } catch (e: unknown) {
-      const detail = e instanceof Error ? e.message : "Erro ao executar o agente."
-      setMessages((m) =>
-        m.map((msg) => (msg.id === pendingMsg.id ? { ...msg, text: detail, time: now(), pending: false, error: true } : msg))
-      )
+      setMessages((m) => m.map((x) => x.id === p.id ? { ...x, text: e instanceof Error ? e.message : "Erro.", time: now(), pending: false, error: true } : x))
     }
     setSending(false)
   }
 
-  async function approveReport() {
-    if (!selectedReport) return
+  async function runResearch() {
+    if (researchTheme.trim().length < 3) return
     const token = getTokenFromCookie()
-    if (!token) return
-    setActing(true)
+    if (!token || !brand) { setGenMsg("Selecione uma marca."); return }
+    setResearchBusy(true)
     try {
-      await apiFetch(`/api/outputs/${selectedReport.id}/approve`, token, { method: "POST", body: JSON.stringify({}) })
-      await loadReports()
-      const fresh = await apiFetch<ContentOutputDetail>(`/api/outputs/${selectedReport.id}`, token)
-      setDetail(fresh)
-    } catch { /* surfaced via reload */ }
-    setActing(false)
-  }
-
-  async function saveToMemory() {
-    if (!selectedReport) return
-    const token = getTokenFromCookie()
-    if (!token) return
-    setActing(true)
-    try {
-      await apiFetch(`/api/research/reports/${selectedReport.id}/save-memory`, token, { method: "POST", body: JSON.stringify({}) })
-    } catch { /* ignore */ }
-    setActing(false)
+      const rep = await apiFetch<ResearchReport>("/api/research/run", token, {
+        method: "POST",
+        body: JSON.stringify({ brand_slug: brand, theme: researchTheme.trim(), depth: researchDepth })
+      })
+      setResearchOpen(false)
+      setResearchTheme("")
+      setMessages((m) => [...m, { id: `s${Date.now()}`, role: "assistant", text: `Pesquisa criada e enviada ao Kanban: **${rep.title}** (#${rep.id}).`, time: now() }])
+      await loadData()
+      setSelectedResearchId(rep.id)
+    } catch (e: unknown) {
+      setMessages((m) => [...m, { id: `e${Date.now()}`, role: "assistant", text: e instanceof Error ? e.message : "Falha na pesquisa.", time: now(), error: true }])
+    }
+    setResearchBusy(false)
   }
 
   async function generateContent() {
-    if (!selectedReport) return
     const token = getTokenFromCookie()
-    if (!token) return
-    setGenLoading(true)
-    setGenError(null)
-    setGenResult(null)
-    const prompt = `Com base nesta pesquisa de mercado, gere um conteúdo pronto para publicação.\n\nTítulo da pesquisa: ${selectedReport.title}\nBriefing: ${selectedReport.briefing}\n\nEntregue uma legenda envolvente com CTA e hashtags para Instagram.`
+    if (!token || !brand) { setGenMsg("Selecione uma marca."); return }
+    const pr = CONTENT_PRESETS[preset]
+    const base = selectedResearch ? `Com base na pesquisa "${selectedResearch.title}". ${selectedResearch.briefing}` : "Conteúdo institucional da marca."
+    const briefing = `${base}${coNote ? ` Observação: ${coNote}` : ""}`.slice(0, 4000)
+    setGenBusy(true); setGenMsg("Gerando conteúdo com o agente… aparece em Conteúdos ao concluir.")
     try {
-      const run = await apiFetch<AgentRun>("/api/agents/run", token, {
+      const out = await apiFetch<ContentOutput>("/api/content/generate", token, {
         method: "POST",
-        body: JSON.stringify({ agent_slug: "content_agent", prompt, brand_slug: brand || undefined })
+        body: JSON.stringify({ brand_slug: brand, category: "content", channel: pr.channel, format: pr.format, briefing, status: "draft" })
       })
-      if (run.status === "failed") setGenError(run.error || "Falha na geração.")
-      else setGenResult(run.output)
+      setGenMsg(`Conteúdo criado: ${out.title} (#${out.id}).`)
+      setCoNote("")
+      await loadData()
     } catch (e: unknown) {
-      setGenError(e instanceof Error ? e.message : "Erro ao gerar conteúdo.")
+      setGenMsg(e instanceof Error ? e.message : "Falha ao gerar conteúdo.")
     }
-    setGenLoading(false)
+    setGenBusy(false)
   }
 
-  const QUICK = [
-    { icon: <PlusIcon className="h-4 w-4" />, label: "Nova pesquisa", prompt: "Faça uma pesquisa de mercado rápida sobre tendências relevantes para a nossa marca." },
-    { icon: <SparklesIcon className="h-4 w-4" />, label: "Gerar conteúdo", prompt: "Gere uma ideia de carrossel para Instagram com base nas pesquisas recentes." },
-    { icon: <RefreshIcon className="h-4 w-4" />, label: "Refinar tema", prompt: "Sugira 3 ângulos diferentes para abordar o último tema pesquisado." }
-  ]
+  // ── Modal de edição ──
+  const openEdit = useCallback(async (id: number) => {
+    setEditId(id); setDetail(null); setModalMsg(null)
+    const token = getTokenFromCookie()
+    if (!token) return
+    try {
+      const d = await apiFetch<ContentOutputDetail>(`/api/outputs/${id}`, token)
+      setDetail(d)
+      setEf({ title: d.title, content: d.current_content ?? "", status: d.status })
+    } catch { setModalMsg("Não foi possível carregar.") }
+  }, [])
+
+  async function saveEdit() {
+    if (!editId || !detail) return
+    const token = getTokenFromCookie()
+    if (!token) return
+    setModalBusy(true); setModalMsg(null)
+    try {
+      const titleChanged = ef.title !== detail.title
+      const contentChanged = ef.content !== (detail.current_content ?? "")
+      const statusChanged = ef.status !== detail.status
+      if (titleChanged || contentChanged) {
+        await apiFetch(`/api/outputs/${editId}`, token, { method: "PATCH", body: JSON.stringify({ title: ef.title, content: ef.content }) })
+      }
+      if (statusChanged) {
+        await apiFetch(`/api/outputs/${editId}/move`, token, { method: "POST", body: JSON.stringify({ status: ef.status }) })
+      }
+      setModalMsg("Salvo.")
+      await loadData()
+      const d = await apiFetch<ContentOutputDetail>(`/api/outputs/${editId}`, token)
+      setDetail(d); setEf({ title: d.title, content: d.current_content ?? "", status: d.status })
+    } catch (e: unknown) { setModalMsg(e instanceof Error ? e.message : "Falha ao salvar.") }
+    setModalBusy(false)
+  }
+
+  async function modalAction(path: string, okMsg: string) {
+    if (!editId) return
+    const token = getTokenFromCookie()
+    if (!token) return
+    setModalBusy(true); setModalMsg(null)
+    try {
+      await apiFetch(`/api/outputs/${editId}/${path}`, token, { method: "POST", body: JSON.stringify({}) })
+      setModalMsg(okMsg)
+      await loadData()
+      const d = await apiFetch<ContentOutputDetail>(`/api/outputs/${editId}`, token)
+      setDetail(d); setEf((f) => ({ ...f, status: d.status }))
+    } catch (e: unknown) { setModalMsg(e instanceof Error ? e.message : "Falha.") }
+    setModalBusy(false)
+  }
+
+  async function exportPdf() {
+    if (!editId) return
+    const token = getTokenFromCookie()
+    if (!token) return
+    try { await downloadFile(exportPath(`/api/outputs/${editId}`, "pdf"), token, `duofy-${editId}.pdf`) } catch { /* ignore */ }
+  }
+
+  async function saveResearchMemory() {
+    if (!editId) return
+    const token = getTokenFromCookie()
+    if (!token) return
+    setModalBusy(true)
+    try { await apiFetch(`/api/research/reports/${editId}/save-memory`, token, { method: "POST", body: JSON.stringify({}) }); setModalMsg("Salvo na memória.") }
+    catch (e: unknown) { setModalMsg(e instanceof Error ? e.message : "Falha.") }
+    setModalBusy(false)
+  }
+
+  // ── Drag & drop ──
+  async function dropTo(col: ColId) {
+    setDragOver(null)
+    const id = dragId
+    setDragId(null)
+    if (!id) return
+    const target = COLUMNS.find((c) => c.id === col)?.status
+    if (!target) return
+    const rep = reports.find((r) => r.id === id)
+    if (!rep || STATUS_TO_COL[rep.status] === col) return
+    setReports((rs) => rs.map((r) => r.id === id ? { ...r, status: target } : r)) // otimista
+    const token = getTokenFromCookie()
+    if (!token) return
+    try { await apiFetch(`/api/outputs/${id}/move`, token, { method: "POST", body: JSON.stringify({ status: target }) }) }
+    catch { await loadData() }
+  }
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[336px_minmax(0,1fr)_372px]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
         {/* Orquestrador */}
         <section className="duofy-card flex flex-col rounded-2xl p-5" style={{ maxHeight: "calc(100vh - 130px)" }}>
           <div className="mb-4 flex items-center gap-2">
@@ -230,21 +280,9 @@ export default function OperationsPage() {
           </div>
           <div className="flex-1 space-y-3 overflow-y-auto duofy-scroll pr-1">
             {messages.map((m) => (
-              <div key={m.id} className={`max-w-[90%] ${m.role === "user" ? "ml-auto" : ""}`}>
-                <div
-                  className={`rounded-2xl px-4 py-3 text-sm ${
-                    m.role === "user"
-                      ? "bg-purple text-white"
-                      : m.error
-                        ? "bg-red-50 text-red-700"
-                        : "bg-purple-soft/70 text-ink"
-                  } ${m.pending ? "animate-pulse" : ""}`}
-                >
-                  {m.role === "assistant" && !m.pending && !m.error ? (
-                    <Markdown content={m.text} className="text-ink/90" />
-                  ) : (
-                    <span className="whitespace-pre-wrap">{m.text}</span>
-                  )}
+              <div key={m.id} className={`max-w-[92%] ${m.role === "user" ? "ml-auto" : ""}`}>
+                <div className={`rounded-2xl px-4 py-3 text-sm ${m.role === "user" ? "bg-purple text-white" : m.error ? "bg-red-50 text-red-700" : "bg-purple-soft/70 text-ink"} ${m.pending ? "animate-pulse" : ""}`}>
+                  {m.role === "assistant" && !m.pending && !m.error ? <Markdown content={m.text} className="text-ink/90" /> : <span className="whitespace-pre-wrap">{m.text}</span>}
                 </div>
                 <p className={`mt-1 text-[11px] text-muted ${m.role === "user" ? "text-right" : ""}`}>{m.time}</p>
               </div>
@@ -252,32 +290,14 @@ export default function OperationsPage() {
             <div ref={chatEndRef} />
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
-            {QUICK.map((q) => (
-              <GhostButton key={q.label} className="text-xs" onClick={() => sendMessage(q.prompt)}>
-                {q.icon} {q.label}
-              </GhostButton>
-            ))}
+            <GhostButton className="text-xs" onClick={() => setResearchOpen(true)}><PlusIcon className="h-4 w-4" /> Nova pesquisa</GhostButton>
+            <GhostButton className="text-xs" onClick={() => document.getElementById("cocriacao")?.scrollIntoView({ behavior: "smooth" })}><SparklesIcon className="h-4 w-4" /> Gerar conteúdo</GhostButton>
+            <GhostButton className="text-xs" onClick={loadData}><RefreshIcon className="h-4 w-4" /> Atualizar</GhostButton>
           </div>
           <div className="mt-3 flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2">
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-              disabled={sending}
-              className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-muted disabled:opacity-60"
-              placeholder="Pergunte algo ao Orquestrador..."
-            />
-            <button
-              onClick={() => sendMessage()}
-              disabled={sending || !input.trim()}
-              className="grid h-8 w-8 place-items-center rounded-lg bg-purple text-white disabled:opacity-50"
-              aria-label="Enviar"
-            >
-              {sending ? (
-                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
-              ) : (
-                <SendIcon className="h-4 w-4" />
-              )}
+            <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendMessage()} disabled={sending} className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-muted disabled:opacity-60" placeholder="Pergunte algo ao Orquestrador..." />
+            <button onClick={() => sendMessage()} disabled={sending || !input.trim()} className="grid h-8 w-8 place-items-center rounded-lg bg-purple text-white disabled:opacity-50" aria-label="Enviar">
+              {sending ? <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg> : <SendIcon className="h-4 w-4" />}
             </button>
           </div>
         </section>
@@ -285,56 +305,61 @@ export default function OperationsPage() {
         {/* Kanban */}
         <section className="duofy-card rounded-2xl p-5">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-base font-bold tracking-[-0.02em] text-ink">Kanban de Pesquisas</h2>
-            <button onClick={loadReports} className="flex items-center gap-1.5 text-sm font-medium text-muted hover:text-purple">
-              <RefreshIcon className="h-4 w-4" /> Atualizar
+            <div>
+              <h2 className="text-base font-bold tracking-[-0.02em] text-ink">Kanban de Pesquisas</h2>
+              <p className="text-xs text-muted">Clique para abrir · arraste entre colunas para mudar o status.</p>
+            </div>
+            <button onClick={() => setResearchOpen(true)} className="duofy-tap flex items-center gap-1.5 rounded-lg bg-purple px-3 py-1.5 text-sm font-semibold text-white hover:bg-purple-deep">
+              <PlusIcon className="h-4 w-4" /> Nova pesquisa
             </button>
           </div>
-          {loadingReports ? (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              {[1, 2, 3].map((i) => <div key={i} className="duofy-skeleton h-32 rounded-xl" />)}
-            </div>
+          {loading ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">{[1, 2, 3].map((i) => <div key={i} className="duofy-skeleton h-40 rounded-xl" />)}</div>
           ) : reports.length === 0 ? (
             <div className="grid place-items-center rounded-xl border border-dashed border-line py-16 text-center">
-              <p className="text-sm text-muted">Nenhuma pesquisa para esta marca ainda.</p>
-              <button onClick={() => sendMessage(QUICK[0].prompt)} className="mt-2 text-sm font-semibold text-purple">
-                Disparar primeira pesquisa →
-              </button>
+              <p className="text-sm text-muted">Nenhuma pesquisa ainda.</p>
+              <button onClick={() => setResearchOpen(true)} className="mt-2 text-sm font-semibold text-purple">Criar primeira pesquisa →</button>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {COLUMNS.map((col) => {
                 const cards = reports.filter((r) => (STATUS_TO_COL[r.status] ?? "analise") === col.id)
                 return (
-                  <div key={col.id} className="flex flex-col">
-                    <div className="mb-3 flex items-center justify-between px-1">
+                  <div
+                    key={col.id}
+                    onDragOver={(e) => { e.preventDefault(); setDragOver(col.id) }}
+                    onDragLeave={() => setDragOver((c) => c === col.id ? null : c)}
+                    onDrop={(e) => { e.preventDefault(); dropTo(col.id) }}
+                    className={`flex min-h-[120px] flex-col rounded-xl p-1 transition ${dragOver === col.id ? "bg-purple-soft/60 ring-1 ring-purple/40" : ""}`}
+                  >
+                    <div className="mb-2 flex items-center justify-between px-2 pt-1">
                       <span className="text-sm font-semibold text-ink">{col.label}</span>
                       <span className="grid h-5 min-w-[20px] place-items-center rounded-full bg-line/70 px-1 text-xs font-semibold text-muted">{cards.length}</span>
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-2.5 px-1">
                       {cards.map((card) => {
-                        const active = selectedId === card.id
                         const st = STATUS_LABEL[card.status] ?? { label: card.status, tone: "slate" as const }
                         return (
-                          <button
+                          <div
                             key={card.id}
-                            onClick={() => setSelectedId(card.id)}
-                            className={`w-full rounded-xl border bg-white p-3.5 text-left transition ${active ? "border-purple shadow-soft ring-1 ring-purple/30" : "border-line hover:border-purple/40"}`}
+                            draggable
+                            onDragStart={() => setDragId(card.id)}
+                            onDragEnd={() => { justDragged.current = true; setDragId(null); setDragOver(null); setTimeout(() => { justDragged.current = false }, 150) }}
+                            onClick={() => { if (!justDragged.current) { setSelectedResearchId(card.id); openEdit(card.id) } }}
+                            className={`cursor-grab rounded-xl border bg-white p-3.5 transition active:cursor-grabbing ${dragId === card.id ? "opacity-40" : selectedResearchId === card.id ? "border-purple shadow-soft" : "border-line hover:border-purple/40 hover:shadow-soft"}`}
                           >
                             <p className="text-sm font-semibold leading-snug text-ink">{card.title}</p>
                             <div className="mt-2 flex flex-wrap gap-1.5">
                               <Badge tone={st.tone}>{st.label}</Badge>
                               <Badge tone="slate">{card.category}</Badge>
                             </div>
-                            <p className="mt-2.5 line-clamp-2 text-xs text-muted">{card.briefing}</p>
-                            <div className="mt-2 flex items-center justify-between border-t border-line pt-2">
-                              <span className="text-xs font-medium text-ink">{card.sources?.length ?? 0} fontes</span>
-                              <span className="text-xs text-muted">#{card.id}</span>
+                            <p className="mt-2 line-clamp-2 text-xs text-muted">{card.briefing}</p>
+                            <div className="mt-2 flex items-center justify-between border-t border-line pt-2 text-xs text-muted">
+                              <span>{card.sources?.length ?? 0} fontes</span><span>#{card.id}</span>
                             </div>
-                          </button>
+                          </div>
                         )
                       })}
-                      {cards.length === 0 && <p className="px-1 text-xs text-muted">—</p>}
                     </div>
                   </div>
                 )
@@ -342,183 +367,161 @@ export default function OperationsPage() {
             </div>
           )}
         </section>
-
-        {/* Detalhe */}
-        <section className="duofy-card flex flex-col rounded-2xl p-5" style={{ maxHeight: "calc(100vh - 130px)" }}>
-          {!selectedReport ? (
-            <div className="grid flex-1 place-items-center text-center text-sm text-muted">
-              Selecione uma pesquisa no kanban.
-            </div>
-          ) : (
-            <>
-              <div className="mb-3 flex items-start justify-between gap-3">
-                <h2 className="text-lg font-bold leading-snug tracking-[-0.02em] text-ink">{selectedReport.title}</h2>
-                <Badge tone={(STATUS_LABEL[selectedReport.status]?.tone) ?? "slate"}>{STATUS_LABEL[selectedReport.status]?.label ?? selectedReport.status}</Badge>
-              </div>
-              <p className="text-xs text-muted">
-                {selectedReport.channel} · {selectedReport.provider}/{selectedReport.model.replace("~", "")} · #{selectedReport.id}
-              </p>
-
-              <div className="mt-4 flex-1 overflow-y-auto duofy-scroll pr-1">
-                <p className="text-sm leading-relaxed text-ink/80">{summarize(detail?.current_content ?? selectedReport.current_content)}</p>
-
-                {selectedReport.sources && selectedReport.sources.length > 0 && (
-                  <div className="mt-4">
-                    <p className="mb-2 text-sm font-semibold text-ink">Fontes ({selectedReport.sources.length})</p>
-                    <ul className="space-y-2">
-                      {selectedReport.sources.slice(0, 8).map((s) => (
-                        <li key={s.id} className="rounded-lg border border-line bg-white p-2.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="truncate text-xs font-semibold text-ink">{s.title}</span>
-                            <Badge tone={s.reliability === "high" ? "green" : s.reliability === "low" ? "amber" : "slate"}>{s.reliability}</Badge>
-                          </div>
-                          {s.url && (
-                            <a href={s.url} target="_blank" rel="noreferrer" className="mt-0.5 block truncate text-[11px] text-purple hover:underline">
-                              {s.url}
-                            </a>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {detail?.quality_notes && detail.quality_notes.length > 0 && (
-                  <div className="mt-4">
-                    <p className="mb-1.5 text-sm font-semibold text-ink">Notas de qualidade</p>
-                    <ul className="space-y-1">
-                      {detail.quality_notes.map((n, i) => (
-                        <li key={i} className="flex gap-2 text-xs text-muted">
-                          <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber" />{n}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-4 space-y-2.5">
-                <button
-                  onClick={approveReport}
-                  disabled={acting || selectedReport.status === "approved"}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-green py-3 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-50"
-                >
-                  <CheckCircleIcon className="h-5 w-5" /> {selectedReport.status === "approved" ? "Aprovado" : "Aprovar"}
-                </button>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <GhostButton className="justify-center" onClick={() => sendMessage(`Refine e melhore a pesquisa "${selectedReport.title}".`)}>
-                    <SettingsIcon className="h-4 w-4" /> Solicitar ajuste
-                  </GhostButton>
-                  <GhostButton className="justify-center" onClick={saveToMemory}>
-                    <BookIcon className="h-4 w-4" /> Salvar na memória
-                  </GhostButton>
-                </div>
-              </div>
-            </>
-          )}
-        </section>
       </div>
 
-      {/* Cocriação contextual */}
+      {/* Conteúdos criados */}
       <section className="duofy-card rounded-2xl p-5">
-        <div className="mb-4 flex items-center gap-3">
-          <h2 className="text-lg font-bold tracking-[-0.02em] text-ink">Cocriação contextual</h2>
-          {selectedReport ? (
-            <Badge tone="purple">Baseada em: {selectedReport.title}</Badge>
-          ) : (
-            <Badge tone="slate">Selecione uma pesquisa</Badge>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="space-y-4">
-            <div className="rounded-xl border border-line bg-white p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-bold text-ink">Gerar conteúdo com o agente de Cocriação</p>
-                <button
-                  onClick={generateContent}
-                  disabled={!selectedReport || genLoading}
-                  className="flex items-center gap-1.5 rounded-lg bg-purple px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-purple-deep disabled:opacity-50"
-                >
-                  {genLoading ? (
-                    <>
-                      <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
-                      Gerando…
-                    </>
-                  ) : (
-                    <><SparklesIcon className="h-4 w-4" /> Gerar conteúdo</>
-                  )}
-                </button>
-              </div>
-              <p className="mt-1 text-xs text-muted">
-                O agente <span className="font-medium text-ink">content_agent</span> usa a pesquisa selecionada como contexto e gera uma entrega pronta.
-              </p>
-
-              {genError && (
-                <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">{genError}</div>
-              )}
-              {genResult && (
-                <div className="mt-3 rounded-lg border border-green-200 bg-green-50/50 p-3">
-                  <div className="mb-1.5 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-ink">Conteúdo gerado</span>
-                    <button
-                      onClick={() => navigator.clipboard?.writeText(genResult)}
-                      className="flex items-center gap-1 text-xs font-semibold text-purple"
-                    >
-                      <CopyIcon className="h-3.5 w-3.5" /> Copiar
-                    </button>
-                  </div>
-                  <Markdown content={genResult} />
-                </div>
-              )}
-              {!genResult && !genError && !genLoading && (
-                <div className="mt-3 grid place-items-center rounded-lg border border-dashed border-line py-8 text-center text-xs text-muted">
-                  {selectedReport ? "Clique em “Gerar conteúdo” para criar uma entrega real a partir desta pesquisa." : "Selecione uma pesquisa no kanban acima."}
-                </div>
-              )}
-            </div>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-bold tracking-[-0.02em] text-ink">Conteúdos</h2>
+            <p className="text-xs text-muted">Entregas geradas pela cocriação. Clique para editar.</p>
           </div>
-
-          {/* Guardião */}
-          <div className="rounded-xl border border-line bg-white p-4">
-            <div className="mb-2 flex items-center gap-2">
-              <ShieldCheckIcon className="h-5 w-5 text-purple" />
-              <p className="text-sm font-bold text-ink">Guardião de Qualidade</p>
-            </div>
-            {detail?.latest_quality_review ? (
-              <>
-                <div className="flex items-end gap-2">
-                  <span className={`text-4xl font-extrabold leading-none ${detail.latest_quality_review.passed ? "text-green" : "text-amber"}`}>
-                    {Math.round(detail.latest_quality_review.score)}
-                  </span>
-                  <span className="pb-1 text-sm text-muted">/100</span>
-                </div>
-                <p className="text-xs text-muted">{detail.latest_quality_review.summary}</p>
-                {detail.latest_quality_review.required_fixes?.length > 0 && (
-                  <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber/10 p-2.5">
-                    <AlertTriangleIcon className="mt-0.5 h-4 w-4 shrink-0 text-amber" />
-                    <p className="text-xs text-ink">
-                      <span className="font-semibold">Correções:</span> {detail.latest_quality_review.required_fixes.slice(0, 2).join("; ")}
-                    </p>
+          <button onClick={loadData} className="duofy-tap flex items-center gap-1.5 text-sm font-medium text-muted hover:text-purple"><RefreshIcon className="h-4 w-4" /> Atualizar</button>
+        </div>
+        {loading ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">{[1, 2, 3].map((i) => <div key={i} className="duofy-skeleton h-28 rounded-xl" />)}</div>
+        ) : content.length === 0 ? (
+          <div className="grid place-items-center rounded-xl border border-dashed border-line py-10 text-center text-sm text-muted">
+            Nenhum conteúdo ainda. Gere um na Cocriação abaixo.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {content.map((c) => {
+              const st = STATUS_LABEL[c.status] ?? { label: c.status, tone: "slate" as const }
+              return (
+                <button key={c.id} onClick={() => openEdit(c.id)} className="duofy-card-hover flex flex-col rounded-xl border border-line bg-white p-4 text-left">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-purple-soft text-purple"><FileIcon className="h-4 w-4" /></span>
+                    <Badge tone={st.tone}>{st.label}</Badge>
                   </div>
-                )}
-              </>
-            ) : (
-              <div className="grid place-items-center rounded-lg border border-dashed border-line py-8 text-center">
-                <FileIcon className="h-6 w-6 text-muted" />
-                <p className="mt-1.5 text-xs text-muted">Sem revisão de qualidade ainda.</p>
-                <button
-                  onClick={() => selectedReport && sendMessage(`Acione o Guardião de Qualidade para avaliar a pesquisa "${selectedReport.title}".`)}
-                  disabled={!selectedReport}
-                  className="mt-1 text-xs font-semibold text-purple disabled:opacity-50"
-                >
-                  Solicitar avaliação →
+                  <p className="mt-2 line-clamp-2 text-sm font-semibold text-ink">{c.title}</p>
+                  <p className="mt-0.5 text-xs text-muted">{c.channel} · {c.format} · #{c.id}</p>
+                  <p className="mt-1.5 line-clamp-2 text-xs text-muted">{c.briefing}</p>
                 </button>
+              )
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* Cocriação */}
+      <section id="cocriacao" className="duofy-card rounded-2xl p-5">
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <h2 className="text-lg font-bold tracking-[-0.02em] text-ink">Cocriação de conteúdo</h2>
+          {selectedResearch ? <Badge tone="purple">Baseada em: {selectedResearch.title}</Badge> : <Badge tone="slate">Sem pesquisa (institucional)</Badge>}
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto]">
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {CONTENT_PRESETS.map((p, i) => (
+                <button key={p.label} onClick={() => setPreset(i)} className={`duofy-tap rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${preset === i ? "border-purple bg-purple-soft/60 text-purple-deep" : "border-line text-muted hover:border-purple/40"}`}>{p.label}</button>
+              ))}
+            </div>
+            <textarea value={coNote} onChange={(e) => setCoNote(e.target.value)} rows={2} placeholder="Observação / direcionamento opcional para o conteúdo." className="w-full resize-none rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none placeholder:text-muted focus:border-purple" />
+            {genMsg && <p className="text-xs text-muted">{genMsg}</p>}
+          </div>
+          <button onClick={generateContent} disabled={genBusy || !brand} className="duofy-tap flex h-11 items-center justify-center gap-2 self-start rounded-xl bg-purple px-5 text-sm font-semibold text-white hover:bg-purple-deep disabled:opacity-50">
+            {genBusy ? <><svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg> Gerando…</> : <><SparklesIcon className="h-4 w-4" /> Gerar conteúdo</>}
+          </button>
+        </div>
+      </section>
+
+      {/* Modal de criação de pesquisa */}
+      {researchOpen && (
+        <div className="fixed inset-0 z-50 grid place-items-center p-4">
+          <div className="absolute inset-0 bg-ink/30 animate-fade-in" onClick={() => setResearchOpen(false)} aria-hidden="true" />
+          <div className="relative w-full max-w-lg rounded-2xl border border-line bg-white p-6 shadow-panel animate-scale-in">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-base font-bold text-ink">Nova pesquisa</h3>
+              <button onClick={() => setResearchOpen(false)} className="text-muted hover:text-ink"><CloseIcon className="h-5 w-5" /></button>
+            </div>
+            <label className="block text-xs font-semibold text-muted">Tema
+              <input value={researchTheme} onChange={(e) => setResearchTheme(e.target.value)} placeholder="Ex: tendências de IA para gestão de postos em 2026" className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:border-purple focus:outline-none" autoFocus />
+            </label>
+            <div className="mt-3 flex items-center gap-2">
+              <span className="text-xs font-semibold text-muted">Profundidade:</span>
+              {(["quick", "standard", "deep"] as const).map((d) => (
+                <button key={d} onClick={() => setResearchDepth(d)} className={`rounded-lg px-3 py-1 text-xs font-semibold transition ${researchDepth === d ? "bg-purple text-white" : "border border-line text-muted"}`}>{d === "quick" ? "Rápida" : d === "standard" ? "Padrão" : "Profunda"}</button>
+              ))}
+            </div>
+            <div className="mt-5 flex gap-2">
+              <button onClick={runResearch} disabled={researchBusy || researchTheme.trim().length < 3 || !brand} className="duofy-tap flex-1 rounded-lg bg-purple py-2.5 text-sm font-semibold text-white hover:bg-purple-deep disabled:opacity-50">
+                {researchBusy ? "Pesquisando…" : "Criar pesquisa"}
+              </button>
+              <button onClick={() => setResearchOpen(false)} className="duofy-tap rounded-lg border border-line px-4 py-2.5 text-sm font-medium text-ink hover:bg-surface">Cancelar</button>
+            </div>
+            {!brand && <p className="mt-2 text-xs text-red-600">Selecione uma marca no topo.</p>}
+          </div>
+        </div>
+      )}
+
+      {/* Modal de edição completa */}
+      {editId !== null && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="absolute inset-0 bg-ink/30 animate-fade-in" onClick={() => setEditId(null)} aria-hidden="true" />
+          <div className="relative flex h-full w-full max-w-2xl flex-col overflow-hidden border-l border-line bg-white shadow-panel animate-scale-in">
+            <div className="flex items-center justify-between border-b border-line px-5 py-4">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-ink">{detail ? (isResearch(detail) ? "Pesquisa" : "Conteúdo") : "Carregando…"} #{editId}</p>
+                <p className="text-xs text-muted">{detail ? `${detail.channel} · ${detail.provider}/${detail.model.replace("~", "")}` : ""}</p>
               </div>
+              <button onClick={() => setEditId(null)} className="text-muted hover:text-ink"><CloseIcon className="h-5 w-5" /></button>
+            </div>
+
+            {!detail ? (
+              <div className="grid flex-1 place-items-center text-sm text-muted">Carregando…</div>
+            ) : (
+              <>
+                <div className="flex-1 space-y-4 overflow-y-auto duofy-scroll p-5">
+                  <label className="block text-xs font-semibold text-muted">Título
+                    <input value={ef.title} onChange={(e) => setEf({ ...ef, title: e.target.value })} className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm font-semibold text-ink focus:border-purple focus:outline-none" />
+                  </label>
+                  <label className="block text-xs font-semibold text-muted">Status
+                    <select value={ef.status} onChange={(e) => setEf({ ...ef, status: e.target.value })} className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:border-purple focus:outline-none">
+                      {["draft", "review", "approved", "needs_adjustment", "rejected", "archived"].map((s) => <option key={s} value={s}>{STATUS_LABEL[s]?.label ?? s}</option>)}
+                    </select>
+                  </label>
+                  <label className="block text-xs font-semibold text-muted">Conteúdo (Markdown)
+                    <textarea value={ef.content} onChange={(e) => setEf({ ...ef, content: e.target.value })} rows={14} className="mt-1 w-full resize-y rounded-lg border border-line px-3 py-2 font-mono text-xs leading-relaxed text-ink focus:border-purple focus:outline-none" />
+                  </label>
+                  {detail.quality_notes?.length > 0 && (
+                    <div className="rounded-lg border border-line bg-panel/60 p-3">
+                      <p className="mb-1 text-xs font-semibold text-ink">Notas de qualidade</p>
+                      <ul className="space-y-1">{detail.quality_notes.map((n, i) => <li key={i} className="flex gap-2 text-xs text-muted"><span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber" />{n}</li>)}</ul>
+                    </div>
+                  )}
+                  {"sources" in detail && Array.isArray((detail as unknown as ResearchReport).sources) && (detail as unknown as ResearchReport).sources.length > 0 && (
+                    <div>
+                      <p className="mb-1.5 text-xs font-semibold text-ink">Fontes</p>
+                      <ul className="space-y-1.5">
+                        {(detail as unknown as ResearchReport).sources.slice(0, 8).map((s) => (
+                          <li key={s.id} className="rounded-lg border border-line p-2 text-xs">
+                            <span className="font-semibold text-ink">{s.title}</span>
+                            {s.url && <a href={s.url} target="_blank" rel="noreferrer" className="mt-0.5 block truncate text-purple hover:underline">{s.url}</a>}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {modalMsg && <p className="text-xs font-medium text-purple-deep">{modalMsg}</p>}
+                </div>
+
+                <div className="border-t border-line p-4">
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={saveEdit} disabled={modalBusy} className="duofy-tap flex items-center gap-1.5 rounded-lg bg-purple px-4 py-2 text-sm font-semibold text-white hover:bg-purple-deep disabled:opacity-50"><CheckCircleIcon className="h-4 w-4" /> Salvar</button>
+                    <button onClick={() => modalAction("approve", "Aprovado.")} disabled={modalBusy} className="duofy-tap rounded-lg border border-line px-3 py-2 text-sm font-medium text-green hover:border-green/40 disabled:opacity-50">Aprovar</button>
+                    <button onClick={() => modalAction("request-adjustment", "Ajuste solicitado.")} disabled={modalBusy} className="duofy-tap flex items-center gap-1 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink hover:border-purple/40 hover:text-purple disabled:opacity-50"><SettingsIcon className="h-4 w-4" /> Ajuste</button>
+                    {isResearch(detail) && <button onClick={saveResearchMemory} disabled={modalBusy} className="duofy-tap flex items-center gap-1 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink hover:border-purple/40 hover:text-purple disabled:opacity-50"><BookIcon className="h-4 w-4" /> Memória</button>}
+                    <button onClick={exportPdf} className="duofy-tap flex items-center gap-1 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink hover:border-purple/40 hover:text-purple"><DownloadIcon className="h-4 w-4" /> PDF</button>
+                    <button onClick={() => navigator.clipboard?.writeText(ef.content)} className="duofy-tap flex items-center gap-1 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink hover:border-purple/40 hover:text-purple"><CopyIcon className="h-4 w-4" /> Copiar</button>
+                    <button onClick={() => modalAction("archive", "Arquivado.")} disabled={modalBusy} className="duofy-tap ml-auto flex items-center gap-1 rounded-lg border border-line px-3 py-2 text-sm font-medium text-muted hover:border-red/40 hover:text-red disabled:opacity-50"><AlertTriangleIcon className="h-4 w-4" /> Arquivar</button>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </div>
-      </section>
+      )}
     </div>
   )
 }

@@ -39,6 +39,7 @@ from app.schemas import (
     ContentOutputUpdate,
     ContentOutputVersionRead,
     OutputActionRequest,
+    OutputMoveRequest,
     OutputCommentCreate,
     OutputCommentRead,
     OutputCommentUpdate,
@@ -767,6 +768,36 @@ async def request_adjustment_endpoint(
         metadata={"feedback": payload.feedback},
     )
     await db.commit()
+    return await _workflow_detail(db, output)
+
+
+@router.post("/{output_id}/move", response_model=OutputWorkflowDetail)
+async def move_output(
+    output_id: int,
+    payload: OutputMoveRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> OutputWorkflowDetail:
+    """Move o output diretamente para um status (reposicionamento no kanban).
+
+    Diferente das transições com efeitos (approve/reject), apenas ajusta o status
+    e registra auditoria — usado pelo drag-and-drop e pelo seletor de status.
+    """
+    output = await _get_output_or_404(db, output_id)
+    previous = output.status
+    output.status = payload.status
+    await record_audit_event(
+        db,
+        user=current_user,
+        action="output.moved",
+        entity_type="output",
+        entity_id=output.id,
+        status=output.status,
+        brand_slug=output.brand_slug,
+        summary=f"Output movido: {previous} -> {output.status}",
+    )
+    await db.commit()
+    await db.refresh(output)
     return await _workflow_detail(db, output)
 
 

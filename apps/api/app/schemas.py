@@ -277,6 +277,10 @@ class OutputActionRequest(BaseModel):
     feedback: str | None = Field(default=None, max_length=4000)
 
 
+class OutputMoveRequest(BaseModel):
+    status: Literal["draft", "review", "approved", "needs_adjustment", "rejected", "archived"]
+
+
 class OutputCommentCreate(BaseModel):
     version_id: int | None = None
     anchor_text: str | None = Field(default=None, max_length=500)
