@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { Badge } from "@/components/ui"
-import { PlusIcon } from "@/components/icons"
+import { PlusIcon, RefreshIcon } from "@/components/icons"
 import { apiFetch } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
 import { useBrand } from "@/lib/brand-context"
@@ -129,6 +129,10 @@ export default function AdminPage() {
   const [savingQuality, setSavingQuality] = useState(false)
   const [adminMsg, setAdminMsg] = useState<string | null>(null)
 
+  // Monitor de execuções (aba Automações)
+  const [allRuns, setAllRuns] = useState<AgentRun[]>([])
+  const [runsLoading, setRunsLoading] = useState(false)
+
   const loadAll = useCallback(async (first = false) => {
     const token = getTokenFromCookie()
     if (!token) { setLoading(false); return }
@@ -216,6 +220,21 @@ export default function AdminPage() {
     }
     setSavingQuality(false)
   }
+
+  const loadAllRuns = useCallback(async () => {
+    const token = getTokenFromCookie()
+    if (!token) return
+    setRunsLoading(true)
+    try {
+      const data = await apiFetch<AgentRun[]>("/api/agents/runs?limit=40", token)
+      setAllRuns(data)
+    } catch { setAllRuns([]) }
+    setRunsLoading(false)
+  }, [])
+
+  useEffect(() => {
+    if (tab === "automacoes") loadAllRuns()
+  }, [tab, loadAllRuns])
 
   const loadRuns = useCallback(async (slug: string) => {
     const token = getTokenFromCookie()
@@ -315,7 +334,7 @@ export default function AdminPage() {
             <div className="flex w-64 shrink-0 flex-col overflow-hidden border-r border-line bg-white">
               <div className="flex items-center justify-between border-b border-line px-4 py-3">
                 <p className="font-semibold text-sm text-ink">Agentes</p>
-                <button className="flex items-center gap-1 rounded-lg border border-line px-2 py-1 text-xs font-medium text-muted hover:text-ink transition-colors">
+                <button disabled title="Em breve" className="flex cursor-not-allowed items-center gap-1 rounded-lg border border-line px-2 py-1 text-xs font-medium text-muted opacity-60">
                   <PlusIcon className="w-3 h-3" /> Novo agente
                 </button>
               </div>
@@ -607,8 +626,8 @@ export default function AdminPage() {
                 <div className="border-b border-line p-4">
                   <div className="mb-3 flex items-center justify-between">
                     <p className="text-sm font-semibold text-ink">Modelos (OpenRouter)</p>
-                    <button className="flex items-center gap-1 text-xs font-medium text-purple-deep hover:underline">
-                      <PlusIcon className="w-3 h-3" /> Adicionar
+                    <button onClick={() => setTab("modelos")} className="duofy-tap flex items-center gap-1 text-xs font-medium text-purple-deep hover:underline">
+                      <PlusIcon className="w-3 h-3" /> Gerenciar
                     </button>
                   </div>
                   {loading ? (
@@ -644,8 +663,8 @@ export default function AdminPage() {
                 <div className="p-4">
                   <div className="mb-3 flex items-center justify-between">
                     <p className="text-sm font-semibold text-ink">Automações e fluxos</p>
-                    <button className="flex items-center gap-1 text-xs font-medium text-purple-deep hover:underline">
-                      <PlusIcon className="w-3 h-3" /> Novo fluxo
+                    <button onClick={() => setTab("automacoes")} className="duofy-tap flex items-center gap-1 text-xs font-medium text-purple-deep hover:underline">
+                      Ver execuções
                     </button>
                   </div>
                   <div className="space-y-1.5">
@@ -661,7 +680,7 @@ export default function AdminPage() {
                         </button>
                       </div>
                     ))}
-                    <button className="text-xs font-medium text-purple-deep hover:underline">Ver todos os fluxos ▾</button>
+                    <button onClick={() => setTab("automacoes")} className="duofy-tap text-xs font-medium text-purple-deep hover:underline">Ver execuções recentes →</button>
                   </div>
                 </div>
               </div>
@@ -852,33 +871,57 @@ export default function AdminPage() {
 
         {/* ── Automações tab ── */}
         {tab === "automacoes" && (
-          <div className="overflow-y-auto duofy-scroll h-full p-6 max-w-2xl">
+          <div className="overflow-y-auto duofy-scroll h-full p-6 max-w-3xl">
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <h2 className="text-base font-bold text-ink">Automações e Fluxos</h2>
-                <p className="text-sm text-muted">Fluxos automáticos de agentes configurados na plataforma.</p>
+                <h2 className="text-base font-bold text-ink">Execuções dos agentes</h2>
+                <p className="text-sm text-muted">Histórico real das últimas execuções (agents/runs).</p>
               </div>
-              <button className="flex items-center gap-1.5 rounded-lg bg-purple-deep px-3 py-2 text-sm font-semibold text-white hover:bg-purple-deep/90 transition-colors">
-                <PlusIcon className="w-3.5 h-3.5" /> Novo fluxo
+              <button onClick={loadAllRuns} className="duofy-tap flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink hover:border-purple/40 hover:text-purple">
+                <RefreshIcon className="w-3.5 h-3.5" /> Atualizar
               </button>
             </div>
-            <div className="space-y-3">
-              {FLUXOS.map((f, i) => (
-                <div key={f} className="flex items-center gap-4 rounded-xl border border-line bg-white p-4 shadow-card">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-purple-deep/10">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6d35ee" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 3h5v5M4 20 20.8 3.2M21 16v5h-5M15 15l5.9 5.9"/></svg>
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-ink">{f}</p>
-                    <p className="text-xs text-muted">Agente: {agents[i % agents.length]?.name ?? "Orquestrador"}</p>
-                  </div>
+
+            {/* Pipelines nativos (informativo) */}
+            <div className="mb-5 grid gap-2 sm:grid-cols-2">
+              {FLUXOS.map((f) => (
+                <div key={f} className="flex items-center gap-2.5 rounded-lg border border-line bg-white px-3 py-2.5">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-purple-deep/10">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6d35ee" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 3h5v5M4 20 20.8 3.2M21 16v5h-5M15 15l5.9 5.9"/></svg>
+                  </span>
+                  <p className="flex-1 text-xs font-medium text-ink">{f}</p>
                   <Badge tone="green">Ativo</Badge>
-                  <button className="text-muted hover:text-ink transition-colors">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
-                  </button>
                 </div>
               ))}
             </div>
+
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Últimas execuções</p>
+            {runsLoading ? (
+              <div className="space-y-2">{[1,2,3,4].map(i=><div key={i} className="duofy-skeleton h-14 rounded-xl"/>)}</div>
+            ) : allRuns.length === 0 ? (
+              <div className="grid place-items-center rounded-xl border border-dashed border-line py-12 text-center text-sm text-muted">
+                Nenhuma execução registrada ainda. Rode um agente em Operações ou no Console de Testes.
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {allRuns.map((r) => (
+                  <div key={r.id} className="flex items-start gap-3 rounded-xl border border-line bg-white p-3">
+                    <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${r.status === "completed" ? "bg-green-500" : r.status === "failed" ? "bg-red-500" : "bg-amber-500"}`} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold text-ink">{r.agent_slug}</span>
+                        <Badge tone={r.status === "completed" ? "green" : r.status === "failed" ? "red" : "amber"}>{r.status}</Badge>
+                        <span className="text-[11px] text-muted">{r.provider} · {r.model.replace("~", "")}</span>
+                        <span className="ml-auto text-[11px] text-muted">#{r.id}</span>
+                      </div>
+                      <p className="mt-1 line-clamp-1 text-xs text-muted">{r.prompt}</p>
+                      {r.output && <p className="mt-0.5 line-clamp-1 text-xs text-ink/70">→ {r.output}</p>}
+                      {r.error && <p className="mt-0.5 line-clamp-1 text-xs text-red-600">{r.error}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -888,9 +931,9 @@ export default function AdminPage() {
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h2 className="text-base font-bold text-ink">Permissões e Papéis</h2>
-                <p className="text-sm text-muted">Defina o nível de acesso de cada papel aos recursos da plataforma.</p>
+                <p className="text-sm text-muted">Modelo de acesso da plataforma (somente leitura nesta versão).</p>
               </div>
-              <button className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink hover:bg-surface transition-colors">
+              <button disabled title="Em breve" className="flex cursor-not-allowed items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm font-medium text-muted opacity-60">
                 <PlusIcon className="w-3.5 h-3.5" /> Novo papel
               </button>
             </div>
@@ -925,9 +968,7 @@ export default function AdminPage() {
                         </td>
                       ))}
                       <td className="px-4 py-3">
-                        <button className="text-xs font-medium text-purple-deep hover:underline">
-                          {r.role === "Administrador" ? "Gerenciar tudo" : "Editar"}
-                        </button>
+                        <span className="text-xs text-muted">{r.role === "Administrador" ? "Acesso total" : "Predefinido"}</span>
                       </td>
                     </tr>
                   ))}
@@ -945,27 +986,43 @@ export default function AdminPage() {
               <p className="text-sm text-muted">Conecte fontes de dados e ferramentas de pesquisa à plataforma.</p>
             </div>
             <div className="space-y-3">
-              {[
-                { name: "Meta Ads", desc: "Gerenciador de Anúncios e Instagram Insights", status: "Não configurado", tone: "slate" as const },
-                { name: "Google Sheets", desc: "Importação de temas e calendário editorial", status: "Não configurado", tone: "slate" as const },
-                { name: "Apify", desc: "Scraping de fontes externas para pesquisa", status: "Não configurado", tone: "slate" as const },
-                { name: "Tavily", desc: "Busca web para agente de pesquisa", status: "Não configurado", tone: "slate" as const },
-                { name: "SendGrid", desc: "Envio de relatórios por e-mail", status: "Não configurado", tone: "slate" as const },
-              ].map((int) => (
-                <div key={int.name} className="flex items-center gap-4 rounded-xl border border-line bg-white p-4 shadow-card">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6d35ee" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              {(() => {
+                const apify = providers.find((p) => p.provider === "apify")
+                const apifyOn = !!apify?.is_enabled && !!apify?.has_api_key
+                const items = [
+                  { name: "Apify", desc: "Scraping de fontes externas para pesquisa", real: true, connected: apifyOn },
+                  { name: "Meta Ads", desc: "Gerenciador de Anúncios e Instagram Insights", real: false, connected: false },
+                  { name: "Google Sheets", desc: "Importação de temas e calendário editorial", real: false, connected: false },
+                  { name: "Tavily", desc: "Busca web para agente de pesquisa", real: false, connected: false },
+                  { name: "SendGrid", desc: "Envio de relatórios por e-mail", real: false, connected: false },
+                ]
+                return items.map((int) => (
+                  <div key={int.name} className="flex items-center gap-4 rounded-xl border border-line bg-white p-4 shadow-card">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6d35ee" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-ink">{int.name}</p>
+                      <p className="text-xs text-muted">{int.desc}</p>
+                    </div>
+                    <Badge tone={int.connected ? "green" : int.real ? "amber" : "slate"}>
+                      {int.connected ? "Conectado" : int.real ? "Sem chave" : "Em breve"}
+                    </Badge>
+                    {int.real && apify ? (
+                      <button
+                        onClick={() => setEditProvider({ provider: "apify", display_name: apify.display_name, base_url: apify.base_url ?? "", default_model: apify.default_model ?? "", is_enabled: apify.is_enabled, api_key: "" })}
+                        className="duofy-tap rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-ink hover:border-purple/40 hover:text-purple"
+                      >
+                        Configurar
+                      </button>
+                    ) : (
+                      <button disabled title="Em breve" className="cursor-not-allowed rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-muted opacity-60">
+                        Configurar
+                      </button>
+                    )}
                   </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-ink">{int.name}</p>
-                    <p className="text-xs text-muted">{int.desc}</p>
-                  </div>
-                  <Badge tone={int.tone}>{int.status}</Badge>
-                  <button className="rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-ink hover:bg-surface transition-colors">
-                    Configurar
-                  </button>
-                </div>
-              ))}
+                ))
+              })()}
             </div>
           </div>
         )}
