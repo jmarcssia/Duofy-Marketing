@@ -185,6 +185,8 @@ class OutputVersion(TimestampMixin, Base):
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     editor_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Pacote estruturado (ContentPackage JSON) da cocriacao; None para saidas legadas.
+    structured_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class OutputDecision(TimestampMixin, Base):

@@ -21,7 +21,8 @@ async def test_call_llm_passes_custom_max_tokens(monkeypatch):
     captured = {}
 
     async def fake_compat(*, credential, model, system_prompt, user_prompt, base_url,
-                          extra_headers=None, use_web_search=False, max_tokens):
+                          extra_headers=None, use_web_search=False, json_mode=False,
+                          max_tokens):
         captured["max_tokens"] = max_tokens
         return llm.LLMResult(output="ok", provider="openrouter", model=model)
 

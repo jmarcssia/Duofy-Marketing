@@ -238,6 +238,7 @@ def patch_ai(monkeypatch):
     for mod in (
         "content_generation", "calendar_service", "research_service",
         "orchestrator", "quality_guardian", "orchestrator_planning", "briefing_service",
+        "cocreation_service",
     ):
         try:
             importlib.import_module(f"app.{mod}")

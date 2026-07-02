@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ContentPackage",
+  "description": "Pacote estruturado de conteudo produzido pelo Agente de Cocriacao.",
+  "type": "object",
+  "required": ["brand_slug", "channel", "format", "captions"],
+  "properties": {
+    "brand_slug": { "type": "string" },
+    "channel": { "type": "string" },
+    "format": { "type": "string" },
+    "persona": { "type": "string" },
+    "objetivo": { "type": "string" },
+    "etapa_funil": { "type": "string" },
+    "analise_estrategica": { "type": "string" },
+    "conceito": { "type": "string" },
+    "arco_narrativo": { "type": "string" },
+    "cta": { "type": "string" },
+    "captions": {
+      "type": "object",
+      "description": "Legenda por canal. Canais diferentes devem ter legendas diferentes.",
+      "additionalProperties": { "type": "string" }
+    },
+    "slides": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["numero", "funcao", "texto", "image_prompt"],
+        "properties": {
+          "numero": { "type": "integer" },
+          "funcao": { "type": "string" },
+          "texto": { "type": "string" },
+          "texto_arte": { "type": "string" },
+          "image_prompt": {
+            "type": "string",
+            "description": "Prompt COMPLETO e INDEPENDENTE. Nao pode pedir logo, @, hashtag, marca d'agua, selo ou assinatura."
+          },
+          "alt_text": { "type": "string" }
+        }
+      }
+    },
+    "visual_direction": {
+      "type": "object",
+      "properties": {
+        "conceito": { "type": "string" },
+        "estilo": { "type": "string" },
+        "cenario": { "type": "string" },
+        "enquadramento": { "type": "string" },
+        "composicao": { "type": "string" },
+        "iluminacao": { "type": "string" },
+        "paleta": { "type": "string" },
+        "tipografia": { "type": "string" },
+        "restricoes": { "type": "string" }
+      }
+    },
+    "factualidade": { "type": "array", "items": { "type": "string" } },
+    "checklist": { "type": "array", "items": { "type": "string" } }
+  }
+}

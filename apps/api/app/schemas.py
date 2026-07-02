@@ -734,3 +734,84 @@ class MemorySearchResult(BaseModel):
     title: str
     content: str
     score: float
+
+
+# ---------------------------------------------------------------------------
+# Cocriacao (agente de co-criacao) — pacote estruturado de conteudo
+# ---------------------------------------------------------------------------
+
+class CreationRequest(BaseModel):
+    brand_slug: str = Field(min_length=1, max_length=120)
+    theme: str = Field(min_length=2, max_length=2000)
+    channel: str = Field(default="Instagram", max_length=80)
+    format: str = Field(default="Carrossel", max_length=80)
+    category: str = Field(default="content_generation", max_length=120)
+    persona: str | None = Field(default=None, max_length=255)
+    objetivo: str | None = Field(default=None, max_length=500)
+    cta: str | None = Field(default=None, max_length=255)
+    slides: int | None = Field(default=None, ge=3, le=12)
+    depth: Literal["quick", "deep"] = "quick"
+    tone: str | None = Field(default=None, max_length=255)
+    observacoes: str | None = Field(default=None, max_length=4000)
+    research_output_id: int | None = None
+    previous_content: str | None = Field(default=None, max_length=20000)
+    status: str = Field(default="draft", max_length=40)
+    model: str | None = Field(default=None, max_length=120)
+    provider: str | None = Field(default=None, max_length=40)
+
+
+class VisualDirection(BaseModel):
+    conceito: str = ""
+    estilo: str = ""
+    cenario: str = ""
+    enquadramento: str = ""
+    composicao: str = ""
+    iluminacao: str = ""
+    paleta: str = ""
+    tipografia: str = ""
+    restricoes: str = ""
+
+
+class ContentSlide(BaseModel):
+    numero: int
+    funcao: str = ""
+    texto: str = ""
+    texto_arte: str = ""  # texto exato da arte (fora do prompt), curto e legivel
+    image_prompt: str = ""  # prompt COMPLETO e INDEPENDENTE (sem logo/@/#)
+    alt_text: str = ""
+
+
+class ContentPackage(BaseModel):
+    brand_slug: str
+    channel: str
+    format: str
+    persona: str = ""
+    objetivo: str = ""
+    etapa_funil: str = ""
+    analise_estrategica: str = ""
+    conceito: str = ""
+    arco_narrativo: str = ""
+    cta: str = ""
+    captions: dict[str, str] = Field(default_factory=dict)  # por canal; instagram != linkedin
+    slides: list[ContentSlide] = Field(default_factory=list)
+    visual_direction: VisualDirection = Field(default_factory=VisualDirection)
+    factualidade: list[str] = Field(default_factory=list)
+    checklist: list[str] = Field(default_factory=list)
+
+
+class ContentPackageResponse(BaseModel):
+    output_id: int
+    version_number: int
+    status: str
+    package: ContentPackage
+    content_markdown: str
+    warnings: list[str] = Field(default_factory=list)
+
+
+class CocreationRefineRequest(BaseModel):
+    target: Literal["caption", "slide", "cta", "visual", "tone", "shorten", "persona"]
+    channel: str | None = Field(default=None, max_length=80)
+    slide_number: int | None = Field(default=None, ge=1, le=12)
+    instruction: str | None = Field(default=None, max_length=2000)
+    model: str | None = Field(default=None, max_length=120)
+    provider: str | None = Field(default=None, max_length=40)

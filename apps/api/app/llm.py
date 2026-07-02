@@ -163,6 +163,7 @@ async def call_llm(
     system_prompt: str,
     user_prompt: str,
     use_web_search: bool = False,
+    json_mode: bool = False,
     max_tokens: int | None = None,
     task_type: str = "llm",
     task_id: int | None = None,
@@ -184,6 +185,7 @@ async def call_llm(
                     "X-OpenRouter-Title": "Duofy V1 Local",
                 },
                 use_web_search=use_web_search,
+                json_mode=json_mode,
                 max_tokens=max_tokens or 1200,
             )
         elif provider == "openai":
@@ -193,6 +195,7 @@ async def call_llm(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 base_url=credential.base_url or "https://api.openai.com/v1",
+                json_mode=json_mode,
                 max_tokens=max_tokens or 1200,
             )
         elif provider == "anthropic":
@@ -273,6 +276,7 @@ async def _call_openai_compatible(
     base_url: str,
     extra_headers: dict[str, str] | None = None,
     use_web_search: bool = False,
+    json_mode: bool = False,
     max_tokens: int = 1200,
 ) -> LLMResult:
     headers = {
@@ -291,6 +295,8 @@ async def _call_openai_compatible(
     }
     if credential.provider == "openrouter" and use_web_search:
         payload["tools"] = [{"type": "openrouter:web_search"}]
+    if json_mode:
+        payload["response_format"] = {"type": "json_object"}
 
     async with httpx.AsyncClient(timeout=60) as client:
         response = await _post_with_retry(

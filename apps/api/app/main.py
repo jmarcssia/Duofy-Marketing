@@ -19,6 +19,7 @@ from app.routers import (
     brands,
     calendar,
     chat,
+    cocreation,
     content,
     documents,
     memory,
@@ -79,6 +80,7 @@ app.include_router(brands.router)
 app.include_router(admin.router)
 app.include_router(agents.router)
 app.include_router(chat.router)
+app.include_router(cocreation.router)
 app.include_router(content.router)
 app.include_router(documents.router)
 app.include_router(memory.router)
