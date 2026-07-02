@@ -111,7 +111,7 @@ async def approve(
     if b.tipo == "pesquisa":
         if model_override and model_override not in allowed_research_model_ids():
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=422,  # Unprocessable Content
                 detail="Modelo de pesquisa invalido (fora da lista permitida).",
             )
     else:
