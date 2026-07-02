@@ -14,21 +14,26 @@ import {
   FileIcon,
   PlusIcon,
   RefreshIcon,
+  SearchIcon,
   SendIcon,
   SettingsIcon,
   SparklesIcon
 } from "@/components/icons"
 import {
   apiFetch,
-  type AgentRun,
+  type Briefing,
   type ContentOutput,
   type ContentOutputDetail,
   type ContentTheme,
-  type ResearchReport
+  type ResearchModel,
+  type ResearchReport,
+  type ResearchTheme
 } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
 import { useBrand } from "@/lib/brand-context"
 import { downloadFile, exportPath } from "@/lib/download"
+import { BriefingPanel } from "./BriefingPanel"
+import { ThemePicker } from "./ThemePicker"
 
 type ChatMsg = { id: string; role: "user" | "assistant"; text: string; time: string; pending?: boolean; error?: boolean }
 type ColId = "analise" | "revisao" | "aprovado"
@@ -73,6 +78,12 @@ export default function OperationsPage() {
   const [sending, setSending] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
+  // Briefing (plan→painel) e temas de pesquisa
+  const [activeBriefing, setActiveBriefing] = useState<Briefing | null>(null)
+  const [researchModels, setResearchModels] = useState<ResearchModel[]>([])
+  const [researchThemes, setResearchThemes] = useState<ResearchTheme[]>([])
+  const [themePickerOpen, setThemePickerOpen] = useState(false)
+
   // Dados
   const [reports, setReports] = useState<ResearchReport[]>([])
   const [content, setContent] = useState<ContentOutput[]>([])
@@ -114,14 +125,18 @@ export default function OperationsPage() {
     if (!token) { setLoading(false); return }
     setLoading(true)
     try {
-      const [r, c, th] = await Promise.all([
+      const [r, c, th, rm, rth] = await Promise.all([
         apiFetch<ResearchReport[]>(`/api/research/reports?limit=60`, token),
         apiFetch<ContentOutput[]>(`/api/content/outputs?limit=60${brand ? `&brand_slug=${brand}` : ""}`, token),
-        apiFetch<ContentTheme[]>(`/api/themes?limit=500`, token).catch(() => [])
+        apiFetch<ContentTheme[]>(`/api/themes?limit=500`, token).catch(() => []),
+        apiFetch<ResearchModel[]>("/api/research-models", token).catch(() => []),
+        apiFetch<ResearchTheme[]>(`/api/research-themes?limit=500${brand ? `&brand_slug=${brand}` : ""}`, token).catch(() => [])
       ])
       setReports(brand ? r.filter((x) => x.brand_slug === brand) : r)
       setContent(c.filter((x) => !isResearch(x)))
       setThemes(th)
+      setResearchModels(rm)
+      setResearchThemes(rth)
     } catch { setReports([]); setContent([]); setThemes([]) }
     setLoading(false)
   }, [brand])
@@ -142,20 +157,51 @@ export default function OperationsPage() {
     const token = getTokenFromCookie()
     if (!token) return
     const u: ChatMsg = { id: `u${Date.now()}`, role: "user", text, time: now() }
-    const p: ChatMsg = { id: `p${Date.now()}`, role: "assistant", text: "Pensando…", time: now(), pending: true }
+    const p: ChatMsg = { id: `p${Date.now()}`, role: "assistant", text: "Preparando briefing…", time: now(), pending: true }
     setMessages((m) => [...m, u, p])
     setInput("")
     setSending(true)
     try {
-      const run = await apiFetch<AgentRun>("/api/agents/run", token, {
-        method: "POST", body: JSON.stringify({ agent_slug: "orchestrator", prompt: text, brand_slug: brand || undefined })
+      const briefing = await apiFetch<Briefing>("/api/orchestrator/plan", token, {
+        method: "POST",
+        body: JSON.stringify({ prompt: text, brand_slug: brand || undefined })
       })
-      setMessages((m) => m.map((x) => x.id === p.id ? { ...x, text: run.output || run.error || "(sem resposta)", time: now(), pending: false, error: run.status === "failed" } : x))
-      loadData()
+      if (briefing.tipo === "conversa") {
+        setMessages((m) => m.map((x) => x.id === p.id
+          ? { ...x, text: briefing.direct_answer || "(sem resposta)", time: now(), pending: false } : x))
+      } else {
+        setMessages((m) => m.map((x) => x.id === p.id
+          ? { ...x, text: `Preparei um briefing de ${briefing.tipo}. Revise ao lado para eu executar.`, time: now(), pending: false } : x))
+        setActiveBriefing(briefing)
+      }
     } catch (e: unknown) {
-      setMessages((m) => m.map((x) => x.id === p.id ? { ...x, text: e instanceof Error ? e.message : "Erro.", time: now(), pending: false, error: true } : x))
+      setMessages((m) => m.map((x) => x.id === p.id
+        ? { ...x, text: e instanceof Error ? e.message : "Erro.", time: now(), pending: false, error: true } : x))
     }
     setSending(false)
+  }
+
+  async function pickResearchTheme(theme: ResearchTheme) {
+    setThemePickerOpen(false)
+    const token = getTokenFromCookie()
+    if (!token) return
+    const u: ChatMsg = { id: `u${Date.now()}`, role: "user", text: `Pesquisar: ${theme.title}`, time: now() }
+    setMessages((m) => [...m, u])
+    try {
+      const briefing = await apiFetch<Briefing>("/api/orchestrator/plan-from-theme", token, {
+        method: "POST",
+        body: JSON.stringify({ research_theme_id: theme.id, brand_slug: brand || undefined })
+      })
+      setActiveBriefing(briefing)
+    } catch (e: unknown) {
+      setMessages((m) => [...m, { id: `e${Date.now()}`, role: "assistant", text: e instanceof Error ? e.message : "Erro.", time: now(), error: true }])
+    }
+  }
+
+  function onBriefingApproved(answer: string) {
+    setMessages((m) => [...m, { id: `a${Date.now()}`, role: "assistant", text: answer, time: now() }])
+    setActiveBriefing(null)
+    loadData()
   }
 
   async function runResearch() {
@@ -344,6 +390,16 @@ export default function OperationsPage() {
             <GhostButton className="text-xs" onClick={loadData}><RefreshIcon className="h-4 w-4" /> Atualizar</GhostButton>
           </div>
           <div className="mt-3 flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2">
+            <div className="relative">
+              <button onClick={() => setThemePickerOpen((v) => !v)}
+                className="grid h-8 w-8 place-items-center rounded-lg border border-line text-muted hover:border-purple/40 hover:text-purple"
+                aria-label="Temas de pesquisa">
+                <SearchIcon className="h-4 w-4" />
+              </button>
+              {themePickerOpen && (
+                <ThemePicker themes={researchThemes} onPick={pickResearchTheme} onClose={() => setThemePickerOpen(false)} />
+              )}
+            </div>
             <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendMessage()} disabled={sending} className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-muted disabled:opacity-60" placeholder="Pergunte algo ao Orquestrador..." />
             <button onClick={() => sendMessage()} disabled={sending || !input.trim()} className="grid h-8 w-8 place-items-center rounded-lg bg-purple text-white disabled:opacity-50" aria-label="Enviar">
               {sending ? <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg> : <SendIcon className="h-4 w-4" />}
@@ -593,6 +649,18 @@ export default function OperationsPage() {
             {!brand && <p className="mt-2 text-xs text-red-600">Selecione uma marca no topo.</p>}
           </div>
         </div>
+      )}
+
+      {activeBriefing && (
+        <BriefingPanel
+          key={activeBriefing.id}
+          briefing={activeBriefing}
+          models={researchModels}
+          themes={researchThemes}
+          token={getTokenFromCookie() ?? ""}
+          onApproved={onBriefingApproved}
+          onCancel={() => setActiveBriefing(null)}
+        />
       )}
     </div>
   )
