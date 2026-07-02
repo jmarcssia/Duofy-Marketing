@@ -210,6 +210,16 @@ class ContentThemeRead(BaseModel):
     status: str | None = None
 
 
+class ContentThemeCreate(BaseModel):
+    title: str = Field(min_length=2, max_length=255)
+    theme: str = Field(default="", max_length=2000)
+    brand_slug: str | None = Field(default=None, max_length=120)
+    audience: str | None = Field(default=None, max_length=255)
+    kind: str | None = Field(default=None, max_length=120)
+    owner: str | None = Field(default=None, max_length=120)
+    status: str | None = Field(default=None, max_length=80)
+
+
 class ThemeImportResult(BaseModel):
     parsed: int
     inserted: int

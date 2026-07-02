@@ -117,7 +117,7 @@ export default function OperationsPage() {
       const [r, c, th] = await Promise.all([
         apiFetch<ResearchReport[]>(`/api/research/reports?limit=60`, token),
         apiFetch<ContentOutput[]>(`/api/content/outputs?limit=60${brand ? `&brand_slug=${brand}` : ""}`, token),
-        apiFetch<ContentTheme[]>(`/api/calendar/themes?limit=500`, token).catch(() => [])
+        apiFetch<ContentTheme[]>(`/api/themes?limit=500`, token).catch(() => [])
       ])
       setReports(brand ? r.filter((x) => x.brand_slug === brand) : r)
       setContent(c.filter((x) => !isResearch(x)))

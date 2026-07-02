@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,67 +17,15 @@ from app.calendar_service import (
 from app.db import get_db
 from app.dependencies import get_current_user
 from app.llm import LLMConfigurationError
-from app.models import CalendarEvent, ContentTheme, User
+from app.models import CalendarEvent, User
 from app.schemas import (
     CalendarEventCreate,
     CalendarEventRead,
     CalendarEventUpdate,
     CalendarGenerateRequest,
-    ContentThemeRead,
-    ThemeImportResult,
 )
-from app.theme_import import import_themes, parse_themes_csv
 
 router = APIRouter(prefix="/api/calendar", tags=["calendar"])
-
-
-def _theme_read(theme: ContentTheme) -> ContentThemeRead:
-    return ContentThemeRead(
-        id=theme.id, title=theme.title, theme=theme.theme, brand_slug=theme.brand_slug,
-        audience=theme.audience, kind=theme.kind, owner=theme.owner, status=theme.status,
-    )
-
-
-@router.get("/themes", response_model=list[ContentThemeRead])
-async def list_themes(
-    current_user: Annotated[User, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
-    brand_slug: str | None = Query(default=None),
-    limit: int = Query(default=200, ge=1, le=500),
-) -> list[ContentThemeRead]:
-    stmt = select(ContentTheme).order_by(ContentTheme.title)
-    if brand_slug:
-        stmt = stmt.where(ContentTheme.brand_slug == brand_slug)
-    stmt = stmt.limit(limit)
-    rows = (await db.execute(stmt)).scalars().all()
-    return [_theme_read(t) for t in rows]
-
-
-@router.post("/themes/import", response_model=ThemeImportResult)
-async def import_themes_csv(
-    request: Request,
-    current_user: Annotated[User, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
-) -> ThemeImportResult:
-    raw = await request.body()
-    if not raw:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="CSV vazio.")
-    themes = parse_themes_csv(raw)
-    if not themes:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Nenhum tema encontrado no CSV (esperado separador ';' com coluna TITULO/TEMA).",
-        )
-    summary = await import_themes(db, themes)
-    await record_audit_event(
-        db, user=current_user, action="calendar.themes_imported",
-        entity_type="content_theme", entity_id=None, status="success",
-        brand_slug=None, agent_slug=None,
-        summary=f"Banco de temas importado: {summary['inserted']} novos de {summary['parsed']}.",
-        metadata=summary,
-    )
-    await db.commit()
-    return ThemeImportResult(**summary)
 
 
 def _event_read(event: CalendarEvent) -> CalendarEventRead:

@@ -5,10 +5,13 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Badge, GhostButton, StatCard } from "@/components/ui"
 import {
   BookIcon,
+  BookmarkIcon,
   ClockIcon,
+  CloseIcon,
   DownloadIcon,
   FileIcon,
   LayersIcon,
+  PlusIcon,
   RefreshIcon,
   SearchIcon,
   SparklesIcon,
@@ -16,6 +19,7 @@ import {
 } from "@/components/icons"
 import {
   apiFetch,
+  type ContentTheme,
   type DocumentChunk,
   type DocumentItem,
   type MemorySearchResult
@@ -94,6 +98,68 @@ export default function MemoryPage() {
   const [ragResults, setRagResults] = useState<MemorySearchResult[] | null>(null)
   const [ragLoading, setRagLoading] = useState(false)
 
+  // Banco de temas (contexto da cocriação) — gerenciado aqui na Memória
+  const [themes, setThemes] = useState<ContentTheme[]>([])
+  const [themeBusy, setThemeBusy] = useState(false)
+  const [themeMsg, setThemeMsg] = useState<string | null>(null)
+  const [newTheme, setNewTheme] = useState({ title: "", theme: "", kind: "" })
+  const [themeFilter, setThemeFilter] = useState("")
+
+  const loadThemes = useCallback(async () => {
+    const token = getTokenFromCookie()
+    if (!token) return
+    try {
+      setThemes(await apiFetch<ContentTheme[]>("/api/themes?limit=500", token))
+    } catch { setThemes([]) }
+  }, [])
+
+  useEffect(() => { loadThemes() }, [loadThemes])
+
+  async function createTheme() {
+    const token = getTokenFromCookie()
+    if (!token || newTheme.title.trim().length < 2) return
+    setThemeBusy(true); setThemeMsg(null)
+    try {
+      await apiFetch("/api/themes", token, {
+        method: "POST",
+        body: JSON.stringify({
+          title: newTheme.title.trim(),
+          theme: newTheme.theme.trim(),
+          kind: newTheme.kind.trim() || undefined,
+          brand_slug: brand || undefined
+        })
+      })
+      setNewTheme({ title: "", theme: "", kind: "" })
+      setThemeMsg("Tema adicionado.")
+      await loadThemes()
+    } catch (e: unknown) { setThemeMsg(e instanceof Error ? e.message : "Falha ao adicionar tema.") }
+    setThemeBusy(false)
+  }
+
+  async function deleteTheme(id: number) {
+    const token = getTokenFromCookie()
+    if (!token) return
+    setThemes((ts) => ts.filter((t) => t.id !== id)) // otimista
+    try { await apiFetch(`/api/themes/${id}`, token, { method: "DELETE" }) }
+    catch { await loadThemes() }
+  }
+
+  async function importThemesCsv(file: File) {
+    const token = getTokenFromCookie()
+    if (!token) return
+    setThemeBusy(true); setThemeMsg(null)
+    try {
+      const text = await file.text()
+      const res = await apiFetch<{ parsed: number; inserted: number; skipped: number }>(
+        "/api/themes/import", token,
+        { method: "POST", body: text, headers: { "Content-Type": "text/csv" } }
+      )
+      setThemeMsg(`Importados ${res.inserted} novos (de ${res.parsed}; ${res.skipped} já existiam).`)
+      await loadThemes()
+    } catch (e: unknown) { setThemeMsg(e instanceof Error ? e.message : "Falha ao importar CSV.") }
+    setThemeBusy(false)
+  }
+
   const load = useCallback(async () => {
     const token = getTokenFromCookie()
     if (!token) { setLoading(false); return }
@@ -165,6 +231,16 @@ export default function MemoryPage() {
     return items.sort((a, b) => new Date(b.when).getTime() - new Date(a.when).getTime()).slice(0, 6)
   }, [docs, entries])
 
+  const visibleThemes = useMemo(() => {
+    const q = themeFilter.trim().toLowerCase()
+    if (!q) return themes
+    return themes.filter((t) =>
+      t.title.toLowerCase().includes(q) ||
+      (t.theme || "").toLowerCase().includes(q) ||
+      (t.kind || "").toLowerCase().includes(q)
+    )
+  }, [themes, themeFilter])
+
   const indexedCount = docs.filter((d) => d.status === "indexed").length
   const brands = new Set([...docs.map((d) => d.brand_slug), ...entries.map((e) => e.brand_slug)]).size
 
@@ -189,6 +265,72 @@ export default function MemoryPage() {
           <StatCard key={s.label} icon={s.icon} iconTone={s.tone} label={s.label} value={s.value} hint={s.hint} />
         ))}
       </div>
+
+      {/* Banco de temas — contexto da cocriação, gerenciável aqui */}
+      <section className="duofy-card rounded-2xl p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <BookmarkIcon className="h-5 w-5 text-purple" />
+            <h2 className="text-lg font-bold tracking-[-0.02em] text-ink">Banco de temas</h2>
+            <Badge tone="purple">{themes.length}</Badge>
+            <span className="hidden text-xs text-muted sm:inline">contexto para a cocriação de conteúdos</span>
+          </div>
+          <label className={`duofy-tap flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-line bg-white px-3.5 text-sm font-semibold text-ink hover:border-purple/40 hover:text-purple ${themeBusy ? "opacity-50" : ""}`}>
+            <DownloadIcon className="h-4 w-4" /> Importar CSV
+            <input type="file" accept=".csv,text/csv" className="hidden" disabled={themeBusy}
+                   onChange={(e) => { const f = e.target.files?.[0]; if (f) importThemesCsv(f); e.target.value = "" }} />
+          </label>
+        </div>
+
+        {/* Adicionar manualmente */}
+        <div className="mt-4 grid gap-2 md:grid-cols-[minmax(0,1fr)_170px_auto]">
+          <input value={newTheme.title} onChange={(e) => setNewTheme({ ...newTheme, title: e.target.value })}
+                 onKeyDown={(e) => e.key === "Enter" && createTheme()}
+                 placeholder="Título do tema" className="h-10 rounded-xl border border-line bg-white px-3 text-sm text-ink outline-none placeholder:text-muted focus:border-purple" />
+          <input value={newTheme.kind} onChange={(e) => setNewTheme({ ...newTheme, kind: e.target.value })}
+                 placeholder="Tipo (opcional)" className="h-10 rounded-xl border border-line bg-white px-3 text-sm text-ink outline-none placeholder:text-muted focus:border-purple" />
+          <button onClick={createTheme} disabled={themeBusy || newTheme.title.trim().length < 2}
+                  className="duofy-tap flex h-10 items-center justify-center gap-1.5 rounded-xl bg-purple px-4 text-sm font-semibold text-white hover:bg-purple-deep disabled:opacity-50">
+            <PlusIcon className="h-4 w-4" /> Adicionar
+          </button>
+        </div>
+        <input value={newTheme.theme} onChange={(e) => setNewTheme({ ...newTheme, theme: e.target.value })}
+               placeholder="Descrição / direcionamento do tema (opcional)"
+               className="mt-2 w-full rounded-xl border border-line bg-white px-3 py-2 text-sm text-ink outline-none placeholder:text-muted focus:border-purple" />
+        {themeMsg && <p className="mt-2 text-xs text-purple-deep">{themeMsg}</p>}
+
+        {/* Filtro + lista */}
+        <div className="mt-4 flex items-center gap-2 rounded-xl border border-line bg-white px-3 text-muted">
+          <SearchIcon className="h-4 w-4" />
+          <input value={themeFilter} onChange={(e) => setThemeFilter(e.target.value)}
+                 placeholder="Filtrar temas…" className="h-9 w-full bg-transparent text-sm text-ink outline-none placeholder:text-muted" />
+        </div>
+        <div className="mt-3 max-h-96 space-y-2 overflow-y-auto duofy-scroll pr-1">
+          {visibleThemes.length === 0 ? (
+            <div className="grid place-items-center rounded-xl border border-dashed border-line py-8 text-center text-sm text-muted">
+              {themes.length === 0 ? "Nenhum tema ainda. Adicione manualmente ou importe um CSV." : "Nenhum tema corresponde ao filtro."}
+            </div>
+          ) : (
+            visibleThemes.map((t) => (
+              <div key={t.id} className="flex items-start justify-between gap-3 rounded-xl border border-line bg-white p-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold leading-snug text-ink">{t.title}</p>
+                  {t.theme && <p className="mt-0.5 line-clamp-2 text-xs text-muted">{t.theme}</p>}
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {t.brand_slug && <Badge tone="slate">{t.brand_slug}</Badge>}
+                    {t.kind && <Badge tone="blue">{t.kind}</Badge>}
+                    {t.audience && <Badge tone="slate">{t.audience}</Badge>}
+                  </div>
+                </div>
+                <button onClick={() => deleteTheme(t.id)} aria-label="Excluir tema"
+                        className="duofy-tap grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-line text-muted hover:border-red/40 hover:text-red">
+                  <CloseIcon className="h-4 w-4" />
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
         <div className="space-y-5">

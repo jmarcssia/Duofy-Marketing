@@ -101,40 +101,6 @@ export default function CalendarPage() {
   const [cursor, setCursor] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1))
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
-
-  // Banco de temas (contexto da cocriação) — importado via CSV
-  const [themeCount, setThemeCount] = useState<number | null>(null)
-  const [importing, setImporting] = useState(false)
-  const [importMsg, setImportMsg] = useState<string | null>(null)
-
-  const loadThemeCount = useCallback(async () => {
-    const token = getTokenFromCookie()
-    if (!token) return
-    try {
-      const list = await apiFetch<unknown[]>("/api/calendar/themes?limit=500", token)
-      setThemeCount(list.length)
-    } catch { setThemeCount(null) }
-  }, [])
-
-  useEffect(() => { loadThemeCount() }, [loadThemeCount])
-
-  async function importThemesCsv(file: File) {
-    const token = getTokenFromCookie()
-    if (!token) return
-    setImporting(true); setImportMsg(null)
-    try {
-      const text = await file.text()
-      const res = await apiFetch<{ parsed: number; inserted: number; skipped: number }>(
-        "/api/calendar/themes/import", token,
-        { method: "POST", body: text, headers: { "Content-Type": "text/csv" } }
-      )
-      setImportMsg(`Importados ${res.inserted} novos temas (de ${res.parsed}; ${res.skipped} já existiam).`)
-      await loadThemeCount()
-    } catch (e: unknown) {
-      setImportMsg(e instanceof Error ? e.message : "Falha ao importar CSV.")
-    }
-    setImporting(false)
-  }
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
 
   const [objective, setObjective] = useState("")
@@ -317,25 +283,6 @@ export default function CalendarPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => <StatCard key={s.label} icon={s.icon} iconTone={s.tone} label={s.label} value={s.value} />)}
-      </div>
-
-      {/* Banco de temas — contexto para a cocriação (importado via CSV) */}
-      <div className="duofy-card flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
-        <div className="flex items-center gap-2.5">
-          <span className="grid h-9 w-9 place-items-center rounded-lg bg-purple-soft text-purple"><SparklesIcon className="h-5 w-5" /></span>
-          <div>
-            <p className="text-sm font-bold text-ink">Banco de temas</p>
-            <p className="text-xs text-muted">{themeCount === null ? "Serve de contexto para a cocriação." : `${themeCount} temas disponíveis · contexto da cocriação.`}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {importMsg && <span className="text-xs text-muted">{importMsg}</span>}
-          <label className={`duofy-tap flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-line bg-white px-3.5 text-sm font-semibold text-ink hover:border-purple/40 hover:text-purple ${importing ? "opacity-50" : ""}`}>
-            <DownloadIcon className="h-4 w-4" /> {importing ? "Importando…" : "Importar CSV"}
-            <input type="file" accept=".csv,text/csv" className="hidden" disabled={importing}
-                   onChange={(e) => { const f = e.target.files?.[0]; if (f) importThemesCsv(f); e.target.value = "" }} />
-          </label>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px]">

@@ -29,6 +29,7 @@ from app.routers import (
     reports,
     research,
     tasks,
+    themes,
 )
 from app.schemas import HealthResponse, ServiceHealth
 from app.settings import get_settings
@@ -87,6 +88,7 @@ app.include_router(metrics.router)
 app.include_router(operations.router)
 app.include_router(reports.router)
 app.include_router(tasks.router)
+app.include_router(themes.router)
 
 
 @app.get("/health", response_model=HealthResponse)

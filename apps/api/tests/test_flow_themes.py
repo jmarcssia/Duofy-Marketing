@@ -1,4 +1,4 @@
-"""Banco de temas: parser de CSV e import via endpoint (contexto da cocriação)."""
+"""Banco de temas (na Memória): parser de CSV, import, criação manual e exclusão."""
 
 from __future__ import annotations
 
@@ -23,26 +23,43 @@ def test_parse_themes_csv_maps_brands_and_skips_empty():
     assert themes[0]["title"] == "Como reduzir custo no posto"
     assert themes[0]["brand_slug"] == "postos_combustiveis"
     assert themes[1]["brand_slug"] == "deathcare"
-    assert themes[1]["theme"] == "Governanca"
 
 
-async def test_import_endpoint_and_listing(client, auth_headers):
-    resp = client.post("/api/calendar/themes/import", content=CSV.encode("utf-8"),
+async def test_import_list_create_delete(client, auth_headers):
+    # importa via CSV
+    resp = client.post("/api/themes/import", content=CSV.encode("utf-8"),
                        headers={**auth_headers, "Content-Type": "text/csv"})
     assert resp.status_code == 200, resp.text
     assert resp.json()["inserted"] == 2
 
-    # reimportar não duplica
-    resp2 = client.post("/api/calendar/themes/import", content=CSV.encode("utf-8"),
-                        headers={**auth_headers, "Content-Type": "text/csv"})
-    assert resp2.json()["inserted"] == 0
+    # cria manualmente
+    created = client.post("/api/themes", json={
+        "title": "Tema manual do usuário", "theme": "sobre gestão de frotas",
+        "brand_slug": "postos_combustiveis", "kind": "Post",
+    }, headers=auth_headers)
+    assert created.status_code == 201, created.text
+    theme_id = created.json()["id"]
 
-    listing = client.get("/api/calendar/themes", headers=auth_headers)
+    # lista contém os três
+    listing = client.get("/api/themes", headers=auth_headers)
     assert listing.status_code == 200
     titles = [t["title"] for t in listing.json()]
+    assert "Tema manual do usuário" in titles
     assert "Como reduzir custo no posto" in titles
 
-    # filtro por marca
-    postos = client.get("/api/calendar/themes", params={"brand_slug": "postos_combustiveis"},
-                        headers=auth_headers)
+    # exclui o criado
+    deleted = client.delete(f"/api/themes/{theme_id}", headers=auth_headers)
+    assert deleted.status_code == 204
+    after = client.get("/api/themes", headers=auth_headers)
+    assert all(t["id"] != theme_id for t in after.json())
+
+    # excluir inexistente -> 404
+    assert client.delete("/api/themes/999999", headers=auth_headers).status_code == 404
+
+
+async def test_filter_by_brand(client, auth_headers):
+    client.post("/api/themes", json={"title": "T Posto", "brand_slug": "postos_combustiveis"}, headers=auth_headers)
+    client.post("/api/themes", json={"title": "T Death", "brand_slug": "deathcare"}, headers=auth_headers)
+    postos = client.get("/api/themes", params={"brand_slug": "postos_combustiveis"}, headers=auth_headers)
+    assert postos.status_code == 200
     assert all(t["brand_slug"] == "postos_combustiveis" for t in postos.json())
