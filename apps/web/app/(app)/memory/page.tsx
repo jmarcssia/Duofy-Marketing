@@ -22,7 +22,8 @@ import {
   type ContentTheme,
   type DocumentChunk,
   type DocumentItem,
-  type MemorySearchResult
+  type MemorySearchResult,
+  type ResearchTheme
 } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
 import { useBrand } from "@/lib/brand-context"
@@ -105,6 +106,13 @@ export default function MemoryPage() {
   const [newTheme, setNewTheme] = useState({ title: "", theme: "", kind: "" })
   const [themeFilter, setThemeFilter] = useState("")
 
+  // Banco de temas de pesquisa — contexto para pesquisa/briefing
+  const [researchThemes, setResearchThemes] = useState<ResearchTheme[]>([])
+  const [newRTheme, setNewRTheme] = useState({ title: "", notes: "" })
+  const [rThemeBusy, setRThemeBusy] = useState(false)
+  const [rThemeMsg, setRThemeMsg] = useState<string | null>(null)
+  const [rThemeFilter, setRThemeFilter] = useState("")
+
   const loadThemes = useCallback(async () => {
     const token = getTokenFromCookie()
     if (!token) return
@@ -158,6 +166,62 @@ export default function MemoryPage() {
       await loadThemes()
     } catch (e: unknown) { setThemeMsg(e instanceof Error ? e.message : "Falha ao importar CSV.") }
     setThemeBusy(false)
+  }
+
+  const loadResearchThemes = useCallback(async () => {
+    const token = getTokenFromCookie()
+    if (!token) return
+    try {
+      setResearchThemes(
+        await apiFetch<ResearchTheme[]>(`/api/research-themes?limit=500${brand ? `&brand_slug=${brand}` : ""}`, token)
+      )
+    } catch { setResearchThemes([]) }
+  }, [brand])
+
+  useEffect(() => { loadResearchThemes() }, [loadResearchThemes])
+
+  async function createResearchTheme() {
+    const token = getTokenFromCookie()
+    if (!token || newRTheme.title.trim().length < 2) return
+    setRThemeBusy(true); setRThemeMsg(null)
+    try {
+      await apiFetch("/api/research-themes", token, {
+        method: "POST",
+        body: JSON.stringify({
+          title: newRTheme.title.trim(),
+          notes: newRTheme.notes.trim() || undefined,
+          brand_slug: brand || undefined,
+        }),
+      })
+      setNewRTheme({ title: "", notes: "" })
+      setRThemeMsg("Tema de pesquisa adicionado.")
+      await loadResearchThemes()
+    } catch (e: unknown) { setRThemeMsg(e instanceof Error ? e.message : "Falha ao adicionar.") }
+    setRThemeBusy(false)
+  }
+
+  async function deleteResearchTheme(id: number) {
+    const token = getTokenFromCookie()
+    if (!token) return
+    setResearchThemes((ts) => ts.filter((t) => t.id !== id))
+    try { await apiFetch(`/api/research-themes/${id}`, token, { method: "DELETE" }) }
+    catch { await loadResearchThemes() }
+  }
+
+  async function importResearchThemesCsv(file: File) {
+    const token = getTokenFromCookie()
+    if (!token) return
+    setRThemeBusy(true); setRThemeMsg(null)
+    try {
+      const text = await file.text()
+      const res = await apiFetch<{ parsed: number; inserted: number; skipped: number }>(
+        `/api/research-themes/import${brand ? `?brand_slug=${brand}` : ""}`, token,
+        { method: "POST", body: text, headers: { "Content-Type": "text/csv" } }
+      )
+      setRThemeMsg(`Importados ${res.inserted} novos (de ${res.parsed}; ${res.skipped} já existiam).`)
+      await loadResearchThemes()
+    } catch (e: unknown) { setRThemeMsg(e instanceof Error ? e.message : "Falha ao importar CSV.") }
+    setRThemeBusy(false)
   }
 
   const load = useCallback(async () => {
@@ -241,6 +305,13 @@ export default function MemoryPage() {
     )
   }, [themes, themeFilter])
 
+  const visibleRThemes = useMemo(() => {
+    const q = rThemeFilter.trim().toLowerCase()
+    if (!q) return researchThemes
+    return researchThemes.filter((t) =>
+      t.title.toLowerCase().includes(q) || (t.notes || "").toLowerCase().includes(q))
+  }, [researchThemes, rThemeFilter])
+
   const indexedCount = docs.filter((d) => d.status === "indexed").length
   const brands = new Set([...docs.map((d) => d.brand_slug), ...entries.map((e) => e.brand_slug)]).size
 
@@ -323,6 +394,66 @@ export default function MemoryPage() {
                   </div>
                 </div>
                 <button onClick={() => deleteTheme(t.id)} aria-label="Excluir tema"
+                        className="duofy-tap grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-line text-muted hover:border-red/40 hover:text-red">
+                  <CloseIcon className="h-4 w-4" />
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      {/* Banco de temas de pesquisa — contexto para pesquisa/briefing */}
+      <section className="duofy-card rounded-2xl p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <BookmarkIcon className="h-5 w-5 text-purple" />
+            <h2 className="text-lg font-bold tracking-[-0.02em] text-ink">Temas de pesquisa</h2>
+            <Badge tone="purple">{researchThemes.length}</Badge>
+            <span className="hidden text-xs text-muted sm:inline">contexto para a pesquisa/briefing</span>
+          </div>
+          <label className={`duofy-tap flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-line bg-white px-3.5 text-sm font-semibold text-ink hover:border-purple/40 hover:text-purple ${rThemeBusy ? "opacity-50" : ""}`}>
+            <DownloadIcon className="h-4 w-4" /> Importar CSV
+            <input type="file" accept=".csv,text/csv" className="hidden" disabled={rThemeBusy}
+                   onChange={(e) => { const f = e.target.files?.[0]; if (f) importResearchThemesCsv(f); e.target.value = "" }} />
+          </label>
+        </div>
+
+        {/* Adicionar manualmente */}
+        <div className="mt-4 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+          <input value={newRTheme.title} onChange={(e) => setNewRTheme({ ...newRTheme, title: e.target.value })}
+                 onKeyDown={(e) => e.key === "Enter" && createResearchTheme()}
+                 placeholder="Título do tema de pesquisa" className="h-10 rounded-xl border border-line bg-white px-3 text-sm text-ink outline-none placeholder:text-muted focus:border-purple" />
+          <button onClick={createResearchTheme} disabled={rThemeBusy || newRTheme.title.trim().length < 2}
+                  className="duofy-tap flex h-10 items-center justify-center gap-1.5 rounded-xl bg-purple px-4 text-sm font-semibold text-white hover:bg-purple-deep disabled:opacity-50">
+            <PlusIcon className="h-4 w-4" /> Adicionar
+          </button>
+        </div>
+        <input value={newRTheme.notes} onChange={(e) => setNewRTheme({ ...newRTheme, notes: e.target.value })}
+               placeholder="Notas / direcionamento (opcional)"
+               className="mt-2 w-full rounded-xl border border-line bg-white px-3 py-2 text-sm text-ink outline-none placeholder:text-muted focus:border-purple" />
+        {rThemeMsg && <p className="mt-2 text-xs text-purple-deep">{rThemeMsg}</p>}
+
+        {/* Filtro + lista */}
+        <div className="mt-4 flex items-center gap-2 rounded-xl border border-line bg-white px-3 text-muted">
+          <SearchIcon className="h-4 w-4" />
+          <input value={rThemeFilter} onChange={(e) => setRThemeFilter(e.target.value)}
+                 placeholder="Filtrar temas de pesquisa…" className="h-9 w-full bg-transparent text-sm text-ink outline-none placeholder:text-muted" />
+        </div>
+        <div className="mt-3 max-h-96 space-y-2 overflow-y-auto duofy-scroll pr-1">
+          {visibleRThemes.length === 0 ? (
+            <div className="grid place-items-center rounded-xl border border-dashed border-line py-8 text-center text-sm text-muted">
+              {researchThemes.length === 0 ? "Nenhum tema de pesquisa ainda. Adicione manualmente ou importe um CSV." : "Nenhum tema corresponde ao filtro."}
+            </div>
+          ) : (
+            visibleRThemes.map((t) => (
+              <div key={t.id} className="flex items-start justify-between gap-3 rounded-xl border border-line bg-white p-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold leading-snug text-ink">{t.title}</p>
+                  {t.notes && <p className="mt-0.5 line-clamp-2 text-xs text-muted">{t.notes}</p>}
+                  {t.brand_slug && <div className="mt-1.5"><Badge tone="slate">{t.brand_slug}</Badge></div>}
+                </div>
+                <button onClick={() => deleteResearchTheme(t.id)} aria-label="Excluir tema de pesquisa"
                         className="duofy-tap grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-line text-muted hover:border-red/40 hover:text-red">
                   <CloseIcon className="h-4 w-4" />
                 </button>
