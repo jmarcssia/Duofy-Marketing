@@ -43,6 +43,7 @@ class SourceCandidate:
     publisher: str | None = None
     published_at: str | None = None
     source_kind: str = "rss"
+    summary: str | None = None
 
 
 @dataclass(frozen=True)
@@ -170,6 +171,7 @@ async def _rss_candidates(
                 publisher=str(entry.get("source", {}).get("title", "") or "") or None,
                 published_at=str(entry.get("published", "") or "") or None,
                 source_kind="rss",
+                summary=(str(entry.get("summary", "") or "").strip() or None),
             )
         )
     return candidates
@@ -243,26 +245,65 @@ def _dedupe_candidates(candidates: list[SourceCandidate], sources: int) -> list[
     return unique
 
 
+def _dedupe_by_domain(
+    candidates: list[SourceCandidate], sources: int, per_domain: int = 2
+) -> list[SourceCandidate]:
+    """Prioriza diversidade: no maximo `per_domain` fontes por dominio, ate `sources`."""
+    seen_urls: set[str] = set()
+    per_host: dict[str, int] = {}
+    unique: list[SourceCandidate] = []
+    for candidate in candidates:
+        if candidate.url in seen_urls:
+            continue
+        host = _publisher_from_url(candidate.url) or candidate.url
+        if per_host.get(host, 0) >= per_domain:
+            continue
+        seen_urls.add(candidate.url)
+        per_host[host] = per_host.get(host, 0) + 1
+        unique.append(candidate)
+        if len(unique) >= sources:
+            break
+    return unique
+
+
+def count_usable_sources(sources: list[CollectedSource]) -> int:
+    return sum(1 for s in sources if s.status == "collected")
+
+
 async def _collect_candidate(
     candidate: SourceCandidate,
     use_playwright: bool,
     excerpt_limit: int,
 ) -> CollectedSource:
     publisher = candidate.publisher or _publisher_from_url(candidate.url)
+    snippet = _plain_text_from_html(candidate.summary) if candidate.summary else ""
     try:
         text = await _fetch_url_text(candidate.url)
         source_kind = "http" if candidate.source_kind == "rss" else candidate.source_kind
         if len(text) < 450 and use_playwright:
-            text = await _fetch_with_playwright(candidate.url)
-            source_kind = "playwright"
+            try:
+                text = await _fetch_with_playwright(candidate.url)
+                source_kind = "playwright"
+            except Exception:
+                text = text  # mantem o que tiver; snippet abaixo cobre o piso
+        if len(text) < 200 and snippet:
+            text = snippet
+            source_kind = "rss_snippet"
         evidence = _evidence_excerpt(text, excerpt_limit)
         status = "collected" if evidence else "failed"
         error = None if evidence else "Fonte sem texto extraivel."
     except Exception as exc:
-        evidence = ""
-        status = "failed"
-        error = str(exc)[:800]
-        source_kind = candidate.source_kind
+        # falha ao buscar a pagina: usa o snippet do RSS como piso
+        if snippet:
+            evidence = _evidence_excerpt(snippet, excerpt_limit)
+            status = "collected"
+            error = None
+            source_kind = "rss_snippet"
+        else:
+            evidence = ""
+            status = "failed"
+            error = str(exc)[:800]
+            source_kind = candidate.source_kind
 
     return CollectedSource(
         title=candidate.title[:500],
@@ -308,7 +349,10 @@ async def collect_research_sources(
         )
     candidates.extend(await _apify_candidates(db, payload, brand, sources))
 
-    unique = _dedupe_candidates(candidates, sources)
+    if payload.depth == "deep":
+        unique = _dedupe_by_domain(candidates, sources, per_domain=2)
+    else:
+        unique = _dedupe_candidates(candidates, sources)
     use_playwright = payload.depth == "deep"
     return [
         await _collect_candidate(candidate, use_playwright, excerpt_limit)
