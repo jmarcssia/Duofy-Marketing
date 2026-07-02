@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from unicodedata import combining, normalize
 
 from app.agent_rules import (
     citation_required_for,
@@ -13,6 +14,12 @@ from app.agent_rules import (
 _CITATION_RE = re.compile(r"\[\d+\]")
 
 
+def _plain_text(value: str) -> str:
+    return "".join(
+        char for char in normalize("NFKD", value.lower()) if not combining(char)
+    )
+
+
 def validate_document(
     content: str, agent_slug: str, channel: str | None = None
 ) -> list[dict]:
@@ -20,12 +27,15 @@ def validate_document(
     lower = text.lower()
     violations: list[dict] = []
 
+    plain_text = _plain_text(text)
     for section in required_sections_for(agent_slug, channel):
-        # secao presente se aparece como cabecalho markdown "## Secao" (case-insensitive)
+        # secao presente se aparece como cabecalho markdown "## Secao"
+        # (case- e acento-insensitive: templates/prompts variam a grafia dos acentos)
         pattern = re.compile(
-            r"^#{1,6}\s*" + re.escape(section), re.IGNORECASE | re.MULTILINE
+            r"^#{1,6}\s*" + re.escape(_plain_text(section)),
+            re.IGNORECASE | re.MULTILINE,
         )
-        if not pattern.search(text):
+        if not pattern.search(plain_text):
             violations.append(
                 {"severity": "required", "message": f"Seção obrigatória ausente: {section}."}
             )
