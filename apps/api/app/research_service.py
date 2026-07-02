@@ -18,7 +18,6 @@ from app.agent_rules import (
     citation_required_for,
     forbidden_terms_for,
     min_sources_for,
-    required_sections_for,
 )
 from app.crypto import decrypt_secret
 from app.document_formatting import normalize_document_content
@@ -397,6 +396,21 @@ async def _collect_candidate(
 ) -> CollectedSource:
     publisher = candidate.publisher or _publisher_from_url(candidate.url)
     snippet = _plain_text_from_html(candidate.summary) if candidate.summary else ""
+    # Fontes da busca web (OpenRouter) ja vem com evidencia citada: usa direto, sem
+    # fetch lento da pagina (evita gargalo/erros ao coletar dezenas de fontes na Profunda).
+    if candidate.source_kind == "web" and snippet:
+        evidence = _evidence_excerpt(snippet, excerpt_limit)
+        return CollectedSource(
+            title=_clean_text(candidate.title)[:500],
+            url=candidate.url,
+            publisher=_clean_text(publisher) if publisher else publisher,
+            published_at=candidate.published_at,
+            reliability=_reliability(candidate.url, publisher, "collected"),
+            source_kind="web",
+            status="collected",
+            evidence=evidence,
+            error=None,
+        )
     try:
         text = await _fetch_url_text(candidate.url)
         source_kind = "http" if candidate.source_kind == "rss" else candidate.source_kind
@@ -438,13 +452,57 @@ async def _collect_candidate(
     )
 
 
-async def _openrouter_web_candidates(
-    db: AsyncSession, theme: str, sources: int
-) -> list[SourceCandidate]:
-    """Busca web ROBUSTA via OpenRouter (plugin 'web') — retorna as fontes citadas.
+def _research_angles(theme: str, depth: str) -> list[str]:
+    """Consultas por angulo. Profunda busca o MAXIMO de fontes (varios angulos);
+    rapida usa poucos angulos (o suficiente para o minimo)."""
+    if depth == "deep":
+        return [
+            theme,
+            f"{theme} dados estatisticas mercado Brasil",
+            f"{theme} tendencias analise setor 2026",
+            f"{theme} concorrentes players principais",
+            f"{theme} regulacao normas legislacao Brasil",
+            f"{theme} noticias recentes",
+        ]
+    return [theme, f"{theme} dados mercado Brasil"]
 
-    Sem scraping e sem bloqueio: a busca roda na infraestrutura do OpenRouter e devolve
-    citacoes (titulo + URL). E o coletor primario, dinamico (nunca uma lista fixa).
+
+async def _openrouter_web_search(
+    client: httpx.AsyncClient, base_url: str, api_key: str, model: str, query: str
+) -> list[dict]:
+    body = {
+        "model": model,
+        "messages": [
+            {
+                "role": "user",
+                "content": (
+                    f"Pesquise na web fontes atuais e confiaveis sobre: {query} "
+                    "(foco no Brasil). Traga os principais dados e cite as fontes."
+                ),
+            }
+        ],
+        "plugins": [{"id": "web", "max_results": 10}],
+        "max_tokens": 400,
+    }
+    try:
+        response = await client.post(
+            f"{base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json=body,
+        )
+        response.raise_for_status()
+        return response.json().get("choices", [{}])[0].get("message", {}).get("annotations") or []
+    except Exception:
+        return []
+
+
+async def _openrouter_web_candidates(
+    db: AsyncSession, theme: str, depth: str
+) -> list[SourceCandidate]:
+    """Busca web ROBUSTA e AGRESSIVA via OpenRouter (plugin 'web').
+
+    Acumula fontes de multiplos angulos de consulta (sem scraping, sem bloqueio, sem lista
+    fixa). Profunda acumula o maximo; rapida o suficiente. E o coletor primario.
     """
     result = await db.execute(
         select(ProviderCredential).where(ProviderCredential.provider == "openrouter")
@@ -458,48 +516,27 @@ async def _openrouter_web_candidates(
         return []
     base_url = (credential.base_url or "https://openrouter.ai/api/v1").rstrip("/")
     model = credential.default_model or "google/gemini-2.5-pro"
-    body = {
-        "model": model,
-        "messages": [
-            {
-                "role": "user",
-                "content": (
-                    f"Pesquise na web fontes atuais e confiaveis sobre: {theme} "
-                    "(foco no Brasil). Traga os principais dados e cite as fontes."
-                ),
-            }
-        ],
-        "plugins": [{"id": "web", "max_results": max(sources, 8)}],
-        "max_tokens": 800,
-    }
-    try:
-        async with httpx.AsyncClient(timeout=90) as client:
-            response = await client.post(
-                f"{base_url}/chat/completions",
-                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-                json=body,
-            )
-            response.raise_for_status()
-        message = response.json().get("choices", [{}])[0].get("message", {})
-    except Exception:
-        return []
+
     candidates: list[SourceCandidate] = []
     seen: set[str] = set()
-    for annotation in message.get("annotations") or []:
-        citation = annotation.get("url_citation") or {}
-        url = str(citation.get("url") or "").strip()
-        if not url.startswith("http") or url in seen:
-            continue
-        seen.add(url)
-        candidates.append(
-            SourceCandidate(
-                title=(citation.get("title") or _publisher_from_url(url) or "Fonte web")[:255],
-                url=url,
-                publisher=_publisher_from_url(url),
-                source_kind="web",
-                summary=(citation.get("content") or citation.get("title") or None),
-            )
-        )
+    async with httpx.AsyncClient(timeout=90) as client:
+        for angle in _research_angles(theme, depth):
+            for annotation in await _openrouter_web_search(client, base_url, api_key, model, angle):
+                citation = annotation.get("url_citation") or {}
+                url = str(citation.get("url") or "").strip()
+                if not url.startswith("http") or url in seen:
+                    continue
+                seen.add(url)
+                title = citation.get("title") or _publisher_from_url(url) or "Fonte web"
+                candidates.append(
+                    SourceCandidate(
+                        title=title[:255],
+                        url=url,
+                        publisher=_publisher_from_url(url),
+                        source_kind="web",
+                        summary=(citation.get("content") or citation.get("title") or None),
+                    )
+                )
     return candidates
 
 
@@ -521,8 +558,8 @@ async def collect_research_sources(
         )
         for url in payload.source_urls
     ]
-    # Coletor primario robusto: busca web via OpenRouter (sem scraping, sem bloqueio).
-    candidates.extend(await _openrouter_web_candidates(db, payload.theme, sources))
+    # Coletor primario robusto: busca web agressiva via OpenRouter (multi-angulo).
+    candidates.extend(await _openrouter_web_candidates(db, payload.theme, payload.depth))
     # Best-effort: DuckDuckGo (amplitude extra quando disponivel; [] se bloquear).
     candidates.extend(await _duckduckgo_candidates(payload.theme, brand, sources))
     try:
@@ -539,7 +576,7 @@ async def collect_research_sources(
     candidates.extend(await _apify_candidates(db, payload, brand, sources))
 
     if payload.depth == "deep":
-        unique = _dedupe_by_domain(candidates, sources, per_domain=2)
+        unique = _dedupe_by_domain(candidates, sources, per_domain=3)
     else:
         unique = _dedupe_candidates(candidates, sources)
     use_playwright = payload.depth == "deep"
@@ -584,40 +621,83 @@ def _system_prompt(agent_prompt: str, brand_slug: str | None = None) -> str:
     )
 
 
+_DEEP_STRUCTURE = """## Resumo executivo
+## Escopo, metodo e criterios de evidencia
+## Definicao do mercado
+## Dimensao potencial e sinais de crescimento
+## Fatores que sustentam a demanda
+## Cadeia de valor e fluxo operacional
+## Modelos de servico e receita
+## Panorama competitivo
+## Ambiente regulatorio
+## Principais desafios operacionais
+## Tecnologia e sistemas de gestao
+## Benchmark internacional
+## Oportunidades economicas e operacionais
+## Riscos do mercado
+## Matriz de evidencias
+## Lacunas prioritarias de informacao
+## Conclusao
+## Referencias"""
+
+_QUICK_STRUCTURE = """## Resumo executivo
+## Sinais de mercado
+## Panorama competitivo
+## Oportunidades
+## Riscos
+## Recomendacoes
+## Referencias"""
+
+
+def _structure_for(depth: str) -> str:
+    return _DEEP_STRUCTURE if depth == "deep" else _QUICK_STRUCTURE
+
+
 def _user_prompt(
     brand: Brand,
     payload: ResearchRunRequest,
     sources: list[CollectedSource],
     rag_context: str,
 ) -> str:
-    _secs = required_sections_for("research_agent")
     _forb = forbidden_terms_for("research_agent")
     _cite = (
         "- Cite a fonte [n] em TODA afirmacao factual (numeros, dados, fatos, datas, nomes); "
         "sem fonte na lista, NAO afirme o dado.\n"
         if citation_required_for("research_agent") else ""
     )
+    is_deep = payload.depth == "deep"
     regras = (
         "\n\nREGRAS OBRIGATORIAS DESTA EXECUCAO:\n"
-        f"- Comece com um titulo (#) e estruture com EXATAMENTE estas secoes de nivel 2 (##), "
-        f"nesta ordem: {', '.join(_secs)}.\n"
-        "- Cada secao deve ser SUBSTANCIAL (varios paragrafos e/ou listas), nunca uma linha.\n"
-        "- Abrangencia obrigatoria: tamanho e dinamica do mercado, tendencias atuais, "
-        "comportamento/expectativa do consumidor, concorrentes, regulacao (quando relevante), "
-        "oportunidades acionaveis e riscos concretos.\n"
-        "- Na secao Concorrentes, inclua uma TABELA markdown comparativa "
-        "(concorrente | proposta | diferencial | fonte).\n"
-        "- Use formatacao rica: subtitulos, listas, **negrito** em termos-chave e TABELAS markdown "
-        "para dados comparativos e numeros.\n"
+        "- Comece com um titulo (#) e use EXATAMENTE as secoes de nivel 2 (##) abaixo, "
+        "nesta ordem:\n"
+        f"{_structure_for(payload.depth)}\n"
+        "- Cada secao deve ser SUBSTANCIAL (varios paragrafos e/ou listas), nunca uma linha. "
+        "Escreva um relatorio LONGO e denso, no padrao de uma consultoria de mercado.\n"
+        + (
+            "- Use subsecoes de nivel 3 (###) onde ajudar (ex.: regra federal, por estado, "
+            "por etapa da cadeia).\n"
+            "- Na secao 'Ambiente regulatorio', separe regra federal e recortes "
+            "estaduais/municipais relevantes, citando as normas.\n"
+            "- Na secao 'Matriz de evidencias', inclua uma TABELA markdown "
+            "(afirmacao | evidencia/fonte [n] | forca da evidencia).\n"
+            "- Na secao 'Lacunas prioritarias de informacao', liste o que NAO foi "
+            "possivel confirmar com as fontes (dados faltantes), sem inventar.\n"
+            if is_deep else ""
+        )
+        + "- Na secao 'Panorama competitivo', inclua uma TABELA markdown "
+        "(player | proposta | diferencial | fonte [n]).\n"
+        "- Use formatacao rica: subtitulos, listas, **negrito** em termos-chave e "
+        "TABELAS markdown para dados, comparativos e numeros.\n"
         + _cite
-        + "- Na secao Fontes, liste cada fonte usada como '[n] Titulo — URL'.\n"
+        + "- Na secao 'Referencias', liste cada fonte usada como '[n] Titulo — URL'.\n"
         + f"- NUNCA use estes termos: {', '.join(_forb)}.\n"
-        + "- Baseie-se APENAS nas fontes coletadas e no contexto RAG. Se um dado nao estiver nas "
-          "fontes, diga que nao foi encontrado — nunca invente numeros, datas ou nomes.\n"
+        + "- Baseie-se nas fontes coletadas (e no contexto RAG). Se um dado nao estiver "
+          "nas fontes, diga que nao foi encontrado — nunca invente numeros, datas ou nomes.\n"
     )
     return "\n".join(
         [
-            "Gere um relatorio de pesquisa de mercado APROFUNDADO e bem formatado.",
+            "Gere um relatorio de pesquisa de mercado APROFUNDADO, longo e bem formatado, "
+            "no padrao de uma consultoria (profundidade, tabelas, criterio de evidencia).",
             "",
             "Dados da marca:",
             f"- Nome: {brand.name}",
@@ -633,7 +713,7 @@ def _user_prompt(
             "Memoria RAG relevante:",
             rag_context or "Nenhuma memoria relevante encontrada.",
             "",
-            "Fontes externas analisadas (use os numeros [n] para citar):",
+            f"Fontes externas analisadas ({len(sources)} fontes; use os numeros [n] para citar):",
             _sources_block(sources),
         ]
     ) + regras

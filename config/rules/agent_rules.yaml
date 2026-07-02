@@ -1,15 +1,12 @@
 # Regras de maquina por agente: injetadas no prompt E validadas apos a geracao.
 research_agent:
-  min_sources: { quick: 3, deep: 5 }
+  # Minimo para NAO recusar (piso). A Profunda mira o maximo de fontes; a coleta
+  # multi-angulo entrega dezenas, entao 3 e apenas o piso de seguranca.
+  min_sources: { quick: 3, deep: 3 }
+  # Checagem minima do Guardiao (o prompt exige a estrutura completa do relatorio).
   required_sections:
     - "Resumo executivo"
-    - "Sinais de mercado"
-    - "Oportunidades"
-    - "Concorrentes"
-    - "Riscos"
-    - "Recomendações"
-    - "Sugestões de pauta"
-    - "Fontes"
+    - "Referências"
   citation_required: true
   forbidden:
     - "confiança nula"

@@ -1,5 +1,5 @@
 token_budgets:
-  research_agent: 6000
+  research_agent: 16000
   content_agent: 4000
   press_agent: 3000
   calendar_agent: 3000

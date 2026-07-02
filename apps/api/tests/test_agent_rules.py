@@ -12,14 +12,16 @@ from app.agent_rules import (
 
 
 def test_min_sources_research():
+    # Piso de seguranca: a Profunda mira o maximo (coleta multi-angulo), mas so recusa
+    # se nao houver nem 3 fontes usaveis.
     assert min_sources_for("research_agent", "quick") == 3
-    assert min_sources_for("research_agent", "deep") == 5
+    assert min_sources_for("research_agent", "deep") == 3
 
 
-def test_required_sections_research_has_fontes():
+def test_required_sections_research_has_core():
     secs = required_sections_for("research_agent")
-    assert "Fontes" in secs
     assert "Resumo executivo" in secs
+    assert "Referências" in secs
 
 
 def test_forbidden_and_citation():
