@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from datetime import date
-from urllib.parse import quote_plus, urlparse
+from urllib.parse import parse_qs, quote_plus, unquote, urlparse
 
 import feedparser
 import httpx
@@ -41,6 +41,11 @@ from app.schemas import ResearchRunRequest
 
 REQUEST_TIMEOUT = 14
 USER_AGENT = "DuofyResearchBot/1.0 (+http://localhost:3000)"
+# DuckDuckGo bloqueia UAs de bot; usa um UA de navegador para a busca web geral.
+DDG_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+)
 
 
 @dataclass(frozen=True)
@@ -76,9 +81,68 @@ def _period_days(period: str) -> int:
 
 
 def _google_news_rss_url(theme: str, brand: Brand, period: str) -> str:
+    # Nao injeta o nicho (duplicava/estreitava a busca); a janela vem do operador when:Nd.
     days = _period_days(period)
-    query = quote_plus(f"{theme} {brand.niche} when:{days}d")
+    query = quote_plus(f"{theme} when:{days}d")
     return f"https://news.google.com/rss/search?q={query}&hl=pt-BR&gl=BR&ceid=BR:pt-419"
+
+
+def _decode_ddg_url(href: str) -> str:
+    """DuckDuckGo HTML entrega links via redirect /l/?uddg=<url>. Devolve a URL real."""
+    if "uddg=" in href:
+        try:
+            values = parse_qs(urlparse(href).query).get("uddg")
+            if values:
+                return unquote(values[0])
+        except Exception:
+            return href
+    if href.startswith("//"):
+        return "https:" + href
+    return href
+
+
+def parse_ddg_html(html: str, sources: int) -> list[SourceCandidate]:
+    """Extrai candidatos do HTML do DuckDuckGo (title, url real, snippet)."""
+    soup = BeautifulSoup(html, "html.parser")
+    candidates: list[SourceCandidate] = []
+    for result in soup.select("div.result")[: sources * 2]:
+        anchor = result.select_one("a.result__a")
+        if anchor is None:
+            continue
+        url = _decode_ddg_url(str(anchor.get("href", "")).strip())
+        if not url.startswith("http"):
+            continue
+        snippet_el = result.select_one("a.result__snippet") or result.select_one(".result__snippet")
+        snippet = snippet_el.get_text(strip=True) if snippet_el else ""
+        candidates.append(
+            SourceCandidate(
+                title=(anchor.get_text(strip=True) or "Resultado DuckDuckGo")[:255],
+                url=url,
+                publisher=_publisher_from_url(url),
+                source_kind="ddg",
+                summary=snippet or None,
+            )
+        )
+    return candidates
+
+
+async def _duckduckgo_candidates(theme: str, brand: Brand, sources: int) -> list[SourceCandidate]:
+    """Busca web geral (sem chave) via DuckDuckGo HTML — fonte primaria de amplitude."""
+    query = f"{theme} {brand.niche} Brasil"
+    try:
+        async with httpx.AsyncClient(
+            timeout=REQUEST_TIMEOUT,
+            follow_redirects=True,
+            headers={"User-Agent": DDG_USER_AGENT},
+        ) as client:
+            response = await client.post(
+                "https://html.duckduckgo.com/html/",
+                data={"q": query, "kl": "br-pt"},
+            )
+            response.raise_for_status()
+    except Exception:
+        return []
+    return parse_ddg_html(response.text, sources)
 
 
 def _publisher_from_url(url: str) -> str | None:
@@ -343,6 +407,8 @@ async def collect_research_sources(
         )
         for url in payload.source_urls
     ]
+    # Busca web geral (DuckDuckGo) — amplitude que o Google News sozinho nao cobre.
+    candidates.extend(await _duckduckgo_candidates(payload.theme, brand, sources))
     try:
         candidates.extend(await _rss_candidates(payload.theme, brand, payload.period, sources))
     except Exception as exc:
