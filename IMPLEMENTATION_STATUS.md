@@ -23,17 +23,28 @@ A V1 está implementada como stack local-first: FastAPI, Next.js 14, PostgreSQL 
 | 11-15 | Workspace, documentos e polimento | Concluídas com validação visual |
 | 16 | Skills dos 7 agentes e Guardião | Implementada nesta rodada |
 
-## Os 7 agentes
+## Núcleo consolidado — 5 agentes + 2 módulos (Sprint 2026-07-01)
+
+O roster foi consolidado em **5 agentes**. Calendário e Métricas passaram a **módulos**
+(o Calendário é módulo do usuário + ferramenta do Orquestrador; Métricas alimenta Admin ›
+Custos/Relatórios). Detalhes por etapa em `docs/auditoria_tecnica_2026-07-01/SPRINT_S*`.
 
 | Agente | Slug | Estado |
 |--------|------|--------|
-| Orquestrador | `orchestrator` | Prompt em `config/agents`, execução via `/api/agents/run` |
-| Pesquisa e Inteligência | `research_agent` | Prompt em `config/agents`, serviço de pesquisa real |
-| Cocriação e Conteúdo | `content_agent` | Prompt em `config/agents`, outputs versionados |
-| Calendário e Campanhas | `calendar_agent` | Prompt em `config/agents`, eventos e scheduler |
-| Assessoria de Imprensa | `press_agent` | Prompt em `config/agents`, outputs de imprensa |
-| Métricas e Análise Interna | `metrics_agent` | Prompt em `config/agents`, relatórios internos |
+| Orquestrador | `orchestrator` | Grafo LangGraph (chat) + `/api/agents/run`; dono do módulo Calendário |
+| Pesquisa e Inteligência | `research_agent` | Serviço de pesquisa real; nº de fontes configurável |
+| Cocriação e Conteúdo | `content_agent` | Outputs versionados |
+| Assessoria de Imprensa | `press_agent` | Outputs de imprensa |
 | Guardião de Qualidade | `quality_guardian` | Gate real com tabela `quality_reviews` |
+
+| Módulo | Config | Estado |
+|--------|--------|--------|
+| Calendário | prompt/limite `calendar_agent` | CRUD do usuário + tool `create_calendar`; geração via Orquestrador |
+| Métricas | prompt `metrics_agent` | Relatórios determinísticos (sem LLM); custos/uso via `ModelCall` |
+
+Destaques do sprint: modelo escolhido = modelo executado (`provider_for_model` único);
+RAG isolado por marca; embeddings resilientes; `/redes` oculto; ~2.900 linhas de código
+morto removidas; **rede de segurança de testes de integração (Postgres real) + CI**.
 
 ## Fase 16
 
