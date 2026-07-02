@@ -399,3 +399,34 @@ class MemoryEntry(TimestampMixin, Base):
     output_id: Mapped[int | None] = mapped_column(ForeignKey("outputs.id"), nullable=True)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     embedding: Mapped[str | None] = mapped_column(Vector(1536), nullable=True)
+
+
+class ContentTheme(TimestampMixin, Base):
+    """Banco de temas — ideias/pautas para cocriação (não é datado)."""
+
+    __tablename__ = "content_themes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    theme: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    brand_slug: Mapped[str | None] = mapped_column(String(120), index=True, nullable=True)
+    audience: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    kind: Mapped[str | None] = mapped_column(String(120), index=True, nullable=True)
+    owner: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    status: Mapped[str | None] = mapped_column(String(80), index=True, nullable=True)
+
+
+class ContentScript(TimestampMixin, Base):
+    """Roteiros de vídeo/conteúdo."""
+
+    __tablename__ = "content_scripts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    brand_slug: Mapped[str | None] = mapped_column(String(120), index=True, nullable=True)
+    recording_status: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    script: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    scenes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    lettering: Mapped[str | None] = mapped_column(Text, nullable=True)
+    caption: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str | None] = mapped_column(String(80), index=True, nullable=True)
