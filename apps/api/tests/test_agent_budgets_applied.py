@@ -115,7 +115,17 @@ async def test_research_uses_resolved_budget(monkeypatch):
         return LLMResult(output="# Rel\ncorpo do relatorio", provider="openrouter", model="m")
 
     async def fake_collect(db, payload, brand):
-        return []
+        # >= min de fontes para passar a porta de fontes minimas (Task 3)
+        from app.research_service import CollectedSource
+
+        return [
+            CollectedSource(
+                title=f"Fonte {i}", url=f"https://exemplo{i}.com", publisher=None,
+                published_at=None, reliability="C", source_kind="rss",
+                status="collected", evidence="trecho", error=None,
+            )
+            for i in range(3)
+        ]
 
     async def fake_rag(**kwargs):
         return ""

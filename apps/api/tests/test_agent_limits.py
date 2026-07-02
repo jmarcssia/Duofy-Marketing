@@ -52,7 +52,7 @@ async def test_research_depth_from_config(monkeypatch):
         return None
     monkeypatch.setattr(agent_limits, "_setting_value", fake_setting)
     result = await agent_limits.get_research_depth_limits(object(), "deep")
-    assert result == {"sources": 15, "excerpt": 4000}
+    assert result == {"sources": 30, "excerpt": 6000}
 
 
 @pytest.mark.anyio
@@ -61,7 +61,7 @@ async def test_research_depth_unknown_uses_quick(monkeypatch):
         return None
     monkeypatch.setattr(agent_limits, "_setting_value", fake_setting)
     result = await agent_limits.get_research_depth_limits(object(), "xpto")
-    assert result == {"sources": 8, "excerpt": 1800}
+    assert result == {"sources": 5, "excerpt": 1800}
 
 
 @pytest.mark.anyio
@@ -76,6 +76,6 @@ async def test_research_depth_invalid_db_falls_back_to_config(monkeypatch):
             return json.dumps(db_data)
         return None
     monkeypatch.setattr(agent_limits, "_setting_value", fake_setting)
-    # DB "deep" is invalid -> must use config "deep" (15/4000), NOT DB "quick"
+    # DB "deep" is invalid -> must use config "deep" (30/6000), NOT DB "quick"
     result = await agent_limits.get_research_depth_limits(object(), "deep")
-    assert result == {"sources": 15, "excerpt": 4000}
+    assert result == {"sources": 30, "excerpt": 6000}
