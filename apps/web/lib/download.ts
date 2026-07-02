@@ -1,4 +1,4 @@
-import type { ExportFormat } from "@/components/document-workspace"
+export type ExportFormat = "pdf" | "docx" | "md" | "html"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
 

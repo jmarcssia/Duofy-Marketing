@@ -57,17 +57,6 @@ from app.text_repair import repair_text
 router = APIRouter(prefix="/api/outputs", tags=["outputs"])
 
 
-def _version_read(version: OutputVersion) -> ContentOutputVersionRead:
-    return ContentOutputVersionRead(
-        id=version.id,
-        output_id=version.output_id,
-        version_number=version.version_number,
-        content=version.content,
-        editor_note=version.editor_note,
-        created_at=version.created_at,
-    )
-
-
 def _quality_review_read(review: QualityReview | None) -> QualityReviewRead | None:
     if review is None:
         return None
@@ -94,37 +83,6 @@ def _quality_review_read(review: QualityReview | None) -> QualityReviewRead | No
         llm_error=repair_text(review.llm_error) if review.llm_error else None,
         confidence=review.confidence,
         created_at=review.created_at,
-    )
-
-
-async def _output_read(db: AsyncSession, output: Output) -> ContentOutputRead:
-    versions = await output_versions(db, output.id)
-    current_version = next(
-        (version for version in versions if version.id == output.current_version_id),
-        versions[-1] if versions else None,
-    )
-    content = current_version.content if current_version else ""
-    profile = document_profile(output.channel, output.format, output.category)
-    return ContentOutputRead(
-        id=output.id,
-        brand_slug=output.brand_slug,
-        category=output.category,
-        channel=output.channel,
-        format=output.format,
-        title=output.title,
-        briefing=output.briefing,
-        status=output.status,
-        provider=output.provider,
-        model=output.model,
-        agent_run_id=output.agent_run_id,
-        current_version_id=output.current_version_id,
-        current_version_number=current_version.version_number if current_version else None,
-        current_content=content,
-        document_type=profile.document_type,
-        document_sections=document_sections(content),
-        quality_notes=quality_notes_for_content(content, profile),
-        created_at=output.created_at,
-        updated_at=output.updated_at,
     )
 
 
@@ -184,30 +142,6 @@ def _export_response(exported: ExportResult) -> Response:
         content=exported.content,
         media_type=exported.media_type,
         headers={"Content-Disposition": f'attachment; filename="{exported.filename}"'},
-    )
-
-
-def _output_export_document(output: Output, version: OutputVersion) -> ExportDocument:
-    profile = document_profile(output.channel, output.format, output.category)
-    sections = document_sections(version.content)
-    notes = quality_notes_for_content(version.content, profile)
-    return ExportDocument(
-        title=output.title,
-        subtitle="Output Duofy exportado para revisao",
-        metadata=[
-            ("Tipo documental", profile.title),
-            ("Marca", output.brand_slug),
-            ("Categoria", output.category),
-            ("Canal", output.channel),
-            ("Formato", output.format),
-            ("Status", output.status),
-            ("Modelo", output.model),
-            ("Versao", str(version.version_number)),
-            ("Seções", ", ".join(sections[:8]) if sections else "Não detectadas"),
-            ("Notas de qualidade", " | ".join(notes[:4])),
-        ],
-        content=version.content,
-        filename_prefix=f"duofy-output-{output.id}",
     )
 
 

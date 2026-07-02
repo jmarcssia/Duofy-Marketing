@@ -9,6 +9,7 @@ const config: Config = {
         muted: "#6b7280",
         line: "#e9e8ef",
         panel: "#fbfbfd",
+        surface: "#f4f4f8",
         purple: "#6d35ee",
         "purple-soft": "#f4efff",
         "purple-deep": "#5b29d6",
