@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import date
 from urllib.parse import quote_plus, urlparse
@@ -57,8 +58,18 @@ class CollectedSource:
     error: str | None = None
 
 
+def _period_days(period: str) -> int:
+    match = re.search(r"(\d+)", period or "")
+    if match:
+        value = int(match.group(1))
+        if 1 <= value <= 365:
+            return value
+    return 30
+
+
 def _google_news_rss_url(theme: str, brand: Brand, period: str) -> str:
-    query = quote_plus(f"{theme} {brand.niche} {period} Brasil")
+    days = _period_days(period)
+    query = quote_plus(f"{theme} {brand.niche} when:{days}d")
     return f"https://news.google.com/rss/search?q={query}&hl=pt-BR&gl=BR&ceid=BR:pt-419"
 
 
