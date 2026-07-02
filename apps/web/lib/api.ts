@@ -273,6 +273,17 @@ export type CalendarEvent = {
   updated_at: string
 }
 
+export type ContentTheme = {
+  id: number
+  title: string
+  theme: string
+  brand_slug: string | null
+  audience: string | null
+  kind: string | null
+  owner: string | null
+  status: string | null
+}
+
 export type ModelCall = {
   id: number
   task_type: string

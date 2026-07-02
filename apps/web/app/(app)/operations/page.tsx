@@ -21,9 +21,9 @@ import {
 import {
   apiFetch,
   type AgentRun,
-  type CalendarEvent,
   type ContentOutput,
   type ContentOutputDetail,
+  type ContentTheme,
   type ResearchReport
 } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
@@ -32,7 +32,7 @@ import { downloadFile, exportPath } from "@/lib/download"
 
 type ChatMsg = { id: string; role: "user" | "assistant"; text: string; time: string; pending?: boolean; error?: boolean }
 type ColId = "analise" | "revisao" | "aprovado"
-type Source = "institucional" | "pesquisa" | "calendario"
+type Source = "institucional" | "pesquisa" | "tema"
 
 const COLUMNS: { id: ColId; label: string; status: string }[] = [
   { id: "analise", label: "Em análise", status: "draft" },
@@ -75,7 +75,7 @@ export default function OperationsPage() {
   // Dados
   const [reports, setReports] = useState<ResearchReport[]>([])
   const [content, setContent] = useState<ContentOutput[]>([])
-  const [calEvents, setCalEvents] = useState<CalendarEvent[]>([])
+  const [themes, setThemes] = useState<ContentTheme[]>([])
   const [loading, setLoading] = useState(true)
 
   // Pesquisa (modal de criação)
@@ -87,7 +87,7 @@ export default function OperationsPage() {
   // Criar novo conteúdo (barra da seção unificada)
   const [source, setSource] = useState<Source>("institucional")
   const [selectedResearchId, setSelectedResearchId] = useState<number | null>(null)
-  const [calEventId, setCalEventId] = useState<number | null>(null)
+  const [themeId, setThemeId] = useState<number | null>(null)
   const [preset, setPreset] = useState(0)
   const [coNote, setCoNote] = useState("")
   const [genBusy, setGenBusy] = useState(false)
@@ -113,15 +113,15 @@ export default function OperationsPage() {
     if (!token) { setLoading(false); return }
     setLoading(true)
     try {
-      const [r, c, ev] = await Promise.all([
+      const [r, c, th] = await Promise.all([
         apiFetch<ResearchReport[]>(`/api/research/reports?limit=60`, token),
         apiFetch<ContentOutput[]>(`/api/content/outputs?limit=60${brand ? `&brand_slug=${brand}` : ""}`, token),
-        apiFetch<CalendarEvent[]>(`/api/calendar${brand ? `?brand_slug=${brand}` : ""}`, token).catch(() => [])
+        apiFetch<ContentTheme[]>(`/api/calendar/themes?limit=500`, token).catch(() => [])
       ])
       setReports(brand ? r.filter((x) => x.brand_slug === brand) : r)
       setContent(c.filter((x) => !isResearch(x)))
-      setCalEvents(ev)
-    } catch { setReports([]); setContent([]); setCalEvents([]) }
+      setThemes(th)
+    } catch { setReports([]); setContent([]); setThemes([]) }
     setLoading(false)
   }, [brand])
 
@@ -129,7 +129,7 @@ export default function OperationsPage() {
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages])
 
   const selectedResearch = reports.find((r) => r.id === selectedResearchId) ?? null
-  const selectedEvent = calEvents.find((e) => e.id === calEventId) ?? null
+  const selectedTheme = themes.find((t) => t.id === themeId) ?? null
 
   async function sendMessage(prompt?: string) {
     const text = (prompt ?? input).trim()
@@ -184,11 +184,9 @@ export default function OperationsPage() {
     if (source === "pesquisa") {
       if (!selectedResearch) { setGenMsg("Selecione uma pesquisa."); return }
       base = `Com base na pesquisa "${selectedResearch.title}". ${selectedResearch.briefing}`
-    } else if (source === "calendario") {
-      if (!selectedEvent) { setGenMsg("Selecione um item do calendário."); return }
-      base = `Com base no item do calendário "${selectedEvent.title}". ${selectedEvent.description || ""}`
-      channel = selectedEvent.channel || channel
-      format = selectedEvent.format || format
+    } else if (source === "tema") {
+      if (!selectedTheme) { setGenMsg("Selecione um tema do banco."); return }
+      base = `Com base no tema do banco "${selectedTheme.title}". ${selectedTheme.theme || ""}`
     } else {
       base = "Conteúdo institucional da marca."
     }
@@ -421,14 +419,14 @@ export default function OperationsPage() {
           <>
             <div className="mb-4">
               <h2 className="text-lg font-bold tracking-[-0.02em] text-ink">Cocriação de conteúdos</h2>
-              <p className="text-xs text-muted">Crie a partir de uma pesquisa, de um item do calendário ou institucional — e clique num conteúdo para cocriar.</p>
+              <p className="text-xs text-muted">Crie a partir de uma pesquisa, de um tema do banco ou institucional — e clique num conteúdo para cocriar.</p>
             </div>
 
             {/* Barra: criar novo */}
             <div className="rounded-xl border border-line bg-panel/50 p-4">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-semibold text-muted">Base:</span>
-                {([["institucional", "Institucional"], ["pesquisa", "Pesquisa"], ["calendario", "Calendário"]] as const).map(([id, label]) => (
+                {([["institucional", "Institucional"], ["pesquisa", "Pesquisa"], ["tema", "Banco de temas"]] as const).map(([id, label]) => (
                   <button key={id} onClick={() => setSource(id)} className={`duofy-tap rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${source === id ? "border-purple bg-purple-soft/60 text-purple-deep" : "border-line text-muted hover:border-purple/40"}`}>{label}</button>
                 ))}
                 {source === "pesquisa" && (
@@ -437,10 +435,10 @@ export default function OperationsPage() {
                     {reports.map((r) => <option key={r.id} value={r.id}>#{r.id} · {r.title}</option>)}
                   </select>
                 )}
-                {source === "calendario" && (
-                  <select value={calEventId ?? ""} onChange={(e) => setCalEventId(e.target.value ? Number(e.target.value) : null)} className="rounded-lg border border-line bg-white px-2 py-1.5 text-xs text-ink focus:border-purple focus:outline-none">
-                    <option value="">Selecione o item do calendário…</option>
-                    {calEvents.map((ev) => <option key={ev.id} value={ev.id}>#{ev.id} · {ev.title}</option>)}
+                {source === "tema" && (
+                  <select value={themeId ?? ""} onChange={(e) => setThemeId(e.target.value ? Number(e.target.value) : null)} className="min-w-[260px] max-w-full rounded-lg border border-line bg-white px-2 py-1.5 text-xs text-ink focus:border-purple focus:outline-none">
+                    <option value="">Selecione um tema do banco…</option>
+                    {themes.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
                   </select>
                 )}
               </div>
@@ -448,7 +446,7 @@ export default function OperationsPage() {
                 {CONTENT_PRESETS.map((p, i) => (
                   <button key={p.label} onClick={() => setPreset(i)} className={`duofy-tap rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${preset === i ? "border-purple bg-purple-soft/60 text-purple-deep" : "border-line text-muted hover:border-purple/40"}`}>{p.label}</button>
                 ))}
-                {source === "calendario" && selectedEvent?.channel && <Badge tone="purple">Canal/formato do item</Badge>}
+                {source === "tema" && selectedTheme?.kind && <Badge tone="purple">{selectedTheme.kind}</Badge>}
               </div>
               <div className="mt-3 flex flex-col gap-2 md:flex-row md:items-end">
                 <textarea value={coNote} onChange={(e) => setCoNote(e.target.value)} rows={2} placeholder="Observação / direcionamento opcional." className="w-full resize-none rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none placeholder:text-muted focus:border-purple" />

@@ -199,6 +199,23 @@ class ContentRefineRequest(BaseModel):
     instruction: str = Field(min_length=3, max_length=2000)
 
 
+class ContentThemeRead(BaseModel):
+    id: int
+    title: str
+    theme: str
+    brand_slug: str | None = None
+    audience: str | None = None
+    kind: str | None = None
+    owner: str | None = None
+    status: str | None = None
+
+
+class ThemeImportResult(BaseModel):
+    parsed: int
+    inserted: int
+    skipped: int
+
+
 class ContentOutputUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=2, max_length=255)
     content: str | None = Field(default=None, min_length=1)

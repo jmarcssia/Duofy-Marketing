@@ -416,17 +416,3 @@ class ContentTheme(TimestampMixin, Base):
     status: Mapped[str | None] = mapped_column(String(80), index=True, nullable=True)
 
 
-class ContentScript(TimestampMixin, Base):
-    """Roteiros de vídeo/conteúdo."""
-
-    __tablename__ = "content_scripts"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    brand_slug: Mapped[str | None] = mapped_column(String(120), index=True, nullable=True)
-    recording_status: Mapped[str | None] = mapped_column(String(120), nullable=True)
-    script: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    scenes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    lettering: Mapped[str | None] = mapped_column(Text, nullable=True)
-    caption: Mapped[str | None] = mapped_column(Text, nullable=True)
-    status: Mapped[str | None] = mapped_column(String(80), index=True, nullable=True)
