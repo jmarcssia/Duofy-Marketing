@@ -126,9 +126,27 @@ def parse_ddg_html(html: str, sources: int) -> list[SourceCandidate]:
     return candidates
 
 
-async def _duckduckgo_candidates(theme: str, brand: Brand, sources: int) -> list[SourceCandidate]:
-    """Busca web geral (sem chave) via DuckDuckGo HTML — fonte primaria de amplitude."""
-    query = f"{theme} {brand.niche} Brasil"
+# Redes sociais e agregadores fracos para pesquisa: mantidos, porem ranqueados por ultimo
+# (nao sao excluidos — a busca continua aberta, sem lista fixa de fontes).
+_LOW_PRIORITY_DOMAINS = (
+    "instagram.com", "facebook.com", "twitter.com", "x.com", "tiktok.com",
+    "youtube.com", "pinterest.com", "linkedin.com",
+)
+
+
+def _candidate_priority(candidate: SourceCandidate) -> int:
+    host = (_publisher_from_url(candidate.url) or "").lower()
+    if any(dom in host for dom in _LOW_PRIORITY_DOMAINS):
+        return 1  # redes sociais depois das fontes independentes
+    return 0
+
+
+def _rank_candidates(candidates: list[SourceCandidate]) -> list[SourceCandidate]:
+    """Fontes independentes primeiro; redes sociais por ultimo (ordenacao estavel)."""
+    return sorted(candidates, key=_candidate_priority)
+
+
+async def _ddg_search(query: str, sources: int) -> list[SourceCandidate]:
     try:
         async with httpx.AsyncClient(
             timeout=REQUEST_TIMEOUT,
@@ -143,6 +161,28 @@ async def _duckduckgo_candidates(theme: str, brand: Brand, sources: int) -> list
     except Exception:
         return []
     return parse_ddg_html(response.text, sources)
+
+
+async def _duckduckgo_candidates(theme: str, brand: Brand, sources: int) -> list[SourceCandidate]:
+    """Busca web REAL e dinamica (sem chave, sem lista fixa) via DuckDuckGo HTML.
+
+    Multiplas consultas focadas no TEMA (nao na marca) para amplitude e diversidade
+    de fontes independentes.
+    """
+    queries = [
+        theme,
+        f"{theme} mercado dados estatisticas Brasil",
+        f"{theme} tendencias analise setor",
+    ]
+    seen: set[str] = set()
+    merged: list[SourceCandidate] = []
+    for query in queries:
+        for candidate in await _ddg_search(query, sources):
+            if candidate.url in seen:
+                continue
+            seen.add(candidate.url)
+            merged.append(candidate)
+    return _rank_candidates(merged)
 
 
 def _publisher_from_url(url: str) -> str | None:
@@ -184,8 +224,17 @@ def _plain_text_from_html(html: str) -> str:
     return " ".join(soup.get_text(" ").split())
 
 
+# Remove NUL e demais caracteres de controle C0 (exceto \t e \n) — o Postgres
+# rejeita 0x00 em colunas de texto, e paginas da web as vezes trazem esses bytes.
+_CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+
+
+def _clean_text(value: str) -> str:
+    return _CONTROL_RE.sub("", value or "")
+
+
 def _evidence_excerpt(text: str, limit: int) -> str:
-    return " ".join(text.split())[:limit]
+    return " ".join(_clean_text(text).split())[:limit]
 
 
 async def _fetch_url_text(url: str) -> str:
@@ -377,9 +426,9 @@ async def _collect_candidate(
             source_kind = candidate.source_kind
 
     return CollectedSource(
-        title=candidate.title[:500],
+        title=_clean_text(candidate.title)[:500],
         url=candidate.url,
-        publisher=publisher,
+        publisher=_clean_text(publisher) if publisher else publisher,
         published_at=candidate.published_at,
         reliability=_reliability(candidate.url, publisher, status),
         source_kind=source_kind,
@@ -387,6 +436,71 @@ async def _collect_candidate(
         evidence=evidence,
         error=error,
     )
+
+
+async def _openrouter_web_candidates(
+    db: AsyncSession, theme: str, sources: int
+) -> list[SourceCandidate]:
+    """Busca web ROBUSTA via OpenRouter (plugin 'web') — retorna as fontes citadas.
+
+    Sem scraping e sem bloqueio: a busca roda na infraestrutura do OpenRouter e devolve
+    citacoes (titulo + URL). E o coletor primario, dinamico (nunca uma lista fixa).
+    """
+    result = await db.execute(
+        select(ProviderCredential).where(ProviderCredential.provider == "openrouter")
+    )
+    credential = result.scalar_one_or_none()
+    if credential is None or not credential.is_enabled or not credential.api_key_encrypted:
+        return []
+    try:
+        api_key = decrypt_secret(credential.api_key_encrypted)
+    except Exception:
+        return []
+    base_url = (credential.base_url or "https://openrouter.ai/api/v1").rstrip("/")
+    model = credential.default_model or "google/gemini-2.5-pro"
+    body = {
+        "model": model,
+        "messages": [
+            {
+                "role": "user",
+                "content": (
+                    f"Pesquise na web fontes atuais e confiaveis sobre: {theme} "
+                    "(foco no Brasil). Traga os principais dados e cite as fontes."
+                ),
+            }
+        ],
+        "plugins": [{"id": "web", "max_results": max(sources, 8)}],
+        "max_tokens": 800,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=90) as client:
+            response = await client.post(
+                f"{base_url}/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json=body,
+            )
+            response.raise_for_status()
+        message = response.json().get("choices", [{}])[0].get("message", {})
+    except Exception:
+        return []
+    candidates: list[SourceCandidate] = []
+    seen: set[str] = set()
+    for annotation in message.get("annotations") or []:
+        citation = annotation.get("url_citation") or {}
+        url = str(citation.get("url") or "").strip()
+        if not url.startswith("http") or url in seen:
+            continue
+        seen.add(url)
+        candidates.append(
+            SourceCandidate(
+                title=(citation.get("title") or _publisher_from_url(url) or "Fonte web")[:255],
+                url=url,
+                publisher=_publisher_from_url(url),
+                source_kind="web",
+                summary=(citation.get("content") or citation.get("title") or None),
+            )
+        )
+    return candidates
 
 
 async def collect_research_sources(
@@ -407,7 +521,9 @@ async def collect_research_sources(
         )
         for url in payload.source_urls
     ]
-    # Busca web geral (DuckDuckGo) — amplitude que o Google News sozinho nao cobre.
+    # Coletor primario robusto: busca web via OpenRouter (sem scraping, sem bloqueio).
+    candidates.extend(await _openrouter_web_candidates(db, payload.theme, sources))
+    # Best-effort: DuckDuckGo (amplitude extra quando disponivel; [] se bloquear).
     candidates.extend(await _duckduckgo_candidates(payload.theme, brand, sources))
     try:
         candidates.extend(await _rss_candidates(payload.theme, brand, payload.period, sources))
@@ -441,7 +557,7 @@ def _sources_block(sources: list[CollectedSource]) -> str:
         blocks.append(
             "\n".join(
                 [
-                    f"[Fonte {index}] {source.title}",
+                    f"[{index}] {source.title}",
                     f"URL: {source.url}",
                     f"Publisher: {source.publisher or 'desconhecido'}",
                     f"Publicado em: {source.published_at or 'nao informado'}",
@@ -476,17 +592,32 @@ def _user_prompt(
 ) -> str:
     _secs = required_sections_for("research_agent")
     _forb = forbidden_terms_for("research_agent")
+    _cite = (
+        "- Cite a fonte [n] em TODA afirmacao factual (numeros, dados, fatos, datas, nomes); "
+        "sem fonte na lista, NAO afirme o dado.\n"
+        if citation_required_for("research_agent") else ""
+    )
     regras = (
         "\n\nREGRAS OBRIGATORIAS DESTA EXECUCAO:\n"
-        f"- Estruture a resposta EXATAMENTE com estas secoes (##): {', '.join(_secs)}.\n"
-        + ("- Cite a fonte [n] em toda afirmacao factual; sem fonte, nao afirme.\n"
-           if citation_required_for("research_agent") else "")
+        f"- Comece com um titulo (#) e estruture com EXATAMENTE estas secoes de nivel 2 (##), "
+        f"nesta ordem: {', '.join(_secs)}.\n"
+        "- Cada secao deve ser SUBSTANCIAL (varios paragrafos e/ou listas), nunca uma linha.\n"
+        "- Abrangencia obrigatoria: tamanho e dinamica do mercado, tendencias atuais, "
+        "comportamento/expectativa do consumidor, concorrentes, regulacao (quando relevante), "
+        "oportunidades acionaveis e riscos concretos.\n"
+        "- Na secao Concorrentes, inclua uma TABELA markdown comparativa "
+        "(concorrente | proposta | diferencial | fonte).\n"
+        "- Use formatacao rica: subtitulos, listas, **negrito** em termos-chave e TABELAS markdown "
+        "para dados comparativos e numeros.\n"
+        + _cite
+        + "- Na secao Fontes, liste cada fonte usada como '[n] Titulo — URL'.\n"
         + f"- NUNCA use estes termos: {', '.join(_forb)}.\n"
-        + "- Baseie-se APENAS nas fontes coletadas e no contexto RAG; nada de hipotetico.\n"
+        + "- Baseie-se APENAS nas fontes coletadas e no contexto RAG. Se um dado nao estiver nas "
+          "fontes, diga que nao foi encontrado — nunca invente numeros, datas ou nomes.\n"
     )
     return "\n".join(
         [
-            "Gere um relatorio de pesquisa de mercado estruturado.",
+            "Gere um relatorio de pesquisa de mercado APROFUNDADO e bem formatado.",
             "",
             "Dados da marca:",
             f"- Nome: {brand.name}",
@@ -502,22 +633,8 @@ def _user_prompt(
             "Memoria RAG relevante:",
             rag_context or "Nenhuma memoria relevante encontrada.",
             "",
-            "Fontes externas analisadas:",
+            "Fontes externas analisadas (use os numeros [n] para citar):",
             _sources_block(sources),
-            "",
-            "Formato obrigatorio:",
-            "- Titulo",
-            "- Marca, nicho, tema e periodo",
-            "- Resumo executivo",
-            "- Fontes analisadas",
-            "- Sinais de mercado",
-            "- Oportunidades",
-            "- Concorrentes observados",
-            "- Riscos",
-            "- Recomendacoes",
-            "- Sugestoes de pauta",
-            "- Proximas acoes",
-            "- Limitacoes da pesquisa",
         ]
     ) + regras
 
