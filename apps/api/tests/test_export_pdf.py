@@ -1,7 +1,19 @@
+import importlib.util
+
+import pytest
+
 from app.export_service import (
     ExportDocument,
     build_duofy_pdf,
     markdown_to_html,
+)
+
+# WeasyPrint depende de libs nativas (Pango/Cairo) presentes só no container da API.
+# Fora dele (host de dev Windows), pula APENAS os testes que geram PDF; os testes
+# de markdown_to_html continuam rodando em qualquer ambiente.
+_HAS_WEASYPRINT = importlib.util.find_spec("weasyprint") is not None
+requires_weasyprint = pytest.mark.skipif(
+    not _HAS_WEASYPRINT, reason="WeasyPrint indisponível fora do container da API"
 )
 
 WIDE_CONTENT = """## Metadados editoriais
@@ -33,6 +45,7 @@ def _doc() -> ExportDocument:
     )
 
 
+@requires_weasyprint
 def test_pdf_is_valid_and_non_trivial():
     data = build_duofy_pdf(_doc())
     assert isinstance(data, bytes)
@@ -40,6 +53,7 @@ def test_pdf_is_valid_and_non_trivial():
     assert len(data) > 2000  # tem conteudo real, nao um PDF vazio
 
 
+@requires_weasyprint
 def test_pdf_handles_wide_table_without_crashing():
     # tabela larga + palavra sem espaco não deve quebrar a geração
     data = build_duofy_pdf(_doc())

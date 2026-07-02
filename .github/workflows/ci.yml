@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend (ruff + pytest)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: duofy
+          POSTGRES_PASSWORD: duofy
+          POSTGRES_DB: duofy_v1_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U duofy -d duofy_v1_test"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      APP_ENV: test
+      JWT_SECRET_KEY: test-secret-key-with-32-bytes-minimum-xyz
+      DATABASE_URL: postgresql+asyncpg://duofy:duofy@localhost:5432/duofy_v1_test
+      REDIS_URL: redis://localhost:6379/1
+      BACKEND_CORS_ORIGINS: http://localhost:3000
+      PYTHONPATH: apps/api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Libs nativas do WeasyPrint (Pango/Cairo) para os testes de PDF rodarem.
+      - name: Instalar libs de sistema (WeasyPrint)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libpango-1.0-0 libpangocairo-1.0-0 libpangoft2-1.0-0 \
+            libgdk-pixbuf-2.0-0 libcairo2 libffi-dev shared-mime-info \
+            fonts-dejavu-core fonts-liberation
+
+      - name: Instalar dependências Python
+        run: pip install -r apps/api/requirements.txt
+
+      - name: Lint (ruff)
+        working-directory: apps/api
+        run: ruff check app alembic
+
+      - name: Migrations (alembic upgrade head)
+        working-directory: apps/api
+        run: python -m alembic upgrade head
+
+      - name: Testes (pytest)
+        working-directory: apps/api
+        run: python -m pytest -q
+
+  frontend:
+    name: Frontend (lint + build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Instalar dependências
+        working-directory: apps/web
+        run: npm install --no-audit --no-fund
+
+      - name: Lint (next lint)
+        working-directory: apps/web
+        run: npm run lint
+
+      - name: Build (next build)
+        working-directory: apps/web
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: ""
