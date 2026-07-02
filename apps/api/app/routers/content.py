@@ -7,7 +7,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit_service import record_audit_event
-from app.content_generation import edit_content_output, generate_content_output
+from app.content_generation import (
+    edit_content_output,
+    generate_content_output,
+    refine_content_output,
+)
 from app.db import get_db
 from app.dependencies import get_current_user
 from app.document_formatting import document_profile, document_sections, quality_notes_for_content
@@ -21,6 +25,7 @@ from app.schemas import (
     ContentOutputRead,
     ContentOutputUpdate,
     ContentOutputVersionRead,
+    ContentRefineRequest,
     QualityReviewRead,
 )
 
@@ -168,6 +173,40 @@ async def generate_content(
     )
     await db.commit()
     return await _output_read(db, output)
+
+
+@router.post("/outputs/{output_id}/refine", response_model=ContentOutputDetail)
+async def refine_output(
+    output_id: int,
+    payload: ContentRefineRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ContentOutputDetail:
+    output = await _get_output_or_404(db, output_id)
+    try:
+        output = await refine_content_output(db, output, payload.instruction)
+    except LLMConfigurationError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Falha ao refinar conteudo: {exc}",
+        ) from exc
+
+    await record_audit_event(
+        db,
+        user=current_user,
+        action="content.refined",
+        entity_type="output",
+        entity_id=output.id,
+        status=output.status,
+        brand_slug=output.brand_slug,
+        agent_slug="content_agent",
+        summary=f"Conteúdo refinado: {output.title}",
+        metadata={"instruction": payload.instruction[:180]},
+    )
+    await db.commit()
+    return await _output_detail(db, output)
 
 
 @router.get("/outputs", response_model=list[ContentOutputRead])

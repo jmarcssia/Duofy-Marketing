@@ -195,6 +195,10 @@ class ContentGenerateRequest(BaseModel):
     status: Literal["draft", "review"] = "draft"
 
 
+class ContentRefineRequest(BaseModel):
+    instruction: str = Field(min_length=3, max_length=2000)
+
+
 class ContentOutputUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=2, max_length=255)
     content: str | None = Field(default=None, min_length=1)

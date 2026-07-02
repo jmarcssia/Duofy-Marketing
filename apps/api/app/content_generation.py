@@ -217,6 +217,120 @@ async def generate_content_output(
         raise
 
 
+async def refine_content_output(
+    db: AsyncSession,
+    output: Output,
+    instruction: str,
+) -> Output:
+    """Refino por agente: reescreve o conteúdo atual aplicando a instrução e grava
+    uma NOVA versão (preserva o histórico). Usa o content_agent com o modelo efetivo."""
+    agent_result = await db.execute(select(Agent).where(Agent.slug == "content_agent"))
+    agent = agent_result.scalar_one_or_none()
+    if agent is None or not agent.is_active:
+        raise LLMConfigurationError("Agente content_agent nao encontrado ou inativo.")
+
+    model = agent.default_model
+    provider = provider_for_model(model)
+    credential_result = await db.execute(
+        select(ProviderCredential).where(ProviderCredential.provider == provider)
+    )
+    credential = credential_result.scalar_one_or_none()
+    if credential is None or not credential.is_enabled:
+        raise LLMConfigurationError(
+            f"Configure e habilite o provedor {provider} em Admin > Configuracoes > Modelos LLM."
+        )
+
+    current = ""
+    if output.current_version_id is not None:
+        vres = await db.execute(
+            select(OutputVersion).where(OutputVersion.id == output.current_version_id)
+        )
+        current_version = vres.scalar_one_or_none()
+        current = current_version.content if current_version else ""
+
+    agent_prompt = read_agent_prompt("content_agent")
+    user_prompt = "\n".join(
+        [
+            "Reescreva o conteúdo a seguir aplicando a instrução do usuário.",
+            "Mantenha o idioma e o formato; devolva o conteúdo completo revisado.",
+            "",
+            f"Instrução: {instruction}",
+            "",
+            "Conteúdo atual:",
+            current or "(vazio)",
+        ]
+    )
+
+    budget = await get_token_budget(db, "content_agent")
+    try:
+        llm_result = await call_llm(
+            credential=credential,
+            model=model,
+            system_prompt=_system_prompt(agent_prompt, output.brand_slug),
+            user_prompt=user_prompt,
+            task_type="content_refine",
+            agent_slug=agent.slug,
+            brand_slug=output.brand_slug,
+            max_tokens=budget,
+        )
+        normalized_output = normalize_document_content(
+            title=output.title,
+            brand_slug=output.brand_slug,
+            category=output.category,
+            channel=output.channel,
+            content_format=output.format,
+            briefing=output.briefing,
+            content=llm_result.output,
+            source_label="content_agent",
+        )
+        run = AgentRun(
+            agent_slug=agent.slug,
+            provider=llm_result.provider,
+            model=llm_result.model,
+            prompt=user_prompt,
+            output=normalized_output,
+            status="completed",
+        )
+        db.add(run)
+        await db.flush()
+
+        result = await db.execute(
+            select(func.max(OutputVersion.version_number)).where(
+                OutputVersion.output_id == output.id
+            )
+        )
+        next_version = int(result.scalar() or 0) + 1
+        version = OutputVersion(
+            output_id=output.id,
+            version_number=next_version,
+            content=normalized_output,
+            editor_note=f"Refino pelo content_agent: {instruction[:180]}",
+        )
+        db.add(version)
+        await db.flush()
+        output.current_version_id = version.id
+        output.provider = llm_result.provider
+        output.model = llm_result.model
+        output.agent_run_id = run.id
+        await db.commit()
+        await db.refresh(output)
+        return output
+    except Exception as exc:
+        await db.rollback()
+        run = AgentRun(
+            agent_slug="content_agent",
+            provider=provider,
+            model=model,
+            prompt=user_prompt,
+            output="",
+            status="failed",
+            error=str(exc),
+        )
+        db.add(run)
+        await db.commit()
+        raise
+
+
 async def edit_content_output(
     db: AsyncSession,
     output: Output,
