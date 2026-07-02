@@ -233,8 +233,17 @@ def patch_ai(monkeypatch):
     async def fake_embed_text(db, text):
         return [0.001] * 1536
 
-    for mod in ("content_generation", "calendar_service", "research_service",
-                "orchestrator", "quality_guardian"):
+    import importlib
+
+    for mod in (
+        "content_generation", "calendar_service", "research_service",
+        "orchestrator", "quality_guardian", "orchestrator_planning", "briefing_service",
+    ):
+        try:
+            importlib.import_module(f"app.{mod}")
+        except ModuleNotFoundError:
+            # briefing_service ainda nao existe (chega em tarefa seguinte); ignorar.
+            continue
         monkeypatch.setattr(f"app.{mod}.call_llm", fake_call_llm, raising=False)
     # embed_text é importado por nome em vários módulos; patchear em cada namespace.
     for target in ("app.embeddings.embed_text", "app.rag.embed_text",
