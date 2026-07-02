@@ -86,6 +86,20 @@ def _format_guide_file(channel: str, content_format: str) -> str:
         return "landing-page.md"
     if "campanha" in text or "campaign" in text:
         return "campaign.md"
+    if "webinar" in text:
+        return "webinar.md"
+    if "comunicado" in text or "institucional" in text:
+        return "comunicado-institucional.md"
+    if "caso" in text or "case" in text:
+        return "estudo-de-caso.md"
+    if "newsletter" in text:
+        return "newsletter.md"
+    if "evento" in text or "event" in text:
+        return "evento.md"
+    if "bastidor" in text:
+        return "bastidores.md"
+    if "sequencia" in text or "sequência" in text or "educativ" in text:
+        return "sequencia-educativa.md"
     return "post-unico.md"
 
 

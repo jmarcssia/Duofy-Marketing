@@ -459,6 +459,114 @@ export type MemorySearchResult = {
   score: number
 }
 
+export type ContentSlide = {
+  numero: number
+  funcao: string
+  texto: string
+  texto_arte: string
+  image_prompt: string
+  alt_text: string
+}
+
+export type VisualDirection = {
+  conceito: string
+  estilo: string
+  cenario: string
+  enquadramento: string
+  composicao: string
+  iluminacao: string
+  paleta: string
+  tipografia: string
+  restricoes: string
+}
+
+export type ContentPackage = {
+  brand_slug: string
+  channel: string
+  format: string
+  persona: string
+  objetivo: string
+  etapa_funil: string
+  analise_estrategica: string
+  conceito: string
+  arco_narrativo: string
+  cta: string
+  captions: Record<string, string>
+  slides: ContentSlide[]
+  visual_direction: VisualDirection
+  factualidade: string[]
+  checklist: string[]
+}
+
+export type ContentPackageResponse = {
+  output_id: number
+  version_number: number
+  status: string
+  package: ContentPackage
+  content_markdown: string
+  warnings: string[]
+}
+
+export type CocreationGenerateRequest = {
+  brand_slug: string
+  theme: string
+  channel: string
+  format: string
+  category?: string
+  persona?: string
+  objetivo?: string
+  cta?: string
+  slides?: number
+  depth?: string
+  tone?: string
+  observacoes?: string
+  research_output_id?: number
+  previous_content?: string
+  status?: string
+  model?: string
+  provider?: string
+}
+
+export type CocreationRefineTarget =
+  | "caption"
+  | "slide"
+  | "cta"
+  | "visual"
+  | "tone"
+  | "shorten"
+  | "persona"
+
+export type CocreationRefineRequest = {
+  target: CocreationRefineTarget
+  channel?: string
+  slide_number?: number
+  instruction?: string
+  model?: string
+  provider?: string
+}
+
+export function generateCocreation(token: string, body: CocreationGenerateRequest) {
+  return apiFetch<ContentPackageResponse>("/api/cocreation/generate", token, {
+    method: "POST",
+    body: JSON.stringify(body)
+  })
+}
+
+export function refineCocreation(token: string, outputId: number, body: CocreationRefineRequest) {
+  return apiFetch<ContentPackageResponse>(`/api/cocreation/${outputId}/refine`, token, {
+    method: "POST",
+    body: JSON.stringify(body)
+  })
+}
+
+export function getCocreation(token: string, outputId: number) {
+  return apiFetch<ContentPackageResponse>(`/api/cocreation/${outputId}`, token)
+}
+
+export function getResearchModels(token: string) {
+  return apiFetch<ResearchModel[]>("/api/research-models", token)
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
 
 export async function apiFetch<T>(path: string, token?: string, init?: RequestInit): Promise<T> {

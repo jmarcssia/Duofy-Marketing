@@ -31,6 +31,7 @@ import { getTokenFromCookie } from "@/lib/auth"
 import { useBrand } from "@/lib/brand-context"
 import { downloadFile, exportPath } from "@/lib/download"
 import { BriefingPanel } from "./BriefingPanel"
+import { CocreationPanel } from "./CocreationPanel"
 import { ThemePicker } from "./ThemePicker"
 
 type ChatMsg = { id: string; role: "user" | "assistant"; text: string; time: string; pending?: boolean; error?: boolean }
@@ -111,6 +112,9 @@ export default function OperationsPage() {
   const [dragId, setDragId] = useState<number | null>(null)
   const [dragOver, setDragOver] = useState<ColId | null>(null)
   const justDragged = useRef(false)
+
+  // Cocriação estruturada (painel dedicado)
+  const [structuredOpen, setStructuredOpen] = useState(false)
 
   const loadData = useCallback(async () => {
     const token = getTokenFromCookie()
@@ -371,6 +375,7 @@ export default function OperationsPage() {
           <div className="mt-4 flex flex-wrap gap-2">
             <GhostButton className="text-xs" onClick={openNewResearch}><PlusIcon className="h-4 w-4" /> Nova pesquisa</GhostButton>
             <GhostButton className="text-xs" onClick={() => coSectionRef.current?.scrollIntoView({ behavior: "smooth" })}><SparklesIcon className="h-4 w-4" /> Cocriar conteúdo</GhostButton>
+            <GhostButton className="text-xs" onClick={() => { setStructuredOpen(true); setTimeout(() => coSectionRef.current?.scrollIntoView({ behavior: "smooth" }), 50) }}><SparklesIcon className="h-4 w-4" /> Cocriar estruturado</GhostButton>
           </div>
           <div className="mt-3 flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2">
             <div className="relative">
@@ -459,11 +464,23 @@ export default function OperationsPage() {
 
       {/* Cocriação de conteúdos — seção única (Lista ⇄ Foco) */}
       <section ref={coSectionRef} id="cocriacao" className="duofy-card rounded-2xl p-5">
+        {structuredOpen && (
+          <div className="mb-5">
+            <CocreationPanel onClose={() => setStructuredOpen(false)} />
+          </div>
+        )}
         {focusId === null ? (
           <>
-            <div className="mb-4">
-              <h2 className="text-lg font-bold tracking-[-0.02em] text-ink">Cocriação de conteúdos</h2>
-              <p className="text-xs text-muted">Crie a partir de uma pesquisa, de um tema do banco ou institucional — e clique num conteúdo para cocriar.</p>
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold tracking-[-0.02em] text-ink">Cocriação de conteúdos</h2>
+                <p className="text-xs text-muted">Crie a partir de uma pesquisa, de um tema do banco ou institucional — e clique num conteúdo para cocriar.</p>
+              </div>
+              {!structuredOpen && (
+                <GhostButton className="shrink-0 text-xs" onClick={() => setStructuredOpen(true)}>
+                  <SparklesIcon className="h-4 w-4" /> Cocriar estruturado
+                </GhostButton>
+              )}
             </div>
 
             {/* Barra: criar novo */}
