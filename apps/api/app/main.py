@@ -24,6 +24,7 @@ from app.routers import (
     memory,
     metrics,
     operations,
+    orchestrator,
     outputs,
     press,
     reports,
@@ -91,6 +92,8 @@ app.include_router(reports.router)
 app.include_router(tasks.router)
 app.include_router(themes.router)
 app.include_router(research_themes.router)
+app.include_router(orchestrator.router)        # /api/orchestrator/*
+app.include_router(orchestrator.models_router)  # /api/research-models
 
 
 @app.get("/health", response_model=HealthResponse)
