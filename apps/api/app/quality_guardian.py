@@ -20,6 +20,7 @@ from app.models import (
     QualityReview,
 )
 from app.output_workflow import OutputWorkflowError, current_version
+from app.rules_validation import validate_document
 from app.settings_store import _setting_value
 from app.text_repair import has_mojibake, repair_text
 
@@ -220,6 +221,23 @@ def assess_output_quality(output: Output, version: OutputVersion) -> QualityAsse
         optional.append("Incluir direção visual para orientar produção criativa.")
     if "persona" not in normalized and output.channel.lower() != "pesquisa":
         optional.append("Deixar persona mais explícita.")
+
+    _agent_slug = "research_agent" if output.channel == "Pesquisa" else "content_agent"
+    for _violation in validate_document(content, _agent_slug, channel=output.channel):
+        if _violation["severity"] == "critical":
+            _append_issue(
+                critical,
+                _violation["message"],
+                penalty=30,
+                penalties=penalties,
+            )
+        else:
+            _append_issue(
+                required,
+                _violation["message"],
+                penalty=10,
+                penalties=penalties,
+            )
 
     score = max(0, 100 - sum(penalties))
     passed = score >= MINIMUM_SCORE and not critical

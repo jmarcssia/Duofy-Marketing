@@ -43,6 +43,10 @@ def _good_content() -> str:
 
 - Marca: Duofy Soluções
 
+## Introdução
+
+Gestores de marketing B2B que precisam estruturar conteúdo com mais consistência.
+
 ## Persona e contexto
 
 Gestores de marketing B2B que precisam estruturar conteúdo com mais consistência.
@@ -55,6 +59,10 @@ Times produzem muito, mas sem direção editorial clara.
 
 Usar a Duofy para organizar briefing, memória, revisão e aprovação em um fluxo único.
 
+## Corpo
+
+Texto profissional com tese, contexto e recomendação prática para a audiência.
+
 ## Conteúdo final
 
 Texto profissional com tese, contexto e recomendação prática para a audiência.
@@ -66,6 +74,10 @@ Solicite uma análise do fluxo editorial atual.
 ## Direção visual
 
 Visual institucional, limpo e com hierarquia clara.
+
+## Conclusão
+
+Solicite uma análise do fluxo editorial atual e avance com a Duofy.
 """
 
 

@@ -14,7 +14,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent_config import brand_voice_section, read_agent_prompt
 from app.agent_limits import get_research_depth_limits, get_token_budget
-from app.agent_rules import min_sources_for
+from app.agent_rules import (
+    citation_required_for,
+    forbidden_terms_for,
+    min_sources_for,
+    required_sections_for,
+)
 from app.crypto import decrypt_secret
 from app.document_formatting import normalize_document_content
 from app.embeddings import embed_text, vector_to_sql
@@ -403,6 +408,16 @@ def _user_prompt(
     sources: list[CollectedSource],
     rag_context: str,
 ) -> str:
+    _secs = required_sections_for("research_agent")
+    _forb = forbidden_terms_for("research_agent")
+    regras = (
+        "\n\nREGRAS OBRIGATORIAS DESTA EXECUCAO:\n"
+        f"- Estruture a resposta EXATAMENTE com estas secoes (##): {', '.join(_secs)}.\n"
+        + ("- Cite a fonte [n] em toda afirmacao factual; sem fonte, nao afirme.\n"
+           if citation_required_for("research_agent") else "")
+        + f"- NUNCA use estes termos: {', '.join(_forb)}.\n"
+        + "- Baseie-se APENAS nas fontes coletadas e no contexto RAG; nada de hipotetico.\n"
+    )
     return "\n".join(
         [
             "Gere um relatorio de pesquisa de mercado estruturado.",
@@ -438,7 +453,7 @@ def _user_prompt(
             "- Proximas acoes",
             "- Limitacoes da pesquisa",
         ]
-    )
+    ) + regras
 
 
 def _derive_title(theme: str, content: str) -> str:

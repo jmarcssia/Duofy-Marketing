@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent_config import brand_voice_section, read_agent_prompt, read_config_text
 from app.agent_limits import get_token_budget
+from app.agent_rules import forbidden_terms_for, required_sections_for
 from app.document_formatting import normalize_document_content
 from app.llm import LLMConfigurationError, call_llm, provider_for_model
 from app.models import Agent, AgentRun, Brand, Output, OutputVersion, ProviderCredential
@@ -65,6 +66,14 @@ def _user_prompt(
     rag_context: str,
 ) -> str:
     context = rag_context or "Nenhum trecho relevante encontrado na memoria RAG."
+    _secs = required_sections_for("content_agent", payload.channel)
+    _forb = forbidden_terms_for("content_agent")
+    regras = (
+        "\n\nREGRAS OBRIGATORIAS DESTA EXECUCAO:\n"
+        f"- Inclua ao menos as secoes (##): {', '.join(_secs)}.\n"
+        f"- NUNCA use: {', '.join(_forb)}.\n"
+        "- Nao invente produto, funcionalidade, case, cliente, preco ou %.\n"
+    )
     return "\n".join(
         [
             "Gere uma entrega de co-criacao de conteudo.",
@@ -93,7 +102,7 @@ def _user_prompt(
             "- Para LinkedIn, entregue gancho, contexto, dor, ponto de vista, solucao e CTA.",
             "- Nao use dados mockados.",
         ]
-    )
+    ) + regras
 
 
 def _derive_title(content: str, payload: ContentGenerateRequest) -> str:
