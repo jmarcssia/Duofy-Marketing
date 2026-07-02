@@ -35,6 +35,7 @@ from app.security import create_access_token, hash_password  # noqa: E402
 # Tabelas com dados de negócio criados durante os testes — truncadas a cada teste.
 DYNAMIC_TABLES = [
     "content_themes",
+    "research_themes",
     "output_comments",
     "output_decisions",
     "output_versions",

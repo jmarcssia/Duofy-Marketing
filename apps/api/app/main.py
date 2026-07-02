@@ -28,6 +28,7 @@ from app.routers import (
     press,
     reports,
     research,
+    research_themes,
     tasks,
     themes,
 )
@@ -89,6 +90,7 @@ app.include_router(operations.router)
 app.include_router(reports.router)
 app.include_router(tasks.router)
 app.include_router(themes.router)
+app.include_router(research_themes.router)
 
 
 @app.get("/health", response_model=HealthResponse)
