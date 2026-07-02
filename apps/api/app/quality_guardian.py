@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent_config import brand_voice_section, read_agent_prompt, read_config_text
 from app.agent_limits import get_token_budget
-from app.llm import LLMConfigurationError, LLMResult, call_llm
+from app.llm import LLMConfigurationError, LLMResult, call_llm, provider_for_model
 from app.models import (
     Agent,
     AgentRun,
@@ -252,16 +252,6 @@ def assess_output_quality(output: Output, version: OutputVersion) -> QualityAsse
     )
 
 
-def _provider_for_model(model: str) -> str:
-    if model.startswith("openai/") or model.startswith("anthropic/"):
-        return "openrouter"
-    if model.startswith("gpt-"):
-        return "openai"
-    if model.startswith("claude-"):
-        return "anthropic"
-    return "openrouter"
-
-
 async def _quality_settings(db: AsyncSession) -> tuple[ReviewMode, str | None, str | None]:
     mode = await _setting_value(db, QUALITY_REVIEW_MODE_KEY)
     provider = await _setting_value(db, QUALITY_REVIEW_PROVIDER_KEY)
@@ -284,7 +274,7 @@ async def _quality_credential(
     agent: Agent | None,
 ) -> tuple[ProviderCredential, str]:
     model = configured_model or (agent.default_model if agent else None) or output.model
-    provider = configured_provider or _provider_for_model(model) or output.provider
+    provider = configured_provider or provider_for_model(model) or output.provider
     result = await db.execute(
         select(ProviderCredential).where(ProviderCredential.provider == provider)
     )
@@ -293,7 +283,7 @@ async def _quality_credential(
         raise LLMConfigurationError(
             f"Configure e habilite o provedor {provider} para revisão LLM."
         )
-    return credential, credential.default_model or model
+    return credential, model
 
 
 def _strip_json_fence(value: str) -> str:

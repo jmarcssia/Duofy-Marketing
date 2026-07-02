@@ -13,7 +13,7 @@ from app.agent_config import brand_voice_section, read_agent_prompt
 from app.agent_limits import get_token_budget
 from app.content_generation import generate_content_output
 from app.document_formatting import normalize_document_content
-from app.llm import LLMConfigurationError, call_llm
+from app.llm import LLMConfigurationError, call_llm, provider_for_model
 from app.models import (
     Agent,
     AgentRun,
@@ -45,16 +45,6 @@ def _plain_text(value: str) -> str:
     return "".join(
         char for char in normalize("NFKD", value.lower()) if not combining(char)
     )
-
-
-def _provider_for_model(model: str) -> str:
-    if model.startswith("openai/") or model.startswith("anthropic/"):
-        return "openrouter"
-    if model.startswith("gpt-"):
-        return "openai"
-    if model.startswith("claude-"):
-        return "anthropic"
-    return "openrouter"
 
 
 def _system_prompt(agent_prompt: str, brand_slug: str | None = None) -> str:
@@ -94,7 +84,7 @@ async def _get_credential(
     model_override: str | None,
 ) -> tuple[ProviderCredential, str, str]:
     model = model_override or agent.default_model
-    provider = provider_override or _provider_for_model(model)
+    provider = provider_override or provider_for_model(model)
     result = await db.execute(
         select(ProviderCredential).where(ProviderCredential.provider == provider)
     )
@@ -212,7 +202,7 @@ async def generate_calendar_events(
     try:
         llm_result = await call_llm(
             credential=credential,
-            model=credential.default_model or model,
+            model=model,
             system_prompt=_system_prompt(agent_prompt, brand.slug),
             user_prompt=user_prompt,
             task_type="calendar_generation",
@@ -313,7 +303,7 @@ async def generate_press_output(
     try:
         llm_result = await call_llm(
             credential=credential,
-            model=credential.default_model or model,
+            model=model,
             system_prompt=_system_prompt(agent_prompt, brand.slug),
             user_prompt=user_prompt,
             task_type="press_generation",

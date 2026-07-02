@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent_config import agent_system_prompt
 from app.agent_limits import get_token_budget
+from app.llm import provider_for_model
 from app.models import Agent, ProviderCredential
 from app.orchestrator_llm import build_orchestrator_chat_model
 from app.orchestrator_tools import build_tools
@@ -65,16 +66,6 @@ def _message_text(message) -> str:
         else:
             parts.append(str(part))
     return "".join(parts)
-
-
-def _provider_for_model(model: str) -> str:
-    if model.startswith("openai/") or model.startswith("anthropic/") or model.startswith("~"):
-        return "openrouter"
-    if model.startswith("gpt-"):
-        return "openai"
-    if model.startswith("claude-"):
-        return "anthropic"
-    return "openrouter"
 
 
 def build_graph(model, tools, *, checkpointer=None):
@@ -133,7 +124,7 @@ async def _load_orchestrator(db: AsyncSession) -> tuple[ProviderCredential, Agen
     agent = agent_result.scalar_one_or_none()
     if agent is None or not agent.is_active:
         raise RuntimeError("Agente orchestrator não encontrado ou inativo.")
-    provider = _provider_for_model(agent.default_model)
+    provider = provider_for_model(agent.default_model)
     cred_result = await db.execute(
         select(ProviderCredential).where(ProviderCredential.provider == provider)
     )
@@ -142,7 +133,7 @@ async def _load_orchestrator(db: AsyncSession) -> tuple[ProviderCredential, Agen
         raise RuntimeError(
             f"Configure e habilite o provedor {provider} em Admin > Configurações > Modelos LLM."
         )
-    model = credential.default_model or agent.default_model
+    model = agent.default_model or credential.default_model
     return credential, agent, model
 
 

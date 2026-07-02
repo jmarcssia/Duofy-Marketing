@@ -13,11 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent_config import brand_voice_section, read_agent_prompt
 from app.agent_limits import get_research_depth_limits, get_token_budget
-from app.content_generation import _provider_for_model
 from app.crypto import decrypt_secret
 from app.document_formatting import normalize_document_content
 from app.embeddings import embed_text, vector_to_sql
-from app.llm import LLMConfigurationError, call_llm
+from app.llm import LLMConfigurationError, call_llm, provider_for_model
 from app.models import (
     Agent,
     AgentRun,
@@ -408,7 +407,7 @@ async def run_market_research(
         raise LLMConfigurationError("Marca nao encontrada ou inativa.")
 
     model = payload.model or agent.default_model
-    provider = payload.provider or _provider_for_model(model)
+    provider = payload.provider or provider_for_model(model)
     credential_result = await db.execute(
         select(ProviderCredential).where(ProviderCredential.provider == provider)
     )
@@ -433,7 +432,7 @@ async def run_market_research(
     try:
         llm_result = await call_llm(
             credential=credential,
-            model=credential.default_model or model,
+            model=model,
             system_prompt=_system_prompt(agent_prompt, brand.slug),
             user_prompt=user_prompt,
             task_type="research_generation",

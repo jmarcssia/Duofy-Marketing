@@ -32,6 +32,26 @@ class LLMConfigurationError(RuntimeError):
     pass
 
 
+def provider_for_model(model: str) -> str:
+    """Deriva o provider a partir do identificador do modelo (fonte única da verdade).
+
+    Convenções do projeto:
+    - prefixo "~" ou formato "vendor/modelo" (ex.: ``openai/...``, ``anthropic/...``)
+      → OpenRouter (é o gateway usado para esses identificadores);
+    - "gpt-", "o1", "o3" → OpenAI direto;
+    - "claude-" → Anthropic direto;
+    - fallback → OpenRouter.
+    """
+    m = (model or "").strip()
+    if m.startswith("~") or "/" in m:
+        return "openrouter"
+    if m.startswith(("gpt-", "o1", "o3")):
+        return "openai"
+    if m.startswith("claude-"):
+        return "anthropic"
+    return "openrouter"
+
+
 @dataclass(frozen=True)
 class LLMResult:
     output: str

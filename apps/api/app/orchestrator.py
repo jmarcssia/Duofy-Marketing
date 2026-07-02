@@ -8,19 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent_config import agent_system_prompt
 from app.agent_limits import get_token_budget
-from app.llm import LLMConfigurationError, call_llm
+from app.llm import LLMConfigurationError, call_llm, provider_for_model
 from app.models import Agent, AgentRun, ProviderCredential
 from app.rag import build_rag_context
-
-
-def _provider_for_model(model: str) -> str:
-    if model.startswith("openai/") or model.startswith("gpt-"):
-        return "openrouter" if "/" in model else "openai"
-    if model.startswith("anthropic/") or model.startswith("~anthropic/"):
-        return "openrouter"
-    if model.startswith("claude-"):
-        return "anthropic"
-    return "openrouter"
 
 
 def _system_prompt(agent: Agent, brand_slug: str | None = None) -> str:
@@ -80,7 +70,7 @@ async def run_agent(
         raise LLMConfigurationError("Agente nao encontrado ou inativo.")
 
     model = model_override or agent.default_model
-    provider = provider_override or _provider_for_model(model)
+    provider = provider_override or provider_for_model(model)
     credential_result = await db.execute(
         select(ProviderCredential).where(ProviderCredential.provider == provider)
     )
@@ -111,7 +101,7 @@ async def run_agent(
         budget = await get_token_budget(db, agent.slug)
         result = await call_llm(
             credential=credential,
-            model=credential.default_model or model,
+            model=model,
             system_prompt=_system_prompt(agent, brand_slug),
             user_prompt=user_prompt,
             use_web_search=_needs_current_info(agent, prompt, provider),
