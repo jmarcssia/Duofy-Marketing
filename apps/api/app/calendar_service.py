@@ -36,7 +36,9 @@ from app.schemas import (
 
 logger = logging.getLogger(__name__)
 
-AGENT_SLUGS = {"calendar_agent", "content_agent", "press_agent", "research_agent"}
+# O Calendário deixou de ser um agente: virou módulo do usuário + ferramenta do
+# Orquestrador. Eventos são executados por estes agentes de conteúdo/pesquisa/imprensa.
+AGENT_SLUGS = {"content_agent", "press_agent", "research_agent"}
 EVENT_STATUSES = {"planned", "scheduled", "in_progress", "completed", "cancelled", "failed"}
 PRESS_FORMATS = {"press_release", "pauta", "comunicado", "editorial_angle", "approach"}
 
@@ -164,7 +166,9 @@ async def generate_calendar_events(
     payload: CalendarGenerateRequest,
 ) -> list[CalendarEvent]:
     brand = await _get_brand(db, payload.brand_slug)
-    agent = await _get_agent(db, "calendar_agent")
+    # Calendário é módulo do Orquestrador: usa o provider/modelo do orchestrator,
+    # mas o prompt e o limite do módulo (chaves "calendar_agent" em config).
+    agent = await _get_agent(db, "orchestrator")
     credential, _provider, model = await _get_credential(db, agent, payload.provider, payload.model)
     agent_prompt = read_agent_prompt("calendar_agent")
     rag_context = await build_rag_context(
@@ -206,12 +210,12 @@ async def generate_calendar_events(
             system_prompt=_system_prompt(agent_prompt, brand.slug),
             user_prompt=user_prompt,
             task_type="calendar_generation",
-            agent_slug=agent.slug,
+            agent_slug="calendar",
             brand_slug=brand.slug,
             max_tokens=budget,
         )
         run = AgentRun(
-            agent_slug=agent.slug,
+            agent_slug="calendar",
             provider=llm_result.provider,
             model=llm_result.model,
             prompt=user_prompt,

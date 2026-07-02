@@ -212,7 +212,7 @@ async def generate_events(
             entity_id=event.id,
             status=event.status,
             brand_slug=event.brand_slug,
-            agent_slug=event.assigned_agent_slug or "calendar_agent",
+            agent_slug=event.assigned_agent_slug or "calendar",
             summary=f"Evento gerado: {event.title}",
             metadata={"objective": payload.objective},
         )

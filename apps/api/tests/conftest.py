@@ -198,6 +198,15 @@ def patch_ai(monkeypatch):
 
     recorder = AIRecorder()
 
+    calendar_json = (
+        '[{"title": "Post de lançamento", "description": "Anúncio do produto",'
+        ' "event_type": "content", "channel": "instagram", "format": "post",'
+        ' "start_at": "2026-08-05T10:00:00+00:00", "assigned_agent_slug": "content_agent"},'
+        ' {"title": "Pauta de imprensa", "description": "Sugestão de pauta",'
+        ' "event_type": "press", "start_at": "2026-08-08T09:00:00+00:00",'
+        ' "assigned_agent_slug": "press_agent"}]'
+    )
+
     async def fake_call_llm(credential, model, system_prompt, user_prompt, **kwargs):
         recorder.calls.append({
             "provider": credential.provider,
@@ -206,8 +215,9 @@ def patch_ai(monkeypatch):
             "agent_slug": kwargs.get("agent_slug"),
             "brand_slug": kwargs.get("brand_slug"),
         })
+        output = calendar_json if kwargs.get("task_type") == "calendar_generation" else FAKE_OUTPUT_MD
         return LLMResult(
-            output=kwargs.get("_output", FAKE_OUTPUT_MD),
+            output=output,
             provider=credential.provider,
             model=model,
             input_tokens=120,

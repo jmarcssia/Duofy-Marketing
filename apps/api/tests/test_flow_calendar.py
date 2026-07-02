@@ -52,3 +52,25 @@ async def test_calendar_crud_roundtrip(client, auth_headers):
     assert deleted.status_code == 200
     after = client.get("/api/calendar", params={"brand_slug": "duofy"}, headers=auth_headers)
     assert all(e["id"] != event_id for e in after.json())
+
+
+async def test_calendar_generate_runs_via_orchestrator_module(client, auth_headers, patch_ai):
+    """Sem agente 'calendar_agent': a geração usa o Orquestrador e é rotulada 'calendar'."""
+    resp = client.post(
+        "/api/calendar/generate",
+        json={
+            "brand_slug": "duofy",
+            "objective": "Plano editorial de agosto para lançamento de produto.",
+            "period_start": "2026-08-01T00:00:00+00:00",
+            "period_end": "2026-08-31T00:00:00+00:00",
+        },
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200, resp.text
+    events = resp.json()
+    assert len(events) == 2
+
+    call = patch_ai.calls[0]
+    assert call["task_type"] == "calendar_generation"
+    assert call["agent_slug"] == "calendar"        # rótulo de módulo
+    assert call["provider"] == "openrouter"        # resolvido pelo modelo do orchestrator

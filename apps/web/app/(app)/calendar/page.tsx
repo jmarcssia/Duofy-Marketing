@@ -36,7 +36,8 @@ const STATUS_META: Record<string, { label: string; tone: "amber" | "blue" | "gre
 
 const EVENT_TYPES = ["content", "campaign", "research", "press", "meeting", "milestone", "other"]
 const STATUSES = ["planned", "scheduled", "in_progress", "completed", "failed"]
-const AGENTS = ["", "content_agent", "research_agent", "calendar_agent", "press_agent", "quality_guardian", "metrics_agent", "orchestrator"]
+// Calendário é módulo do usuário/Orquestrador; eventos são executados por estes agentes.
+const AGENTS = ["", "content_agent", "research_agent", "press_agent"]
 
 function ymd(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}` }
 function hm(d: Date) { return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}` }

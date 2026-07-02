@@ -8,9 +8,6 @@ agents:
   - name: Cocriação de Conteúdo
     slug: content_agent
     default_model: ~anthropic/claude-sonnet-latest
-  - name: Calendário Editorial
-    slug: calendar_agent
-    default_model: ~anthropic/claude-sonnet-latest
   - name: Assessoria de Imprensa
     slug: press_agent
     default_model: ~anthropic/claude-sonnet-latest
