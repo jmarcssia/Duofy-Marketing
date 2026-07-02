@@ -1,0 +1,5602 @@
+{
+  "events": [
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "FICHA TÉCNICA POSTO",
+      "description": "EPISODIO 5 ANA",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-04-01T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "comemorativa": "Dia da Mentira"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "MEME FINGINDO QUE TRABALHA",
+      "description": "TROLAGEM",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Vídeo",
+      "start_at": "2026-04-01T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM",
+        "formato_original": "VIDEO",
+        "perfil": "FEED + STORY DUOFY"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "REFORMA DEATHCARE 5",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-04-02T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "AVISO DE FERIADO",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Card",
+      "start_at": "2026-04-03T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM",
+        "formato_original": "CARD",
+        "comemorativa": "Sexta da Paixão"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "MENSAGEM DE PÁSCOA",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Card",
+      "start_at": "2026-04-05T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM",
+        "formato_original": "CARD",
+        "comemorativa": "Páscoa"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "posto: Quem não controla dados perde margem /",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-04-06T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "MERCADO: TENDÊNCIAS",
+      "description": "TENDENCIAS DE MERCADO DEATHCARE — CARROSSEL: TENDÊNCIAS DO SETOR FUNERÁRIO (2025–2026) Slide 1 — O FUTURO DO SETOR FUNERÁRIO JÁ COMEÇOU Tendências que estão transformando o mercado no Brasil e no mundo Slide 2 — Mercado em crescimento acelerado * O setor funerário brasileiro movimenta cerca de R$ 13 bilhões/ano * E pode chegar a US$ 142,8 bilhões globalmente até 2026 O crescimento é impulsionado por: * Novos serviços * Mudança cultural * Inovação tecnológica (Fonte: Zurik Advisors / Sincep / Global Market Statistics). Slide 3 — Planejamento Antecipado Cada vez mais pessoas contratam serviços antes do falecimento, as funerárias deixam de ser reativas e passam a ser consultivas. Motivos: * Segurança financeira * Redução do impacto emocional * Organização familiar (Fonte: UAI / mercado brasileiro) Slide 4 — Digitalização do setor Experiência mais acessível e conectada. O funeral também entrou na era digital: * Contratação online * Velórios transmitidos ao vivo * Memoriais digitais (Fonte: Soluções Brasil) Slide 5 — Personalização extrema Adeus padrão tradicional, olá despedidas únicas! No exterior: até hologramas e IA para recriar memórias. Tendências: * Cerimônias temáticas * Homenagens personalizadas * Experiências imersivas (som, imagem, história de vida) (Fonte: Funermostra / El País) Slide 6 — Crescimento da cremação A cremação está em forte alta! +34,9% de crescimento em um ano no Brasil Motivos: * Praticidade * Custo * Sustentabilidade * Mudança cultural (Fonte: Grupo Zelo / mercado brasileiro) Slide 7 — Sustentabilidade A morte também está ficando mais sustentável com forte crescimento global. Confira as tendências: * Urnas biodegradáveis * Cemitérios ecológicos * Redução de emissões * Materiais recicláveis Slide 8 — Novos produtos e serviços O setor está se diversificando: * Planos com benefícios em vida (telemedicina, descontos) * Planos pet 🐾 * Assistência familiar completa * Serviços de luto e apoio emocional (Fonte: Estado de Minas) Slide 9 — Humanização e experiência O foco mudou: da morte para o cuidado com a família - o death care passa a ter uma jornada cada vez mais completa. * Acolhimento emocional * Conteúdos sobre luto * Experiência mais leve e significativa (Fonte: mercado brasileiro) Slide 10 — Profissionalização e consolidação O setor está mais estruturado e competitivo * Mais de 14 mil empresas no Brasil * Crescimento de grandes grupos * Gestão baseada em dados (Fonte: Por Dentro do RN) Slide 11 — Tendência global: tecnologia + IA O setor mais tradicional está se tornando tech Inovações emergentes: * IA para recriar imagens do falecido * Hologramas em cerimônias * Testamentos digitais * Gestão automatizada (Fonte: Funermostra / mercado internacional) Slide 12 — O setor funerário deixou de ser tradicional e virou um mercado de inovação, experiência e recorrência. Quem entender essas tendências sai na frente Quer um diagnóstico do seu negócio funerário? Fale com a gente! Assinatura DUOFY + NOME DA SOLUÇÃO + SELO PARCERIA TOTVS",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Carrossel",
+      "start_at": "2026-04-07T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "LINKEDIN E INSTAGRAM",
+        "formato_original": "CARROSSEL",
+        "perfil": "FEED DEATHCARE + STORY DUOFY",
+        "marcas_adicionais": [
+          "deathcare"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "DIA MUNDIAL DA SAUDE",
+      "description": "MOTION",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Motion",
+      "start_at": "2026-04-07T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM",
+        "formato_original": "MOTION",
+        "perfil": "STORY DEATHCARE + DUOFY",
+        "comemorativa": "Dia Mundial da Saúde (prevenção e cuidado com a vida) Combate ao Câncer",
+        "marcas_adicionais": [
+          "deathcare"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "2 DIAS P CONEXAO",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Card",
+      "start_at": "2026-04-07T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "CARD",
+        "perfil": "STORY POSTO E DUOFY",
+        "marcas_adicionais": [
+          "postos_combustiveis"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "DADOS DEATHCARE POR REGIAO",
+      "description": "INFOGRAFICO",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Card",
+      "start_at": "2026-04-07T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "CARD",
+        "perfil": "FEED DEATHCARE + STORY DEATH E DUOFY",
+        "marcas_adicionais": [
+          "deathcare"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "ASSOCIAR COM CUIDADO DEATHCARE",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": null,
+      "start_at": "2026-04-08T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM",
+        "perfil": "DEATHCARE E DUOFY",
+        "comemorativa": "DIA MUNDIAL DE COMBATE CANCER",
+        "marcas_adicionais": [
+          "deathcare"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "VIDEO CASE DECIO",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-04-08T00:00:00",
+      "status": "scheduled",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM E LINKEDIN DUOFY + POSTO (FEED E STORY)",
+        "formato_original": "VIDEO"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "falta 1 dia para conexão rodovia",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Card",
+      "start_at": "2026-04-08T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "card",
+        "perfil": "STORY POSTO + DUOFY",
+        "marcas_adicionais": [
+          "postos_combustiveis"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "FALA DUOFY",
+      "description": "COM LINDAMAR",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-04-09T00:00:00",
+      "status": "in_progress",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "FEED E STORY DUOFY / STORY DEATHCARE",
+        "comemorativa": "EVENTO Conexão Rodovia / posto",
+        "marcas_adicionais": [
+          "deathcare"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "É HOJE (CONEXÃO RODOVIAS)",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Card",
+      "start_at": "2026-04-09T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "CARD",
+        "perfil": "STORY POSTO + DUOFY",
+        "marcas_adicionais": [
+          "postos_combustiveis"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "MELHORES MOMENTOS",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-04-10T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY E TOTVS",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "COLAB POSTO + DUOFY E STORY DE AMBOS",
+        "comemorativa": "SOBRE EVENTO DE ONTEM",
+        "marcas_adicionais": [
+          "postos_combustiveis"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "3 INDICADORES POSTO",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Carrossel",
+      "start_at": "2026-04-14T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "CARROSSEL",
+        "perfil": "PERFIL POSTO (FEED E STORIE) + STORIE DUOFY",
+        "comemorativa": "14/04 – Dia Mundial do Café > (conveniência do posto)",
+        "marcas_adicionais": [
+          "postos_combustiveis"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "3 INDICADORES DEATH",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Carrossel",
+      "start_at": "2026-04-15T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM E LINKEDIN DUOFY + STORY POSTO E DEATH",
+        "formato_original": "CARROSSEL",
+        "perfil": "PERFIL DEATH (FEED E STORIE) + STORIE DUOFY",
+        "marcas_adicionais": [
+          "deathcare"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "CODIGO DO LIDER - MODULO 2",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-04-16T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM E LINKEDIN DUOFY + STORY POSTO E DEATH",
+        "formato_original": "VIDEO",
+        "perfil": "PERFIL DUOFY FEED E STORY"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "FALA DUOFY",
+      "description": "LINDAMAR",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-04-17T00:00:00",
+      "status": "in_progress",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "PERFIL DUOFY - FEED E STORY"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "MEDIDAS PROVISORIAS",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Carrossel",
+      "start_at": null,
+      "status": "completed",
+      "date_missing": true,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "CARROSSEL",
+        "perfil": "PERFIL POSTO (FEED E STORIE) + STORIE DUOFY",
+        "marcas_adicionais": [
+          "postos_combustiveis"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "episodio 6 ana",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-04-18T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026"
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "PEÇA DO TRAFEGO EBOOK REGRAS FISCAIS",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": null,
+      "start_at": "2026-04-19T00:00:00",
+      "status": "scheduled",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "perfil": "PERFIL POSTO (FEED E STORIE) + STORIE DUOFY",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "VER POLITICA POSTO",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-04-20T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "FERIADO",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-04-21T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "COLAB POSTO + DUOFY + STORIES DE AMBOS",
+        "comemorativa": "Tiradentes (feriado prolongado > postos)",
+        "marcas_adicionais": [
+          "postos_combustiveis"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "VIDEO CASE DECIO",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-04-23T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "COLAB POSTO + DUOFY + STORIES DE AMBOS",
+        "marcas_adicionais": [
+          "postos_combustiveis"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "FALA DUOFY",
+      "description": "LINDAMAR",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-04-24T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "DUOFY FEED E STORY / STORY POSTO",
+        "comemorativa": "Dia do Churrasco",
+        "marcas_adicionais": [
+          "postos_combustiveis"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "EBOOK DEATH",
+      "description": "DIA DAS MAES",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Post",
+      "start_at": "2026-04-27T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "POST",
+        "perfil": "FEED DEATH E DUOFY + STORIES",
+        "marcas_adicionais": [
+          "deathcare"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "EBOOK POSTO",
+      "description": "POSTO SOB PRESSAO",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Motion",
+      "start_at": "2026-04-27T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "MOTION",
+        "perfil": "FEED POSTO + STORY E STORY DUOFY",
+        "marcas_adicionais": [
+          "postos_combustiveis"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "FALA DUOFY",
+      "description": "LINDAMAR",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-04-28T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "FEED E STORY DUOFY + STORY DEATH",
+        "comemorativa": "Dia Mundial da Segurança e Saúde no Trabalho E Dia da Educação (gestão e profissionalização do setor)",
+        "marcas_adicionais": [
+          "deathcare"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "VIDEO INSTITUCIONAL",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-04-29T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "FEED E STORY DUOFY + STORY PRODUTOS"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "FALA DUOFY",
+      "description": "COM LEONARDO",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-04-30T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "DUOFY FEED E STORY / STORY POSTO",
+        "marcas_adicionais": [
+          "postos_combustiveis"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "VIDEO INSTITUCIONAL",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-04-30T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "FEED E STORY DUOFY + STORY PRODUTOS"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "DATA COMEMORATIVA",
+      "description": "DIA DO TRABALHO",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Post",
+      "start_at": "2026-05-01T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM",
+        "formato_original": "POST",
+        "perfil": "STORY DUOFY",
+        "comemorativa": "Dia do Trabalho"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "KICK OFF COAPIL EM 30/04",
+      "description": "king checkout",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Post",
+      "start_at": "2026-05-04T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "CHECK",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "POST",
+        "perfil": "FEED E STORY DUOFY"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "DEATH: O MERCADO QUE NUNCA PARA DE CRESCER",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn + WhatsApp",
+      "format": "Carrossel",
+      "start_at": "2026-05-05T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH",
+        "canal_original": "INSTAGRAM E LINKEDIN E REGUA E WHATS",
+        "formato_original": "CARROSSEL",
+        "perfil": "FEED + STORY DEATH + STORY DUOFY",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "FALA DUOFY",
+      "description": "COM LEONARDO",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-05-07T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "DUOFY FEED E STORY / STORY POSTO",
+        "marcas_adicionais": [
+          "postos_combustiveis"
+        ]
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "O dado que todo dono de posto deveria olhar todo dia",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": "Carrossel",
+      "start_at": "2026-05-07T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "POSTO",
+        "formato_original": "CARROSSEL"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "death: A nova geração não aceita gestão improvisada",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-05-08T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "HOMENAGEM MAES",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Post",
+      "start_at": "2026-05-10T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "POST",
+        "perfil": "DUOFY",
+        "comemorativa": "DIA DAS MAES"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "SUBIR EBOOK GESTÃO FUNERARIA NO CAOS",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Motion",
+      "start_at": "2026-05-11T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "MOTION",
+        "perfil": "DUOFY E DEATH",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "POST COMEMORATIVO",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Story",
+      "start_at": "2026-05-13T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "POSTO",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "STORY",
+        "perfil": "DUOFY E POSTO - STORY",
+        "comemorativa": "Dia do Automóvel",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "A maioria das funerárias não sabe quanto ganha de verdade com plano. Veja como calcular sua margem real. LançaR o ebook.",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Carrossel",
+      "start_at": "2026-05-15T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "CARROSSEL + EBOOK",
+        "perfil": "DEATHCARE + STORY DUOFY",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "O processo que toda funerária profissional tem (e a sua provavelmente não tem)",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": "Carrossel",
+      "start_at": "2026-05-18T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH",
+        "formato_original": "CARROSSEL"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "SPOILLER WEBINAR JUNHO",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn + WhatsApp",
+      "format": "Motion",
+      "start_at": "2026-05-19T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH",
+        "canal_original": "INSTAGRAM E LINKEDIN E WHATSAPP E REGUA",
+        "formato_original": "MOTION",
+        "perfil": "DEATHACRE + STORY DUOFY",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "RECIFE",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-05-20T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "comemorativa": "FEIRA FUNERARIA"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "SPOILLER WEBINAR JUNHO",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn + WhatsApp",
+      "format": "Motion",
+      "start_at": "2026-05-21T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH",
+        "canal_original": "INSTAGRAM E LINKEDIN E WHATSAPP E REGUA",
+        "formato_original": "MOTION",
+        "perfil": "DEATHACRE + STORY DUOFY",
+        "comemorativa": "FEIRA FUNERARIA",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "SPOILLER WEBINAR JUNHO + FEIRA FUNERARIA + convocados DUOFY",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn + WhatsApp",
+      "format": "Motion",
+      "start_at": "2026-05-22T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH + DUOFY",
+        "canal_original": "INSTAGRAM E LINKEDIN E WHATSAPP E REGUA",
+        "formato_original": "MOTION + POST",
+        "perfil": "DEATHACRE + DUOFY",
+        "comemorativa": "FEIRA FUNERARIA",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "WEBINAR",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": "Post",
+      "start_at": "2026-05-25T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH",
+        "formato_original": "POST"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "DEATHCARE CONNECT",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": "Post",
+      "start_at": "2026-05-26T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH E DUOFY",
+        "formato_original": "POST",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "TEMA PET DADOS (QUINTA NO DEATH)",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": "Carrossel",
+      "start_at": "2026-05-27T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH",
+        "formato_original": "CARROSSEL"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "CODIGO DO LIDER + WEBINAR",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": "Foto",
+      "start_at": "2026-05-28T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH + DUOFY",
+        "formato_original": "FOTOS",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "CONVOCADOS DUOFY (LINDA LEO RAPHA E PEDRO NETO + REPOST PET PERFIL DUOFY + aviso de feriado",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": "Post",
+      "start_at": "2026-05-29T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "formato_original": "POST"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "VAGA INSIDE SALES + webinar",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": "Carrossel",
+      "start_at": "2026-06-01T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH",
+        "formato_original": "CARROSSEL"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "DEATH CONNECT + pet dados",
+      "description": "0",
+      "event_type": "content",
+      "channel": null,
+      "format": "Post",
+      "start_at": "2026-06-02T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH",
+        "formato_original": "POST"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "AVISO DE FERIADO + DEATHCARE CONNECT",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-06-03T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "comemorativa": "AVISO DE FERIADO"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "CONVOCADOS DUOFY (DANILLO + TIME VERDE) + DATA COMEMORATIVA DEATH",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-06-05T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "comemorativa": "Dia Mundial do Meio Ambiente"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "webinar",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": "Vídeo",
+      "start_at": "2026-06-08T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH",
+        "formato_original": "VIDEO POST"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "webinar + 5 sinais de que sua empresa funerária ainda vive no século passado\" CTA: baixar checklist.",
+      "description": "🎬 IDEIA DE VÍDEO — TikTok/Reels Título: “5 sinais de que sua empresa funerária ainda vive no século passado” 📍Formato: Close na mão → a cada dedo levantado aparece UMA palavra forte na tela + efeito sonoro rápido. 🎵 Música: Batida trend / suspense leve / ritmo acelerado. ✋ DEDO 1 📄 PAPEL Legenda falada: “Se tudo ainda depende de papel, ficha e anotação manual…” ✋ DEDO 2 🐢 LENTIDÃO “Se processos simples demoram mais do que deveriam…” ✋ DEDO 3 📞 DESORGANIZAÇÃO “Se ninguém encontra informações rápido e tudo depende de ligação…” ✋ DEDO 4 📉 FALTA DE DADOS “Se você não acompanha números, indicadores e resultados…” ✋ DEDO 5 ⚠️ RETRABALHO “E se a equipe perde tempo fazendo a mesma coisa várias vezes…” 🎬 FECHAMENTO Texto na tela: “O mercado funerário evoluiu. Sua gestão também precisa evoluir.” ou “Tecnologia não é mais diferencial. É sobrevivência.” 📍CTA FINAL: “Quantos desses sinais existem hoje na sua operação?”",
+      "event_type": "content",
+      "channel": null,
+      "format": "Vídeo",
+      "start_at": "2026-06-09T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH",
+        "formato_original": "video simples de contagem na mao"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "WEBINAR - - agenda de eventos de junho",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": "Story",
+      "start_at": "2026-06-10T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH",
+        "formato_original": "STORY"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "convocados duofy implantaçao",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": "Post",
+      "start_at": "2026-06-11T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY E DEATH",
+        "formato_original": "POST",
+        "marcas_adicionais": [
+          "deathcare"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "webinar + 3 PERFIS = POSTS PRONTOS",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": "Story",
+      "start_at": "2026-06-12T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "3 REDES",
+        "formato_original": "STORY",
+        "comemorativa": "DIA DOS NAMORADOS",
+        "marcas_adicionais": [
+          "postos_combustiveis",
+          "deathcare"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "VER CONTEUDO AQUI COPA",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": "Vídeo",
+      "start_at": "2026-06-13T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "3 REDES",
+        "formato_original": "VIDEO",
+        "comemorativa": "19H JOGO BRASIL",
+        "marcas_adicionais": [
+          "postos_combustiveis",
+          "deathcare"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "WEBINAR AMANHA",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": "Post",
+      "start_at": "2026-06-15T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH",
+        "formato_original": "POST"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "WEBINAR É HOJE",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": "Post",
+      "start_at": "2026-06-16T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH",
+        "formato_original": "POST"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "DEATHCARE CONECT - proximo evento presencial + POCKET",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": "Post",
+      "start_at": "2026-06-17T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH E DUOFY",
+        "formato_original": "POST",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "JOGO DA COPA + CONVOCADOS ADM E COMERCIAL E QA - LARANJA + POCKET + DEATH CONNECT",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": "Vídeo",
+      "start_at": "2026-06-19T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "3 REDES",
+        "formato_original": "VIDEO",
+        "comemorativa": "22H JOGO DO BRASIL | Dia do Cinema Brasileiro",
+        "marcas_adicionais": [
+          "postos_combustiveis",
+          "deathcare"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "viagem GYN CURITIBA - sobre evento",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-06-22T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH E DUOFY",
+        "canal_original": "INSTA E LINKEDIN",
+        "formato_original": "VIDEO / POST",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "POCKET DEATHCARE CURITIBA",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-06-23T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH E DUOFY",
+        "canal_original": "INSTA E LINKEDIN",
+        "formato_original": "VIDEO",
+        "comemorativa": "pocket deathcare - curitiba (manha)",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "IMERSAO NA TOTVS sala 09 do arena pra vcs das 14h as 18h + POST COPA",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-06-24T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH E DUOFY",
+        "canal_original": "INSTA E LINKEDIN",
+        "formato_original": "VIDEO",
+        "comemorativa": "19H JOGO BRASIL",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "PITCH DUOFY ABRINDO COMO CORE BUSINESS",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-06-25T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH E DUOFY",
+        "canal_original": "INSTA E LINKEDIN",
+        "formato_original": "VIDEO",
+        "comemorativa": "EVENTO DEATHCARE CONNECT",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "COPA DO MUNDO DIA DE JOGO",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-06-29T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "comemorativa": "BRASIL X JAPAO"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "COMUNICAÇÃO NO DETAHCARE",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Carrossel",
+      "start_at": "2026-06-30T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH E DUOFY",
+        "canal_original": "INSTA E LINKEDIN",
+        "formato_original": "CARROSSEL",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "webinar julho",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": "Card",
+      "start_at": "2026-07-02T00:00:00",
+      "status": "scheduled",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH E DUOFY",
+        "formato_original": "CARD",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "WEBINAR CONVITE",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-07-02T00:00:00",
+      "status": "in_progress",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH E DUOFY",
+        "canal_original": "INSTA E LINKEDIN",
+        "formato_original": "VIDEO",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "CONVOCADOS RAVI E ANA + card WEBINAR",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": "Carrossel",
+      "start_at": "2026-07-03T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DUOFY",
+        "formato_original": "CARROSSEL"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "DIA DE JOGO",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-07-05T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "comemorativa": "17H JOGO DO BRASIL"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "Funerária que cresce vs. funerária que sobrevive: qual é a diferença na gestão? + WEBINAR",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": "Carrossel",
+      "start_at": "2026-07-06T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH",
+        "formato_original": "CARROSSEL"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "WEBINAR - VIDEO COM MANOEL SURI",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-07-07T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "Achava que estava regularizado? 5 mitos sobre licenciamento funerário que podem te custar caro.",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-07-08T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "Passo a passo: como montar uma régua de cobrança para planos funerários sem perder o cliente.",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-07-09T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "WEBINAR",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-07-10T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "O setor funerário vai separar os profissionais dos amadores. De que lado você vai estar?",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": "Vídeo",
+      "start_at": "2026-07-13T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH",
+        "formato_original": "PODCAST / VIDEO",
+        "comemorativa": "PODCAST?"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "WEBINAR",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-07-14T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "WEBINAR",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-07-15T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "comemorativa": "16H JOGO DO BRASIL SE PASSAR"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "Os 3 sistemas que toda funerária lucrativa tem instalada.",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": "Carrossel",
+      "start_at": "2026-07-20T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "produto_original": "DEATH",
+        "formato_original": "CARROSSEL"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "EVENTO TOTVS IPE S02",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-07-21T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "comemorativa": "JULHO 21 A NOITE"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "EXPOPOSTOS https://expopostos.com.br/",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": null,
+      "status": "planned",
+      "date_missing": true,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "comemorativa": "SETEMBRO 8 A 10"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "SERVICES DAY",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": null,
+      "status": "planned",
+      "date_missing": true,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "comemorativa": "SETEMBRO"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "https://portalbelohorizonte.com.br/eventos/feira/industria-e-comercio/superminas-food-show-2026",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": null,
+      "status": "planned",
+      "date_missing": true,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "comemorativa": "OUTUBRO 27 A 29/10 EVENTO PARA SUPERMERCADOS"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "UNIVERSO TOTVS",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": null,
+      "status": "planned",
+      "date_missing": true,
+      "execution_payload": {
+        "origem_aba": "2º tri 2026",
+        "comemorativa": "OUTUBRO 13 E 14"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "REFORMA TRIBUTARIA DEATHCARE 1",
+      "description": "episodio 1 = Reforma Tributária: por que o deathcare precisa olhar para isso agora?",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-01-05T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO GRAVADO",
+        "perfil": "GESTAO DEATHCARE (FEED) + DUOFY (STORY)",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "DOR OU MERCADO POSTO",
+      "description": "Por que os gestores de postos de combustiveis estão perdendo dinheiro sem perceber?",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Carrossel",
+      "start_at": "2026-01-06T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "CARROSSEL",
+        "perfil": "TOTVS POSTOS (FEED) + DUOFY (STORY)",
+        "comemorativa": "Dia da Gratidão",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "FICHA TÉCNICA DEATHCARE",
+      "description": "O que é o Gestão Deathcare by Duofy?",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-01-07T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO GRAVADO HOJE 07/01 (ANA)",
+        "perfil": "GESTAO DEATHCARE (FEED) + DUOFY (STORY)",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "TBT / VISITA / CASE / JANELA DE POSTAGEM",
+      "description": "print do Juliano da TRAPEZIO = sem nome e marca - apenas a fala (como ta antigo cuidar para data nao aparecer)",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Post",
+      "start_at": "2026-01-08T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "POST",
+        "perfil": "TOTVS POSTOS (FEED) + DUOFY (STORY)",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "reforma tribiutaria episodio 1",
+      "description": "Chamada 1 ebook REFORMA TRIBUTARIA",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-01-09T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "Video",
+        "perfil": "DUOFY",
+        "comemorativa": "INICIO DO NOVO TRAFEGO"
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "FICHA TÉCNICA POSTO",
+      "description": "O que é o TOTVS Varejo Postos de Combustíveis?",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-01-12T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO GRAVADO07/11 (FURTADO)",
+        "perfil": "POSTO + DUOFY",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "DOR OU MERCADO DEATHCARE",
+      "description": "https://www.linkedin.com/feed/update/urn:li:activity:7411766258456596480/?actorCompanyId=64777524",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Carrossel",
+      "start_at": "2026-01-13T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "CARROSSEL",
+        "perfil": "DEATHCARE (FEED) + DUOFY (STORY)",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "IMAGENS DO EVENTO",
+      "description": "KICK OFF 2026 - DUOFY",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Foto",
+      "start_at": "2026-01-14T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "FOTOS E VIDEOS",
+        "perfil": "PERFIL DUOFY",
+        "comemorativa": "KICK OFF DUOFY"
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "REFORMA TRIBUTARIA POSTO 1",
+      "description": "Chamada 2 ebook REFORMA TRIBUTARIA",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-01-15T00:00:00",
+      "status": "cancelled",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "posto + DUOFY",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "MEME / TROLLER",
+      "description": "COM NOVATO (GRAVAR VIDEO NO DIA DO KICK OFF)",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Vídeo",
+      "start_at": "2026-01-16T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM",
+        "formato_original": "VIDEO",
+        "perfil": "DUOFY"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "FICHA TÉCNICA DEATHCARE",
+      "description": "Gestão de Planos e Assistências Funerárias",
+      "event_type": "content",
+      "channel": null,
+      "format": "Vídeo",
+      "start_at": "2026-01-19T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "formato_original": "VIDEO GRAVADO",
+        "perfil": "GESTAO DEATHCARE (FEED) + DUOFY (STORY)",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "REFORMA TRIBUTARIA POSTO",
+      "description": "Chamada 2 ebook REFORMA TRIBUTARIA",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-01-20T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "posto + DUOFY",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "REFORMA TRIBUTARIA DEATHCARE2",
+      "description": "episodio 2 = IVA e serviços funerários: onde está o risco?",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-01-21T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO GRAVADO",
+        "perfil": "GESTAO DEATHCARE (FEED) + DUOFY (STORY)",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "MKT DE OPORTUNIDADE",
+      "description": "BBB",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Post",
+      "start_at": "2026-01-22T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM",
+        "formato_original": "VER",
+        "comemorativa": "EVENTO: CONVENÇÃO DE VENDAS TOTVS"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "DEMO 1 MINUTO POSTO",
+      "description": "TOTVS FEZ O VIDEO",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Post",
+      "start_at": "2026-01-23T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "FEED",
+        "perfil": "DUOFY + POSTO",
+        "marcas_adicionais": [
+          "postos_combustiveis"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "STORY NO INSTA + POST NO LINKEDIN",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Story",
+      "start_at": "2026-01-25T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "STORY INSTAGRAM E LINKEDIN",
+        "formato_original": "STORY",
+        "perfil": "DUOFY + DEATHCARE + POSTO",
+        "comemorativa": "Aniversário de S Paulo",
+        "marcas_adicionais": [
+          "deathcare",
+          "postos_combustiveis"
+        ]
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "FICHA TÉCNICA POSTO",
+      "description": "Controle de Estoque e Qualidade de Combustíveis",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-01-26T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO GRAVADO",
+        "perfil": "TOTVS POSTO (FEED) + DUOFY (STORY)",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "REFORMA TRIBUTARIA",
+      "description": "EPISODIO 3",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-01-27T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO GRAVADO",
+        "perfil": "TOTVS DEATHCARE (FEED) + DUOFY (STORY)",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "REFORMA TRIBUTARIA POSTO 2",
+      "description": "Vai aumentar imposto no posto?",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-01-28T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO GRAVADO",
+        "perfil": "TOTVS POSTO (FEED) + DUOFY (FEED)",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "CASO ORELHA + SOLUÇAO P PET",
+      "description": "CASO ORELHA E SOLUÇÃO PARA PET",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Artigo",
+      "start_at": "2026-01-29T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "POST / ARTIGO",
+        "perfil": "COLAB DUOFY E DEATHCARE",
+        "comemorativa": "EXTRA: conteúdo atual",
+        "marcas_adicionais": [
+          "deathcare"
+        ]
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "TBT / VISITA / CASE / JANELA DE POSTAGEM/ FALA DUOFY/ TESTEMUNHAL",
+      "description": "CLIENTE",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Post",
+      "start_at": "2026-01-29T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "AUDIO",
+        "perfil": "COLAB POSTOS + DUOFY",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "MEME",
+      "description": "MARKETING EDITANDO VIDEO E INCOMODANDO",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Vídeo",
+      "start_at": "2026-01-30T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM",
+        "formato_original": "VIDEO",
+        "perfil": "DUOFY"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "DIA DA SAUDADE",
+      "description": "DATA COMEMORATIVA",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Card",
+      "start_at": "2026-01-30T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM",
+        "formato_original": "CARD",
+        "perfil": "STORY DUOFY + FEED DEATHCARE",
+        "comemorativa": "EXTRA: data comemorativa",
+        "marcas_adicionais": [
+          "deathcare"
+        ]
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "DOR POSTO",
+      "description": "Gestão Financeira e Conciliação Automática / ENCERRANTE",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Carrossel",
+      "start_at": "2026-02-02T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "CARROSSEL",
+        "perfil": "GESTAO POSTO (FEED) + DUOFY (STORY)",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "FICHA TECNICA POSTO C SOLUÇAO",
+      "description": "Vídeo 3 - Gestão Financeira e Conciliação Automática",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-02-03T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO GRAVADO",
+        "perfil": "TOTVS POSTOS (FEED) + DUOFY (FEED)",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "REFORMA TRIBUTARIA DEATHCARE 3",
+      "description": "ANA",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-02-04T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO GRAVADO",
+        "perfil": "GESTAO DEATHCARE (FEED) + DUOFY (STORY)",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "FICHA TÉCNICA DEATHCARE",
+      "description": "Vídeo 3 – Gestão Cemiterial e Crematórios",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-02-05T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO GRAVADO",
+        "perfil": "TOTVS DEATHCARE (FEED) + DUOFY (STORY)",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "TBT / VISITA / CASE / JANELA DE POSTAGEM/ FALA DUOFY/ TESTEMUNHAL",
+      "description": "AUDIO CLIENTE",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-02-05T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "COLAB POSTOS + DUOFY",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "DOR OU MERCADO DEATHCARE + VISITA TECNICA GILBARCO VEEDER-ROOT",
+      "description": "VIDEO2 3 No deathcare, erro de processo vira dor + LEGENDA CHAMANDO VIDEO P AMANHA",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-02-09T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO GRAVADO",
+        "perfil": "GESTAO DEATHCARE (FEED) + DUOFY (STORY)",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "FICHA TECNICA DEATHCARE",
+      "description": "episodio 3 Guilherme: Crédito tributário: oportunidade ou armadilha?",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-02-11T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO GRAVADO",
+        "perfil": "FEED POSTO + STORY DUOFY",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "MULHERES NA TECNOLOGIA",
+      "description": "HOMENAGEM",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-02-11T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "DUOFY (FEED) + STORY POSTO E DEATH",
+        "comemorativa": "Dia Internacional das Mulheres e Meninas na Ciência",
+        "marcas_adicionais": [
+          "postos_combustiveis",
+          "deathcare"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "REFORMA TRIBUTARIA POSTO",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-02-12T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "FALA DUOFY",
+      "description": "COM DANILO BRITO",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-02-13T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO GRAVADO",
+        "perfil": "FEED DUOFY + STORY POSTO",
+        "marcas_adicionais": [
+          "postos_combustiveis"
+        ]
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "TBT / VISITA / CASE / JANELA DE POSTAGEM/ FALA DUOFY/ TESTEMUNHAL",
+      "description": "AUDIO CLIENTE",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-02-14T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "COLAB POSTOS + DUOFY",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "POST FERIADO",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": null,
+      "start_at": null,
+      "status": "completed",
+      "date_missing": true,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM",
+        "perfil": "STORY"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "POST FERIADO",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": null,
+      "start_at": "2026-02-17T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM",
+        "perfil": "STORY",
+        "comemorativa": "Carnaval"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "REFORMA TRIBUTARIA DEATHCARE",
+      "description": "EPISODIO 3",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-02-18T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO GRAVADO",
+        "perfil": "DEATHCARE FEED + CX DE PERGUNTA STORY + STORY DUOFY",
+        "comemorativa": "QUARTA DE CINZAS",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "FALA DUOFY",
+      "description": "COM DANILO BRITO",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-02-19T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO GRAVADO",
+        "perfil": "FEED DUOFY + STORY POSTO",
+        "marcas_adicionais": [
+          "postos_combustiveis"
+        ]
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "CENAS DE BASTIDORES DA GRAVAÇÃO DIA 18 (DECIO) - AGUARDE",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-02-20T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEOS",
+        "perfil": "POSTO E DUOFY - STORY",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "MERCADO OU ESCASSEZ + MACACO (DEATH)",
+      "description": "Crescer sem controle é colocar tudo em risco",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-02-23T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "FEED DEATHCARE + STORY DEATH E DUOFY",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "VIDEO VIBRA (POSTO) + MAMONAS ASSASSINAS (DEATH)",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Foto",
+      "start_at": "2026-02-24T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO E FOTO",
+        "perfil": "FEED EM CADA PRODUTO + STORY (DUOFY)",
+        "comemorativa": "EVENTO MERCADO VIBRA (POSTO)"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "FICHA TECNICA DEATHCARE",
+      "description": "Vídeo 4 – Vendas, Força de Vendas e Auditoria",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-02-24T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "FEED DEATHCARE + STORY DEATH E DUOFY",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "MAMONAS ASSASSINAS COM FOCO CLIENTE",
+      "description": "RAPHAEL",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Card",
+      "start_at": null,
+      "status": "completed",
+      "date_missing": true,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "CARD",
+        "perfil": "DEATH + STORY DUOFY",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "REFORMA POSTO (ATRASO)+ REFORMA TRIBUTARIA DEATHCARE EP 3",
+      "description": "EPISODIO 4 GUILHERME / EP 3 ANA (ATRASO)",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-02-25T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "FEED POSTO, DEATH + STORY POSTO DUOFY E DEATHCARE E DUOFY",
+        "comemorativa": "EVENTO MERCADO VIBRA (POSTO)",
+        "marcas_adicionais": [
+          "deathcare",
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "EVENTO VIBRA MELHORES MOMENTOS",
+      "description": "MOSTRAR PRESENÇA DE MERCADO COM A SOLUÇÃO MAIS COMPLETA DO BRASIL - DA PISTA AO BACKOFFICE",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-02-26T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "FEED POSTO E DUOFY + STORY POSTO E DUOFY",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "POSTO - FICHA TECNICA (SOLUÇÃO)",
+      "description": "Vídeo 3 – PDV Desktop, PDV Móvel e Totens de Pagamento",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-02-27T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "FEED POSTO + STORY POSTO E DUOFY",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "FALA DUOFY",
+      "description": "RICARDO QUINTAIS",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-02-28T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "FEED DUOFY + STORY DUOFY",
+        "comemorativa": "XXV Simpósio Nacional do Setor Funerário"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "FICHA TECNICA DEATHCARE",
+      "description": "Vídeo 4 – Vendas, Força de Vendas e Auditoria",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-03-02T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "FEED DEATHCARE + STORY DEATH E DUOFY",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "REFORMA POSTO (ATRASO)",
+      "description": "EPISODIO 4 GUILHERME",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-03-03T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "FEED POSTO + STORY POSTO DUOFY E DUOFY",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "POSTO - FICHA TECNICA (SOLUÇÃO)",
+      "description": "Vídeo 3 – PDV Desktop, PDV Móvel e Totens de Pagamento",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-03-04T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "FEED POSTO + STORY POSTO E DUOFY",
+        "comemorativa": "DIA DO FRENTISTA",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "DIA DA MULHER DUOFY - ANTECIPADO",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Foto",
+      "start_at": "2026-03-04T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "FOTO",
+        "perfil": "DUOFY"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "FALA DUOFY",
+      "description": "RICARDO QUINTAIS",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-03-05T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "FEED DUOFY + STORY DUOFY"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "MEME - 5 NOVATOS (assistente de SUPORTE)",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Vídeo",
+      "start_at": "2026-03-06T00:00:00",
+      "status": "in_progress",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM",
+        "formato_original": "VIDEO",
+        "perfil": "FEED DUOFY + STORY"
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "DIA DA MULHER",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Card",
+      "start_at": "2026-03-08T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "STORY INSTAGRAM",
+        "formato_original": "CARD",
+        "perfil": "POSTO DEATH DUOFY",
+        "comemorativa": "DIA DA MULHER",
+        "marcas_adicionais": [
+          "deathcare",
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "BASTIDORES DA GRAVAÇAO DO VIDEO",
+      "description": "VIDEO INSTITUCIONAL DUOFY",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Foto",
+      "start_at": "2026-03-10T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM",
+        "formato_original": "foto ou video",
+        "perfil": "STORY DUOFY E POSTO E DEATH",
+        "marcas_adicionais": [
+          "postos_combustiveis",
+          "deathcare"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "FICHA TÉCNICA POSTO",
+      "description": "Vídeo 5 – Gestão de Frotas e Clientes PJ",
+      "event_type": "content",
+      "channel": null,
+      "format": "Vídeo",
+      "start_at": "2026-03-10T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "formato_original": "VIDEO"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "REFORMA TRIBUTARIA EP 4 DEATHCARE",
+      "description": "ANA DEATHCARE",
+      "event_type": "content",
+      "channel": null,
+      "format": "Vídeo",
+      "start_at": "2026-03-11T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "formato_original": "VIDEO"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "CASE DECIO",
+      "description": "VAI P REDES E SITE",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-03-12T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "DUOFY E POSTO (COLAB) + STORY POSTO DUOFY",
+        "marcas_adicionais": [
+          "postos_combustiveis"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "MEME OU TROLLER: NOVATOS",
+      "description": "entrada dos 5 novatos",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Vídeo",
+      "start_at": "2026-03-13T00:00:00",
+      "status": "in_progress",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM DUOFY",
+        "formato_original": "VIDEO",
+        "perfil": "FEED DUOFY + STORY"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "MERCADO OU ESCASSEZ DEATH",
+      "description": "Quando o gestor não consegue estar onde mais importa",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-03-16T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM / LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "FEED E STORY DEATH + STORY DUOFY",
+        "comemorativa": "MERCADO",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "MATERIAL MOTO GP (PRIORIDADE POSTO)",
+      "description": "textos enviados perfis POSTO e DUOFY",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Carrossel",
+      "start_at": "2026-03-16T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM/LINKEDIN",
+        "formato_original": "CARROSSEL/ARTIGO",
+        "perfil": "COLAB POSTO E DUOFY + STORYS",
+        "comemorativa": "TRAFEGO E ORGANICO",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "FICHA TECNICA DEATHCARE",
+      "description": "Vídeo 5 – Cobrança Eficiente e Redução da Inadimplência",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-03-17T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM /LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "COLAB DEATH E DUOFY + STORYS AMBOS",
+        "comemorativa": "VENDA",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "ARTIGO REFORMA TRIBUTARIA E GESTAO DEATHCARE",
+      "description": "",
+      "event_type": "content",
+      "channel": "LinkedIn",
+      "format": "Artigo",
+      "start_at": "2026-03-17T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "LINKEDIN",
+        "formato_original": "POST ARTIGO",
+        "perfil": "DUOFY (RESPOST) E PERFIL DEATHCARE",
+        "comemorativa": "DIA DO AGENTE FUNERARIO",
+        "marcas_adicionais": [
+          "deathcare"
+        ]
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "REFORMA POSTO 5",
+      "description": "GUILHERME",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-03-18T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM/LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "FEED E STORY POSTO + STORY DUOFY",
+        "comemorativa": "MERCADO",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "SUA FUNERARIA ESTA PREPARADA PARA PROSPERAR 1a ediçao",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-03-19T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM/LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "FEED E STORY DEATH",
+        "comemorativa": "EVENTO DEATHCARE NO RJ"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "CODIGO DO LIDER DUOFY",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-03-19T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM/LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "FEED E STORY DUOFY / LINKEDIN",
+        "comemorativa": "TREINAMENTO LIDERANÇA"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "FALA DUOFY",
+      "description": "FELIPE SOUSA",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-03-19T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM /LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "FEED E STORY DUOFY / LINKEDIN"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "MEME TROLER COM 5 NOVATOS",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Vídeo",
+      "start_at": "2026-03-20T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM",
+        "formato_original": "VIDEO",
+        "perfil": "DUOFY FEED E STORY",
+        "comemorativa": "MOTO GP GOIANIA"
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "VIDEO CASE DECIO",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-03-23T00:00:00",
+      "status": "in_progress",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "POSTO E DUOFY (FEED/STORY)",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "BLOG https://www.totvs.com/blog/gestao-de-servicos/funeraria-pet/ deathcare",
+      "description": "ARTIGO TOTVS",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn + WhatsApp",
+      "format": "Story",
+      "start_at": "2026-03-23T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM  LINKEDIN WHATSAPP",
+        "formato_original": "STORY",
+        "perfil": "STORY + LINKEDIN + GRUPO DEATH"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "MERCADO OU ESCASSEZ",
+      "description": "Vídeo 6 – App Meu Gestor: Sua Gestão na Palma da Mão",
+      "event_type": "content",
+      "channel": null,
+      "format": "Vídeo",
+      "start_at": "2026-03-24T00:00:00",
+      "status": "in_progress",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "formato_original": "VIDEO"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "FICHA TECNICA DEATHCARE",
+      "description": "Vídeo 5 – Cobrança Eficiente e Redução da Inadimplência",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-03-25T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM /LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "COLAB DEATH E DUOFY + STORYS AMBOS",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "3 anos DUOFY",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Foto",
+      "start_at": "2026-03-25T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM /LINKEDIN",
+        "formato_original": "FOTOS",
+        "perfil": "DUOFY FEED E STORY"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "FICHA TÉCNICA POSTO",
+      "description": "VIDEO 6",
+      "event_type": "content",
+      "channel": null,
+      "format": "Vídeo",
+      "start_at": "2026-03-25T00:00:00",
+      "status": "in_progress",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "formato_original": "VIDEO"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "REFORMA DEATHCARE video 5",
+      "description": "EPISODIO ANA",
+      "event_type": "content",
+      "channel": null,
+      "format": "Vídeo",
+      "start_at": "2026-03-26T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "formato_original": "VIDEO"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "TROLAGEM NOVATOS",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": "Vídeo",
+      "start_at": "2026-03-27T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "formato_original": "VIDEO"
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "VIDEO CASE DECIO",
+      "description": "POSTO",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-03-30T00:00:00",
+      "status": "in_progress",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "COLAB POSTO E DUOFY (FEED/STORY)",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "FISCALIZAÇÃO SOBRE PREÇOS DE POSTOS",
+      "description": "POSTO",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Carrossel",
+      "start_at": "2026-03-31T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "CARROSSEL",
+        "perfil": "FEED + STORY POSTO / STORY DUOFY",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "MEME FINGINDO QUE TRABALHA",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Vídeo",
+      "start_at": "2026-04-01T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM",
+        "formato_original": "VIDEO",
+        "perfil": "FEED + STORY DUOFY",
+        "comemorativa": "TROLAGEM"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "TIME DE PRODUTO",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Vídeo",
+      "start_at": "2026-04-01T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "VIDEO",
+        "perfil": "FEED E STORY DUOFY",
+        "comemorativa": "EQUIPE"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "AVISO DE FERIADO PÁSCOA",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram + LinkedIn",
+      "format": "Post",
+      "start_at": "2026-04-02T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "canal_original": "INSTAGRAM E LINKEDIN",
+        "formato_original": "POST",
+        "perfil": "FEED E STORY DUOFY",
+        "comemorativa": "COMUNICADO"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "MERCADO OU ESCASSEZ",
+      "description": "> Vídeo 6 – Portal e App do Cliente para Experiência Humanizada",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-04-02T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "AVISO DO EVENTO CONEXAO RODOVIA",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-03-30T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "MERCADO OU ESCASSEZ",
+      "description": "App Meu Gestor: Sua Gestão na Palma da Mão",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-03-31T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "comemorativa": "Stock Car Brasil"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "FICHA TÉCNICA POSTO",
+      "description": "EPISODIO 5 ANA",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-04-01T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "REFORMA DEATHCARE 5 + AVISO DE FERIADO",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-04-02T00:00:00",
+      "status": "scheduled",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "0",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-04-03T00:00:00",
+      "status": "scheduled",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "TBT / VISITA / CASE / JANELA DE POSTAGEM/ FALA DUOFY",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-04-04T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "AVISO DO EVENTO CONEXAO RODOVIA",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-04-06T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "AVISO DO EVENTO CONEXAO RODOVIA",
+      "description": "VIDEO: Nem toda crise começa no atendimen",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-04-08T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "MERCADO OU ESCASSEZ",
+      "description": "Portal do Cliente (contratos / informações)",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-04-09T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026",
+        "comemorativa": "EVENTO Conexão Rodovia"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "FICHA TECNICA DEATHCARE",
+      "description": "GUILHERME",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-04-10T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "REFORMA POSTO",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-04-11T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "TBT / VISITA / CASE / JANELA DE POSTAGEM/ FALA DUOFY",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-04-12T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "MEME",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2026-04-13T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "1º tri 2026"
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "CONVITE",
+      "description": "CONGRESSO INOVARE: FALTAM 10 DIAS",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Vídeo",
+      "start_at": "2025-11-01T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2025",
+        "produto_original": "DEATHCARE DUOFY",
+        "canal_original": "DEATHCARE DUOFY",
+        "formato_original": "video",
+        "perfil": "Instagram",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "HOMENAGEM",
+      "description": "FINADOS",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Post",
+      "start_at": "2025-11-02T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2025",
+        "produto_original": "TODOS",
+        "canal_original": "TODOS",
+        "formato_original": "POST",
+        "perfil": "INSTAGRAM E LIKEDIN",
+        "marcas_adicionais": [
+          "postos_combustiveis",
+          "deathcare"
+        ]
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "DEMO 1 MINUTO TOTVS",
+      "description": "DEMO 1 MINUTO POSTO",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Vídeo",
+      "start_at": "2025-11-03T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2025",
+        "produto_original": "POSTO E DUOFY",
+        "canal_original": "POSTO E DUOFY",
+        "formato_original": "VIDEO",
+        "perfil": "INSTAGRAM E LINKEDIN",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "FOTO",
+      "description": "DEATHCARE: FOTO DO TREINAMENTO DE SABADO AULA 1",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Post",
+      "start_at": "2025-11-03T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2025",
+        "produto_original": "DEATHCARE",
+        "canal_original": "DEATHCARE",
+        "formato_original": "POST",
+        "perfil": "INSTAGRAM E LINKEDIN"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "ARTIGO XADREZ (DETAHCARE) + MARGEM (POSTO)",
+      "description": "",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Story",
+      "start_at": "2025-11-04T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2025",
+        "produto_original": "TODOS",
+        "canal_original": "TODOS",
+        "formato_original": "STORY + ARTIGO",
+        "perfil": "INSTAGRAM E LINKEDIN",
+        "marcas_adicionais": [
+          "postos_combustiveis",
+          "deathcare"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "jogo xadrez",
+      "description": "MERCADO OU DOR DO SETOR DEATHCARE: (xadrez)",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Vídeo",
+      "start_at": "2025-11-04T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2025",
+        "produto_original": "DEATHCARE E DUOFY",
+        "canal_original": "DEATHCARE E DUOFY",
+        "formato_original": "VIDEO",
+        "perfil": "INSTAGRAM E LINKEDIN",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "CONVITE",
+      "description": "CONGRESSO INOVARE: FALTAM 5 DIAS + PRESENÇA DUOFY NO INOVARE",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Card",
+      "start_at": "2025-11-06T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2025",
+        "produto_original": "DEATHCARE DUOFY",
+        "canal_original": "DEATHCARE DUOFY",
+        "formato_original": "video e card",
+        "perfil": "INSTAGRAM E LIKEDIN",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "CONVITE",
+      "description": "CONGRESSO INOVARE: FALTAM 3 DIAS",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Vídeo",
+      "start_at": "2025-11-08T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2025",
+        "produto_original": "DEATHCARE DUOFY",
+        "canal_original": "DEATHCARE DUOFY",
+        "formato_original": "video",
+        "perfil": "INSTAGRAM E LIKEDIN",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "VER GUIA DE BOLSO COM LUCAS",
+      "description": "FICHA TECNICA DO PRODUTO: MANDALA DEATHCARE (em motion?) + chamada para ebook + CONGRESSO INOVARE: FALTA 1 DIA",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Card",
+      "start_at": "2025-11-10T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2025",
+        "produto_original": "DEATHCARE DUOFY",
+        "canal_original": "DEATHCARE DUOFY",
+        "formato_original": "card ANA",
+        "perfil": "INSTAGRAM E LIKEDIN",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "VER FOLDER DUOFY QUE LEVAMOS P UNIVERSO TOTVS OU FICHA TECNICA NO SITE TOTVS",
+      "description": "FICHA TECNICA DO PRODUTO: POSTO",
+      "event_type": "content",
+      "channel": null,
+      "format": "Motion",
+      "start_at": "2025-11-17T00:00:00",
+      "status": "completed",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2025",
+        "formato_original": "MOTION"
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "gravado",
+      "description": "CHAMADA PARA ebook reforma tributaria",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Vídeo",
+      "start_at": "2025-12-01T00:00:00",
+      "status": "in_progress",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2025",
+        "produto_original": "POSTO E DUOFY",
+        "canal_original": "POSTO E DUOFY",
+        "formato_original": "VIDEO",
+        "perfil": "INSTAGRAM E LIKEDIN",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "deathcare",
+      "category": "content",
+      "title": "gravado",
+      "description": "CHAMADA COM CORTE PARA PODCAST DEATHCARE",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": "Vídeo",
+      "start_at": "2025-12-02T00:00:00",
+      "status": "in_progress",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "2025",
+        "produto_original": "DEATHCARE DUOFY",
+        "canal_original": "DEATHCARE DUOFY",
+        "formato_original": "video",
+        "perfil": "INSTAGRAM E LIKEDIN",
+        "marcas_adicionais": [
+          "duofy_solucoes"
+        ]
+      }
+    },
+    {
+      "brand_slug": "postos_combustiveis",
+      "category": "content",
+      "title": "https://www.gov.br/fazenda/pt-br/acesso-a-informacao/acoes-e-programas/reforma-tributaria",
+      "description": "https://espacolegislacao.totvs.com/reforma-tributaria/",
+      "event_type": "content",
+      "channel": "Instagram",
+      "format": null,
+      "start_at": null,
+      "status": "planned",
+      "date_missing": true,
+      "execution_payload": {
+        "origem_aba": "2025",
+        "produto_original": "https://produtos.totvs.com/ficha-tecnica/tudo-sobre-o-totvs-varejo-postos-de-combustiveis/",
+        "canal_original": "https://produtos.totvs.com/ficha-tecnica/tudo-sobre-o-totvs-varejo-postos-de-combustiveis/",
+        "perfil": "tomada de decisão e mobilidade"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "ACELERA VENDAS",
+      "description": "Objeção clássica: Seu sistema é caro demais!",
+      "event_type": "content",
+      "channel": null,
+      "format": "Card",
+      "start_at": "2025-07-01T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "EDITORIAL JULHO",
+        "formato_original": "ACELERA VENDAS (pode ser com caixinha de perguntas) Card com a pergunta no topo e um box com “Resposta de impacto”                                \nCaro é o prejuízo por má gestão. Nosso sistema te mostra isso em números."
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "POSTO 360º",
+      "description": "A Reforma Tributária e os impactos nos postos de combustíveis",
+      "event_type": "content",
+      "channel": null,
+      "format": "Post",
+      "start_at": "2025-07-02T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "EDITORIAL JULHO",
+        "formato_original": "Gráfico animado + trecho de fala de especialista (pode ser do Raphael ou Guilherme)"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "PAINEL DE CONTROLE",
+      "description": "Como parametrizar o CFOP para notas de combustíveis — Painel de Controle apresenta: Como parametrizar corretamente o CFOP para notas fiscais de combustível.",
+      "event_type": "content",
+      "channel": null,
+      "format": "Infográfico",
+      "start_at": "2025-07-03T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "EDITORIAL JULHO",
+        "formato_original": "INFOGRAFICO/ VIDEO"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "MEME/RESUMO SEMANA",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": "Post",
+      "start_at": "2025-07-04T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "EDITORIAL JULHO",
+        "formato_original": "imagens destaques da semana"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "PAINEL DE CONTROLE",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2025-07-07T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "EDITORIAL JULHO"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "ACELERA VENDAS",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2025-07-08T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "EDITORIAL JULHO"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "POSTO 360º",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2025-07-09T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "EDITORIAL JULHO"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "PAINEL DE CONTROLE",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2025-07-10T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "EDITORIAL JULHO"
+      }
+    },
+    {
+      "brand_slug": "duofy_solucoes",
+      "category": "content",
+      "title": "MEME/RESUMO SEMANA",
+      "description": "",
+      "event_type": "content",
+      "channel": null,
+      "format": null,
+      "start_at": "2025-07-11T00:00:00",
+      "status": "planned",
+      "date_missing": false,
+      "execution_payload": {
+        "origem_aba": "EDITORIAL JULHO"
+      }
+    }
+  ],
+  "themes": [
+    {
+      "title": "Do Custo à Conexão: A Nova Era do Deathcare - DORES E OBJEÇÕES DO SETOR",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Time Prospecção",
+      "kind": "Webinar",
+      "owner": "TOTVS",
+      "status": ""
+    },
+    {
+      "title": "Seu posto consegue justificar preço em uma auditoria",
+      "theme": "",
+      "brand_slug": null,
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "Como postos estão evitando risco regulatório com gestão de dados",
+      "theme": "",
+      "brand_slug": null,
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "“Modernização de setores essenciais: do varejo energético ao setor funerário”",
+      "theme": "objetivo é conectar com FIEG",
+      "brand_slug": null,
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "“Como aumentar margem em redes de postos sem depender de preço”",
+      "theme": "FIEG / EVENTOS POSTO",
+      "brand_slug": null,
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "“Profissionalização e crescimento no setor funerário”",
+      "theme": "FIEG EVENTOS DEAth",
+      "brand_slug": null,
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "A Jornada do Crescimento: Vendas com Valor no Deathcare",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "Webinar",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Como a TOTVS Está Revolucionando a Gestão de Postos com Tecnologia de Ponta",
+      "theme": "TECNOLOGIA & TRANSFORMAÇÃO DIGITAL",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Mercado",
+      "kind": "Gestores e TOTVS",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "* QUER BATER META? COMO PROSPECTAR NO SEGMENTO FUNERÁRIO (CAPACITAÇÃO)",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Time Prospecção",
+      "kind": "Webinar",
+      "owner": "TOTVS",
+      "status": ""
+    },
+    {
+      "title": "Tecnologia que Cuida: Como Formar uma Equipe para Inovar no Setor Lifecare",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "Webinar",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Por que os gestores de postos de combustiveis estão perdendo dinheiro sem perceber?",
+      "theme": "EPISODIO 1",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Mercado",
+      "kind": "Gestores de postos",
+      "owner": "DUOFY",
+      "status": "selecionado"
+    },
+    {
+      "title": "Seu time está espantando clientes e você nem percebeu",
+      "theme": "EPISODIO 2",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Mercado",
+      "kind": "Gestores de postos",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Dinheiro parado no estoque: a falha que derruba o seu caixa",
+      "theme": "EPISODIO 3",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Mercado",
+      "kind": "Gestores de postos",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Quem tem informação... manda no mercado”",
+      "theme": "EPISODIO 4",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Mercado",
+      "kind": "Gestores de postos",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Seu posto fatura bem, mas o dinheiro some? Essa é a razão.",
+      "theme": "EPISODIO 5",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Mercado",
+      "kind": "Gestores de postos",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Tecnologia que Gera Lucro: A Nova Era da Gestão para Postos de Combustíveis",
+      "theme": "EPISODIO 6",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Mercado",
+      "kind": "Gestores de postos",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Transformação Digital nos Postos: O Que Você Precisa Saber para Não Ficar para Trás",
+      "theme": "EDUCATIVO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Mercado e Cliente",
+      "kind": "CLIENTES e TOTVS",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Desbravando o Mar de Oportunidades com TOTVS Varejo Postos de Combustiveis",
+      "theme": "VENDAS E PROSPECÇÃO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Time Prospecção",
+      "kind": "AR APN SDR ETC",
+      "owner": "TOTVS",
+      "status": "DIA 27/06"
+    },
+    {
+      "title": "CONHECENDO O SETOR FUNERARIO PARA AUMENTAR AS VENDAS DE GESTÃO DEATHCARE BY DUOFY",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Time Prospecção",
+      "kind": "Webinar",
+      "owner": "TOTVS",
+      "status": ""
+    },
+    {
+      "title": "Marketing para atrair, engajar e fidelizar no Lifecare: Do Offline ao Online com Relevância:",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "Webinar",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Tecnologia para Postos de Combustíveis: Da Bomba ao Backoffice, Tudo Integrado",
+      "theme": "EDUCATIVO PARA MERCADO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Mercado",
+      "kind": "Gestores e TOTVS",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Vender Onde Dói:Transformando a inadimplência em argumento de valor no Deathcare",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Time Prospecção",
+      "kind": "Webinar",
+      "owner": "TOTVS",
+      "status": ""
+    },
+    {
+      "title": "Deathcare em Números:KPIs essenciais para decisões mais inteligentes no setor funerário",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "Webinar",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Posto 100%: A Solução Completa, A Venda Perfeita",
+      "theme": "VENDAS E PROSPECÇÃO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Time Prospecção",
+      "kind": "AR APN SDR ETC",
+      "owner": "TOTVS",
+      "status": "DIA 27/06"
+    },
+    {
+      "title": "Além do Óbvio: Oportunidades no Deathcare que você nunca imaginou - ver holografia ossel",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Time Prospecção",
+      "kind": "Webinar",
+      "owner": "TOTVS",
+      "status": ""
+    },
+    {
+      "title": "Pilares da Confiança: Governança e boas práticas para empresas funerárias",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "Webinar",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Do Papel à Nuvem: Como Digitalizar a Gestão do Seu Posto e Ganhar Eficiência",
+      "theme": "EDUCATIVO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Mercado e Cliente",
+      "kind": "CLIENTES e TOTVS",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Tecnologia que Cuida: Como Formar uma Equipe para Inovar no Setor Lifecare",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "Webinar",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Acelerando Vendas com TOTVS Varejo Postos de Combustiveis",
+      "theme": "VENDAS E PROSPECÇÃO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Time Prospecção",
+      "kind": "AR APN SDR ETC",
+      "owner": "TOTVS",
+      "status": "DIA 08/07"
+    },
+    {
+      "title": "Do Asfalto ao Backoffice: Jornada de Vendas TOTVS",
+      "theme": "VENDAS E PROSPECÇÃO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Time Prospecção",
+      "kind": "AR APN SDR ETC",
+      "owner": "TOTVS",
+      "status": ""
+    },
+    {
+      "title": "Rota da Meta: Tração Total com TOTVS Varejo",
+      "theme": "VENDAS E PROSPECÇÃO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Time Prospecção",
+      "kind": "AR APN SDR ETC",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "A nova gestão de pessoas para o setor Deathcare: Capital Humano no Centro",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "Webinar",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Jornada Comercial Lifecare: Da Escuta à Conversão - Entendendo o Cliente",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Time Prospecção",
+      "kind": "Webinar",
+      "owner": "TOTVS",
+      "status": ""
+    },
+    {
+      "title": "Ganhe Eficiência e Controle com o PDV Desktop da TOTVS para Postos de Combustíveis",
+      "theme": "EDUCATIVO DE PRODUTO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Externo/interno",
+      "kind": "cliente e times de prospecção",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Posto a Posto: Conquista com Inteligência TOTVS Varejo Postos de Combustiveis",
+      "theme": "VENDAS E PROSPECÇÃO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Time Prospecção",
+      "kind": "AR APN SDR ETC",
+      "owner": "TOTVS",
+      "status": ""
+    },
+    {
+      "title": "Gestão contábil estratégica para o setor Deathcare: Transparência que Gera Confiança:",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "Webinar",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Jornada Comercial Lifecare: Da Escuta à Conversão - Entendendo o Cliente",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Time Prospecção",
+      "kind": "Webinar",
+      "owner": "TOTVS",
+      "status": "Idealização"
+    },
+    {
+      "title": "Gestão Ágil e Sem Erros no Caixa do Seu Posto: Veja Como Conseguir Isso",
+      "theme": "EDUCATIVO PARA MERCADO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Mercado",
+      "kind": "Gestores e TOTVS",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Posto 360º: Tudo sobre a Solução TOTVS Varejo",
+      "theme": "EDUCATIVO DE PRODUTO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Externo/interno",
+      "kind": "cliente e times de prospecção",
+      "owner": "TOTVS",
+      "status": ""
+    },
+    {
+      "title": "Gestor na Palma da Mão: O app que transforma a operação",
+      "theme": "EDUCATIVO PARA MERCADO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Mercado",
+      "kind": "Gestores e TOTVS",
+      "owner": "TOTVS",
+      "status": ""
+    },
+    {
+      "title": "Controle Total: do Estoque ao Lucro com TOTVS VAREJO POSTOS DE COMBUSTIVEIS",
+      "theme": "EDUCATIVO DE PRODUTO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Externo/interno",
+      "kind": "cliente e times de prospecção",
+      "owner": "TOTVS",
+      "status": ""
+    },
+    {
+      "title": "Do PDV ao Financeiro: Como Eliminar Gargalos na Gestão do Seu Posto",
+      "theme": "EDUCATIVO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Mercado e Cliente",
+      "kind": "CLIENTES e TOTVS",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "TOTVS na Pista: PDV Desktop em Ação",
+      "theme": "EDUCATIVO DE PRODUTO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Externo/interno",
+      "kind": "cliente e times de prospecção",
+      "owner": "TOTVS",
+      "status": ""
+    },
+    {
+      "title": "Boas práticas financeiras no Deathcare: Gestão que Gera Resultado",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "Webinar",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Fechamento de Caixa Sem Dor de Cabeça: Soluções TOTVS em Ação",
+      "theme": "EDUCATIVO DE PRODUTO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Externo/interno",
+      "kind": "cliente e times de prospecção",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "TENDÊNCIAS DO MERCADO FUNERARIO: (ALGUEM FORTE DO MERCADO)",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "Webinar",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "CASE OSSEL: USANDO HOLOGRAFIA NO SEGMENTO DEATHCARE",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "Webinar",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "TECNOLOGIAS PARA EXPANDIR SEU NEGÓCIO NO SEGMENTO DEATHCARE",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "Webinar",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "* O Custo da Inadimplência Silenciosa: Você Sabe Quanto Está Perdendo no setor deathcare?",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Externo/interno",
+      "kind": "Webinar",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Descubra a Imersão: Oportunidades Únicas para o Setor do Luto e Profissionais Afins",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "Webinar",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "Integração Total: Como Conectar Vendas, Estoque e Fiscal no Seu Posto",
+      "theme": "EDUCATIVO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Mercado e Cliente",
+      "kind": "CLIENTES e TOTVS",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Seu Posto Está Trabalhando com Sistemas Desconectados? Descubra a Solução",
+      "theme": "EDUCATIVO PARA MERCADO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Mercado",
+      "kind": "Gestores e TOTVS",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "A Integração de Sistemas que Coloca Seu Posto na Era da Inteligência de Dados",
+      "theme": "EDUCATIVO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Mercado e Cliente",
+      "kind": "CLIENTES e TOTVS",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Menos Planilhas, Mais Resultados: A Força da Integração na Gestão de Postos",
+      "theme": "EDUCATIVO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Mercado e Cliente",
+      "kind": "CLIENTES e TOTVS",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Frota Abastecida e Sob Controle: Gestão Inteligente com TOTVS",
+      "theme": "EDUCATIVO DE PRODUTO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Externo/interno",
+      "kind": "cliente e times de prospecção",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Como a TOTVS Ajuda Seu Posto a Ganhar com Clientes de Frota",
+      "theme": "EDUCATIVO DE PRODUTO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Externo/interno",
+      "kind": "cliente e times de prospecção",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Postos Inteligentes: Gestão de Frotas Integrada com Resultados Reais",
+      "theme": "EDUCATIVO PARA MERCADO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Mercado",
+      "kind": "Gestores e TOTVS",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Os 5 Maiores Erros na Gestão de Postos — E Como a TOTVS Pode Evitá-los",
+      "theme": "EDUCATIVO DE PRODUTO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Externo/interno",
+      "kind": "cliente e times de prospecção",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Do Atendimento ao Fiscal: Como Unificar a Gestão do Seu Posto com Tecnologia",
+      "theme": "EDUCATIVO PARA MERCADO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Mercado",
+      "kind": "Gestores e TOTVS",
+      "owner": "DUOFY",
+      "status": ""
+    },
+    {
+      "title": "Atendimento Sem Fila: o poder do PDV Móvel e Totem TOTVS",
+      "theme": "EDUCATIVO DE PRODUTO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Externo/interno",
+      "kind": "cliente e times de prospecção",
+      "owner": "TOTVS",
+      "status": ""
+    },
+    {
+      "title": "Posto Marcado com TOTVS: Tecnologia em Cada Bomba",
+      "theme": "EDUCATIVO DE PRODUTO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Externo/interno",
+      "kind": "cliente e times de prospecção",
+      "owner": "TOTVS",
+      "status": ""
+    },
+    {
+      "title": "Gestão de Frotas Inteligente: WebFrota na Prática",
+      "theme": "EDUCATIVO DE PRODUTO",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Externo/interno",
+      "kind": "cliente e times de prospecção",
+      "owner": "TOTVS",
+      "status": ""
+    },
+    {
+      "title": "JUNHO (FINAL DO MÊS)",
+      "theme": "LANÇAMENTO DE NOVIDADES DE PRODUTO",
+      "brand_slug": null,
+      "audience": "Cliente",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "Inteligência Artificial no Setor Deathcare",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "Webinar",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "Deathcare 360º: Os impactos da Reforma Tributária (alguém externo) - EPISODIO 2",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "websérie",
+      "owner": "TOTVS",
+      "status": ""
+    },
+    {
+      "title": "Case Digna: a transformação do deathcare através de dados e estratégias",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "Webinar",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "Remodelagem financeira para o setor funerário",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "Podcast",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "Deathcare 360°: Gestão, Inovação e Resultados - EPISÓDIO 1",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "websérie",
+      "owner": "TOTVS",
+      "status": ""
+    },
+    {
+      "title": "Gestão e Liderança de alto impacto no Deathcare",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "websérie",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "Gestão Deathcare: Desafios e Soluções",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "websérie",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "Gestão de Alta Performance no Deathcare",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "websérie",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "O Essencial da Gestão no Setor Deathcare",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "websérie",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "Fundamentos da Gestão para Líderes Funerários",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "websérie",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "Gestão Estratégica: O Ponto de Partida no Deathcare",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "websérie",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "Desvendando a Gestão no Setor Funerário",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "websérie",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "Gestão Estratégica: O Ponto de Partida no Deathcare",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "websérie",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "Primeiros Passos para uma Gestão de Sucesso no Deathcare",
+      "theme": "",
+      "brand_slug": "deathcare",
+      "audience": "Mercado",
+      "kind": "websérie",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "ENTREVISTAS / LIDERANÇA / GESTÃO / MERCADO",
+      "theme": "ENTREVISTAS / LIDERANÇA / GESTÃO / MERCADO",
+      "brand_slug": null,
+      "audience": "",
+      "kind": "PULSAR DEATHCARE 360º",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "EDUCATIVA / PROFISSIONAIS QUE OPERAM A SOLUÇÃO",
+      "theme": "EDUCATIVA / PROFISSIONAIS QUE OPERAM A SOLUÇÃO",
+      "brand_slug": null,
+      "audience": "",
+      "kind": "PAINEL DE CONTROLE | DEATHCARE",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "TIME COMERCIAL E PROSPECÇÃO (TOTVS E DUOFY)",
+      "theme": "TIME COMERCIAL E PROSPECÇÃO (TOTVS E DUOFY)",
+      "brand_slug": null,
+      "audience": "",
+      "kind": "ACELERA VENDAS | DEATHCARE",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "“Quem não se prepara, paga a conta depois.”",
+      "theme": "Risco, margem, sustentabilidade",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Mercado",
+      "kind": "RISCO E GOVERNANÇA",
+      "owner": "Decisão Estratégica",
+      "status": "Margem & Eficiência"
+    },
+    {
+      "title": "O custo invisível da não conformidade na Reforma Tributária",
+      "theme": "Crédito, imposto, previsibilidade",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Mercado",
+      "kind": "“Quem não se prepara, paga a conta depois.”",
+      "owner": "“Reforma não é imposto. É decisão de gestão.”",
+      "status": "Crédito mal controlado vira prejuízo silencioso."
+    },
+    {
+      "title": "Vídeos curtos: cenários reais",
+      "theme": "Processos, retrabalho",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Mercado",
+      "kind": "O custo invisível da não conformidade na Reforma Tributária",
+      "owner": "Mini whitepapers por setor",
+      "status": "Simuladores simples"
+    },
+    {
+      "title": "checklist de risco",
+      "theme": "Preço e competitividade",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Mercado",
+      "kind": "Vídeos curtos: cenários reais",
+      "owner": "Vídeos com líderes (autoridade)",
+      "status": "Conteúdo de bastidores da operação"
+    },
+    {
+      "title": "Videos comparativos",
+      "theme": "Gestão manual x integrada",
+      "brand_slug": "postos_combustiveis",
+      "audience": "Mercado",
+      "kind": "checklist de risco",
+      "owner": "Comparativos: gestão manual x integrada",
+      "status": "Estudos de caso"
+    },
+    {
+      "title": "DORES DEATHCARE - Informalidade e baixa profissionalização",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DEATHCARE - Informalidade e baixa profissionalização",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DEATHCARE - Informalidade e baixa profissionalização",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DEATHCARE - Informalidade e baixa profissionalização",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DEATHCARE - Informalidade e baixa profissionalização",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DEATHCARE - Pressão por preço e comoditização",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DEATHCARE - Pressão por preço e comoditização",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DEATHCARE - Pressão por preço e comoditização",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DEATHCARE - Pressão por preço e comoditização",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DEATHCARE - Exigência crescente por transparência",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DEATHCARE - Exigência crescente por transparência",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DEATHCARE - Exigência crescente por transparência",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DEATHCARE - Exigência crescente por transparência",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DEATHCARE - Exigência crescente por transparência",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DEATHCARE - Mudança no perfil do consumidor",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DEATHCARE - Mudança no perfil do consumidor",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DEATHCARE - Mudança no perfil do consumidor",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DEATHCARE - Mudança no perfil do consumidor",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DEATHCARE - Mudança no perfil do consumidor",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DEATHCARE - Falta de dados estratégicos",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DEATHCARE - Falta de dados estratégicos",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DEATHCARE - Falta de dados estratégicos",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DEATHCARE - Falta de dados estratégicos",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DEATHCARE - Falta de dados estratégicos",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DOS GESTORES - Sobrecarga operacional",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DOS GESTORES - Sobrecarga operacional",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DOS GESTORES - Sobrecarga operacional",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DOS GESTORES - Sobrecarga operacional",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DOS GESTORES - Sobrecarga operacional",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DOS GESTORES - Medo silencioso de auditoria",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DOS GESTORES - Medo silencioso de auditoria",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DOS GESTORES - Medo silencioso de auditoria",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DOS GESTORES - Medo silencioso de auditoria",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DOS GESTORES - Medo silencioso de auditoria",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DOS GESTORES - Falta de previsibilidade de receita",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DOS GESTORES - Falta de previsibilidade de receita",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DOS GESTORES - Falta de previsibilidade de receita",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DOS GESTORES - Falta de previsibilidade de receita",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DOS GESTORES - Falta de previsibilidade de receita",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DOS GESTORES - Dificuldade de profissionalizar equipe",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DOS GESTORES - Dificuldade de profissionalizar equipe",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DOS GESTORES - Dificuldade de profissionalizar equipe",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DOS GESTORES - Dificuldade de profissionalizar equipe",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DOS GESTORES - Solidão da liderança",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DOS GESTORES - Solidão da liderança",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DOS GESTORES - Solidão da liderança",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES DOS GESTORES - Solidão da liderança",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES ESTRATEGICAS DEATHCARE",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES ESTRATEGICAS DEATHCARE",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES ESTRATEGICAS DEATHCARE",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES ESTRATEGICAS DEATHCARE",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "DORES ESTRATEGICAS DEATHCARE",
+      "theme": "",
+      "brand_slug": "duofy_solucoes",
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "6",
+      "theme": "",
+      "brand_slug": null,
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "POSTO",
+      "theme": "",
+      "brand_slug": null,
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "Programação do webinar de treinamento interno time de AR (agendamento, cards, página de inscrição, e-mail, pesquisa)",
+      "theme": "",
+      "brand_slug": null,
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "Programação do webinar de treinamento interno time de Serviços e Suporte (agendamento, cards, página de inscrição, e-mail, pesquisa)",
+      "theme": "",
+      "brand_slug": null,
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    },
+    {
+      "title": "Criação de Demo de 1 minuto",
+      "theme": "",
+      "brand_slug": null,
+      "audience": "",
+      "kind": "",
+      "owner": "",
+      "status": ""
+    }
+  ],
+  "roteiros": [
+    {
+      "title": "Video 1 - O que é TOTVS VAREJO POSTOS DE COMBUSTIVEIS",
+      "brand_slug": "postos_combustiveis",
+      "recording_status": "GRAVADO",
+      "script": "Você conhece o TOTVS Varejo Postos de Combustíveis? Não? Então fique comigo que esse vídeo é pra você! É uma solução completa e integrada para gestão de redes de postos, desde o controle de estoque de combustíveis, gestão financeira, até conformidade fiscal e operação de pista. Ela automatiza processos, reduz erros e dá mais segurança à sua operação. Tudo para você ter mais eficiência no dia a dia. Estamos na pista com você!",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": "divulgado"
+    },
+    {
+      "title": "Vídeo 2 - Controle de Estoque e Qualidade de Combustíveis",
+      "brand_slug": "postos_combustiveis",
+      "recording_status": "GRAVADO",
+      "script": "Você gestor de postos de combustível, quer transformar sua operação com mais controle, resultados e inteligência? Fica aqui pq esse vídeo é pra você! Se abastecer é o core do seu negócio, controle de estoque e qualidade não podem falhar. Com o TOTVS Varejo Postos, você monitora níveis nos tanques em tempo real, acompanha testes de qualidade e evita rupturas ou perdas. Isso significa menos desperdício e mais lucro no caixa! Estamos na pista com você!",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": "divulgado"
+    },
+    {
+      "title": "Vídeo 3 - Gestão Financeira e Conciliação Automática",
+      "brand_slug": "postos_combustiveis",
+      "recording_status": "GRAVADO",
+      "script": "Quer ver seu fluxo de caixa em tempo real e com conciliações automáticas? Então fique comigo que esse vídeo é pra você! Com o TOTVS Varejo Postos de Combustíveis, todas as vendas e recebimentos são conciliados, inclusive cartões de crédito, direto no sistema. Isso evita fraudes, retrabalhos e garante mais precisão na sua gestão financeira. Estamos na pista com você!",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": "divulgado"
+    },
+    {
+      "title": "> Vídeo 4 – PDV Desktop, PDV Móvel e Totens de Pagamento",
+      "brand_slug": "postos_combustiveis",
+      "recording_status": "GRAVADO",
+      "script": "O atendimento rápido faz toda diferença na pista e na loja de conveniência. Quer saber como acelerar essa diferença? Fica comigo pq esse vídeo é pra você! Com o PDV Desktop, o PDV Móvel e Totens de Pagamento integrados, sua operação fica mais ágil, vendas de combustível, loja e serviços tudo conectado. Atendimento fluido = cliente satisfeito e maior ticket médio! Estamos na pista com você!",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": "AGENDADO"
+    },
+    {
+      "title": "Vídeo 5 – Gestão de Frotas e Clientes PJ",
+      "brand_slug": "postos_combustiveis",
+      "recording_status": "GRAVADO",
+      "script": "Você atende frotistas e quer saber como potencializar esse atendimento? Fica comigo pq esse vídeo é pra você! Com o módulo de Gestão de Frotas e Crédito, dá pra controlar limites, consumo e faturamento. Tudo com regras específicas para clientes PJ, sem dor de cabeça e com total visibilidade dos seus números. Estamos na pista com você!",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": "AGENDADO"
+    },
+    {
+      "title": "Vídeo 6 – App Meu Gestor: Sua Gestão na Palma da Mão",
+      "brand_slug": "postos_combustiveis",
+      "recording_status": "GRAVADO",
+      "script": "Não está no posto e precisa ajustar o preço do combustível? Quer saber como acelerar a sua gestão de qualquer lugar? Fica comigo pq esse vídeo é pra você! Com o App Meu Gestor, você faz alterações rápidas, acompanha estoque e relatórios direto do celular ou tablet. É gestão mobile pra quem está sempre na pi",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": "AGENDADO"
+    },
+    {
+      "title": "Vídeo 1 – O que é o Gestão Deathcare by Duofy?",
+      "brand_slug": "deathcare",
+      "recording_status": "GRAVADO",
+      "script": "Você conhece o Gestão Deathcare by Duofy? É a solução mais completa para gestão pensada especialmente para o setor funerário, integrando operações comerciais, administrativas e operacionais em um só lugar. Com ele, você padroniza processos, reduz a burocracia e melhora a governança da sua empresa, seja para planos funerários, cemitérios ou crematórios ... tudo fica mais organizado e eficiente! Porque cuidar de pessoas começa com boa gestão.",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": "divulgado"
+    },
+    {
+      "title": "Vídeo 2 – Gestão de Planos e Assistências Funerárias",
+      "brand_slug": "deathcare",
+      "recording_status": "GRAVADO",
+      "script": "Na solução Gestão Deathcare by Duofy, o módulo de Planos e Assistências Funerárias te ajuda a gerenciar toda a rotina: criação e gestão de planos individuais, familiares ou empresariais, definição de regras por idade ou beneficiários, além de reduzir o churn com precificação e políticas personalizadas. Tudo pensado para fidelizar seu cliente e fortalecer sua operação! Porque cuidar de pessoas começa com boa gestão.",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": "divulgado"
+    },
+    {
+      "title": "Vídeo 3 – Gestão Cemiterial e Crematórios",
+      "brand_slug": "deathcare",
+      "recording_status": "REEDITADO",
+      "script": "Quer controle total do seu cemitério ou crematório? Com o módulo de Gestão Cemiterial e Crematórios, você visualiza mapas de lotes, controla sepultamentos, serviços e taxas, tudo padronizado e integrado ao sistema. Menos papel, menos retrabalho e mais eficiência operacional! Porque cuidar de pessoas começa com boa gestão.",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": "divulgado"
+    },
+    {
+      "title": "Vídeo 4 – Vendas, Força de Vendas e Auditoria",
+      "brand_slug": "deathcare",
+      "recording_status": "REGRAVADO",
+      "script": "Seu time comercial precisa de agilidade? A solução tem App de Força de Vendas e Painel de Gestão de Vendas e Auditoria, permitindo que sua equipe venda de forma móvel, com assinaturas digitais, e que você audite, aprove e integre tudo ao ERP automaticamente. Mais rapidez e menos erros no processo comercial! Porque cuidar de pessoas começa com boa gestão.",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": "agendado"
+    },
+    {
+      "title": "Vídeo 5 – Cobrança Eficiente e Redução da Inadimplência",
+      "brand_slug": "deathcare",
+      "recording_status": "GRAVADO",
+      "script": "Inadimplência é dor de cabeça pra qualquer gestão. Com o Painel de Gestão de Cobrança e o App de Cobrança, você monitora rotas, controla negociações, gerencia recorrências e tem indicadores que ajudam a reduzir a inadimplência. Cobrança mais inteligente = operação mais saudável! Porque cuidar de pessoas começa com boa gestão.",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": "agendado"
+    },
+    {
+      "title": "> Vídeo 6 – Portal e App do Cliente para Experiência Humanizada",
+      "brand_slug": "deathcare",
+      "recording_status": "REGRAVADO",
+      "script": "Como escalar atendimento no deathcare sem perder o cuidado humano? O Portal do Cliente e o App do Cliente, ambos personalizáveis com a sua marca, permitem acessar contratos, efetuar pagamentos, ativar mensalidades em recorrência, receber notificações e muito mais. Resultado? Menos ruído, mais clareza e uma experiência mais humana, mesmo nos momentos mais delicados.” Porque cuidar de pessoas começa com boa gestão.",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": "agendado"
+    },
+    {
+      "title": "CHAMADA EBOOK REFORMA TRIBUTARIA",
+      "brand_slug": "postos_combustiveis",
+      "recording_status": "GRAVADO",
+      "script": "A Reforma Tributária já começou. E no setor de combustíveis, quem não se adapta rápido, perde margem. ⛽📊 Com a chegada do IVA Dual, CBS e IBS passam a exigir controle total, rastreabilidade e decisões baseadas em dados, não em planilhas improvisadas. Com o TOTVS Varejo Postos de Combustíveis, o seu sistema deixa de reagir e passa a antecipar: * Integração completa entre operação, fiscal e financeiro * Apuração correta de créditos e impactos tributários * Atualizações automáticas alinhadas à legislação vigente Enquanto muitos ainda tentam entender o novo cenário, nossos clientes já operam com segurança, previsibilidade e estratégia. A pergunta não é se a mudança vai impactar o seu posto. É se o seu sistema está preparado para sustentar o caixa nesse novo modelo.",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": "divulgado"
+    },
+    {
+      "title": "REFORMA TRIBUTARIA EPISODIO 1",
+      "brand_slug": "postos_combustiveis",
+      "recording_status": "GRAVADO",
+      "script": "Reforma Tributária começou. Seu posto já sentiu? A Reforma Tributária já começou. E se você é dono ou gestor de posto, isso não é assunto de amanhã, é de agora. Estamos falando do IVA Dual, com CBS e IBS, que muda a lógica de imposto, crédito e preço. No curto prazo, parece confuso. No médio prazo, quem tem gestão e sistema, entende o impacto antes e se antecipa. Reforma não é só imposto. É decisão de gestão. E posto que não se prepara… sente no caixa. Reforma exige controle. Controle exige sistema.",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": "divulgado 09/01"
+    },
+    {
+      "title": "REFORMA TRIBUTARIA episodio 2",
+      "brand_slug": "postos_combustiveis",
+      "recording_status": "GRAVADO",
+      "script": "Vai aumentar imposto no posto? Essa é a pergunta que todo gestor faz. A resposta curta? Pode aumentar em alguns cenários, sim. Mas a resposta certa é outra: o risco maior não está só na alíquota, está na falta de controle da margem, do crédito e do preço. Quem não sabe exatamente quanto paga, quanto recupera e quanto ganha… perde dinheiro em silêncio. A pergunta não é se muda. É se você está preparado. Reforma exige controle. Controle exige sistema.",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": "divulgado"
+    },
+    {
+      "title": "REFORMA TRIBUTARIA episodio 3",
+      "brand_slug": "postos_combustiveis",
+      "recording_status": "GRAVADO",
+      "script": "Crédito tributário: oportunidade ou armadilha? A Reforma promete ampliar o crédito ao longo da cadeia. Na teoria, parece ótimo. Na prática, para o posto, surgem dúvidas, principalmente sobre créditos ligados a serviços. Sem sistema e controle, o risco é simples: perder crédito sem nem perceber. E crédito perdido é margem jogada fora. Oportunidade ou dor de cabeça? Depende da gestão. Reforma exige controle. Controle exige sistema.",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": "divulgado"
+    },
+    {
+      "title": "REFORMA TRIBUTARIA episodio 4",
+      "brand_slug": "postos_combustiveis",
+      "recording_status": "GRAVADO",
+      "script": "Reforma Tributária não é problema do contador. É da gestão. Se você acha que a Reforma é só assunto do contador, cuidado. Com IVA Dual, mudanças na substituição tributária e novas regras de crédito, a formação de preço fica ainda mais sensível. Um erro pequeno hoje vira prejuízo grande amanhã. Quem tem gestão integrada enxerga antes, ajusta rápido e protege a margem. Reforma não pune quem paga imposto. Pune quem não controla. Reforma exige controle. Controle exige sistema.",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": ""
+    },
+    {
+      "title": "REFORMA TRIBUTARIA episodio 5",
+      "brand_slug": "postos_combustiveis",
+      "recording_status": "GRAVADO",
+      "script": "Crédito mal controlado vira dinheiro perdido. Você sabe exatamente quanto crédito seu posto deixa de aproveitar hoje? A Reforma promete crédito mais amplo. Mas sem controle fiscal e financeiro, o risco é duplo: ou você não aproveita, ou erra e cria passivo tributário. Sistema não é custo. Sistema é proteção do caixa. Reforma exige controle. Controle exige sistema.",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": ""
+    },
+    {
+      "title": "REFORMA TRIBUTARIA episodio 6",
+      "brand_slug": "postos_combustiveis",
+      "recording_status": "GRAVADO",
+      "script": "Preço na bomba vai mudar. Você está pronto? O consumidor olha preço.O fisco olha imposto. E o gestor precisa olhar tudo ao mesmo tempo. Com regras mais transparentes, qualquer erro na formação de preço aparece rápido. Quem não tem visão clara de custos, tributos e margem sente no caixa. Antecipar não é luxo. É estratégia de sobrevivência. Reforma exige controle. Controle exige sistema.",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": ""
+    },
+    {
+      "title": "REFORMA TRIBUTARIA episodio 1",
+      "brand_slug": "deathcare",
+      "recording_status": "GRAVADO",
+      "script": "Reforma Tributária: por que o deathcare precisa olhar para isso agora? A Reforma Tributária começa agora em janeiro. E sim, o deathcare será impactado. Funerárias, cemitérios, crematórios e planos lidam com serviços, contratos de longo prazo e margens sensíveis. Quando o modelo de tributação muda, muda também preço, crédito e previsibilidade financeira. Quem não mapeia isso agora, corre o risco de comprometer contratos e resultados. No deathcare, gestão não é detalhe. É responsabilidade. Reforma exige controle. Controle exige sistema.",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": "divulgado 05 JANEIRO"
+    },
+    {
+      "title": "REFORMA TRIBUTARIA episodio 2",
+      "brand_slug": "deathcare",
+      "recording_status": "GRAVADO",
+      "script": "IVA e serviços funerários: onde está o risco? O IVA muda a lógica de quem trabalha com serviços. E no deathcare, isso é crítico. A promessa é ampliar créditos. O desafio é a regulamentação dos serviços, que ainda gera dúvidas. Sem controle de custos, contratos e processos, o impacto não aparece agora… aparece depois, no caixa. Governança tributária deixou de ser opcional. Reforma exige controle. Controle exige sistema.",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": "divulgado 21 JANEIRO"
+    },
+    {
+      "title": "REFORMA TRIBUTARIA episodio 3",
+      "brand_slug": "deathcare",
+      "recording_status": "GRAVADO",
+      "script": "Reforma Tributária não é só imposto. É estratégia. Quando se fala em Reforma, muita gente pensa só em imposto. Mas ela exige algo maior: revisão de processos, sistemas e decisões estratégicas. No deathcare, onde confiança e sustentabilidade caminham juntas, errar na gestão custa caro... para o negócio e para as famílias. Quem se antecipa, protege o futuro da operação. Reforma exige controle. Controle exige sistema.",
+      "scenes": "REGRAVAR",
+      "lettering": "",
+      "caption": "",
+      "status": "divulgado 23 fevereiro"
+    },
+    {
+      "title": "REFORMA TRIBUTARIA episodio 4",
+      "brand_slug": "deathcare",
+      "recording_status": "GRAVADO",
+      "script": "A Reforma também impacta o setor funerário. Ainda existe quem ache que a Reforma Tributária não chega no deathcare. Chega sim. E chega direto na gestão. Mudanças em impostos sobre serviços, crédito tributário e estrutura de custos exigem mais controle financeiro e fiscal. Sem isso, o risco é perder previsibilidade e margem. Gestão profissional garante sustentabilidade e cuidado com o futuro do negócio. Reforma exige controle. Controle exige sistema.",
+      "scenes": "REGRAVAR",
+      "lettering": "",
+      "caption": "",
+      "status": "AGENDADO"
+    },
+    {
+      "title": "REFORMA TRIBUTARIA episodio 5",
+      "brand_slug": "deathcare",
+      "recording_status": "GRAVADO",
+      "script": "Humanização também passa por gestão. Não existe atendimento humanizado com operação desorganizada. A Reforma aumenta a exigência por clareza, rastreabilidade e governança. Gestão frágil gera erro, estresse e impacto direto na experiência da família. Tecnologia não desumaniza. Tecnologia organiza, protege e dá segurança. Reforma exige controle. Controle exige sistema.",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": "AGENDADO"
+    },
+    {
+      "title": "REFORMA TRIBUTARIA episodio 6",
+      "brand_slug": "deathcare",
+      "recording_status": "GRAVADO",
+      "script": "O maior risco da Reforma é não se preparar. O problema não é a mudança. É ignorar a mudança. Quem não revisa processos, contratos e controles financeiros pode ser surpreendido quando as novas regras entrarem em vigor. No deathcare, antecipar não é só estratégia. É governança. Reforma exige controle. Controle exige sistema.",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": "AGENDADO"
+    },
+    {
+      "title": "Quando o gestor não consegue estar onde mais importa",
+      "brand_slug": "deathcare",
+      "recording_status": "2026-02-03 00:00:00",
+      "script": "Quando a gestão consome o tempo,o acolhimento paga o preço. Enquanto a família precisa de presença, o gestor está preso em planilha, contrato, cobrança, retrabalho. Não é falta de cuidado. É falta de estrutura. O Gestão Deathcare by Duofy organiza processos, integra informações e devolve ao gestor o que ele mais precisa: tempo para liderar e cuidar.Tecnologia não substitui o humano. Ela protege.",
+      "scenes": "Abertura: Câmera mostra o relógio correndo rápido.",
+      "lettering": "ABERTURA: No deathcare, o tempo nunca espera. ENCERRAMENTO: Tecnologia não substitui o humano. Ela protege.",
+      "caption": "No deathcare, o dia nunca fecha. Quando você vê, está resolvendo contrato, sistema, cobrança… e o tempo que deveria ir para liderar e acompanhar o atendimento simplesmente some. Isso não tem a ver com falta de cuidado. Tem a ver com processos que não ajudam. Organizar a gestão não é burocracia. É criar espaço para o humano aparecer. Na sua rotina, o que mais rouba seu tempo hoje? #GestãoDeathcare #DeathcareBrasil #Funerárias #Cemitério #Crematório #PlanosFunerários",
+      "status": "postado 09 fevereiro"
+    },
+    {
+      "title": "Equipe exausta não acolhe como gostaria",
+      "brand_slug": "deathcare",
+      "recording_status": "2026-02-03 00:00:00",
+      "script": "Gestão frágil sobrecarrega pessoas boas. No deathcare, não falta só gente.Falta gente preparada para lidar com processo e emoção. Sem apoio, a equipe cansa. E quando cansa, sofre. O Gestão Deathcare by Duofy padroniza rotinas, reduz improviso e dá suporte para que a equipe faça bem o que sabe fazer: acolher. Cuidar da equipe também é cuidar das famílias.",
+      "scenes": "Close em uma cadeira vazia.",
+      "lettering": "Texto na tela: Mais uma vaga aberta.",
+      "caption": "Quem trabalha no deathcare sente, e sente muito. Quando não existe processo claro, sobra improviso. E quem paga essa conta é a equipe e o gestor junto. Equipe cansada não é falta de vontade. É falta de estrutura. Organizar a operação é uma forma de cuidar de quem cuida. Hoje, sua equipe está sobrecarregada ou mal distribuída? #AtendimentoHumanizado #GestãoDeathcare #Funerárias #Cemitérios #Crematórios #PlanosFunerários #Duofy",
+      "status": "EM EDIÇÃO"
+    },
+    {
+      "title": "No deathcare, erro de processo vira dor",
+      "brand_slug": "deathcare",
+      "recording_status": "2026-02-03 00:00:00",
+      "script": "Quando o processo falha, a experiência da família sente. Planilhas paralelas.Informações na cabeça de alguém. Processos que dependem da memória. No deathcare, isso não é detalhe.É risco. O Gestão Deathcare by Duofy centraliza dados, garante rastreabilidade e segurança em cada etapa da jornada. Gestão segura é respeito.",
+      "scenes": "Tela preta",
+      "lettering": "Tela preta → surge a frase: E se uma informação falhar?",
+      "caption": "Planilha, caderno, memória. Funciona… até o dia que não funciona mais. No deathcare, erro de processo vira problema sério. E quase sempre aparece no pior momento. Controle não é rigidez. É segurança para trabalhar com tranquilidade. Hoje, se alguém sair da equipe, o processo continua? #GestãoFunerária #DeathcareBrasil #FuneráriasBrasil #Cemitério #Crematório #PlanosFunerários #Duofy",
+      "status": "postado dia 18/02"
+    },
+    {
+      "title": "Crescer sem controle é colocar tudo em risco",
+      "brand_slug": "deathcare",
+      "recording_status": "2026-02-03 00:00:00",
+      "script": "E quem vive no limite não consegue planejar o cuidado. Ela começa na inadimplência invisível, no contrato mal gerido, no custo que ninguém acompanha.” Sem previsibilidade, o gestor vive no limite. O Gestão Deathcare by Duofy traz controle financeiro, visão de contratos e dados para decisões sustentáveis. Gestão forte sustenta um cuidado forte.",
+      "scenes": "",
+      "lettering": "Frase na tela: Nem toda crise começa no atendimento",
+      "caption": "Nem todo problema aparece no atendimento. Muitos começam no financeiro, em silêncio. Contrato sem controle, inadimplência que cresce aos poucos, custo que ninguém acompanha de perto. Sem previsibilidade, o gestor vive no limite. E ninguém consegue cuidar bem vivendo no limite. Gestão financeira não é sobre dinheiro. É sobre sustentar o cuidado no longo prazo. Hoje, você tem clareza real dos números da sua operação? #GestãoDeathcare #GestãoFinanceira #FuneráriasBrasil #PlanosFunerários #Cemitérios #Crematórios #Duofy",
+      "status": "postado 26 de fevereiro"
+    },
+    {
+      "title": "Institucional",
+      "brand_slug": "duofy_solucoes",
+      "recording_status": "",
+      "script": "CENA 1: O SILÊNCIO trazendo um Impacto Emocional >> Tela escura. Som quase imperceptível<< Texto na tela e locuçao em off: Quando tudo funciona, ninguém percebe. (Pausa) Mas quando falha…o impacto é imediato. CENA 2: (trazer Conexão) >> Cortes sutis e respeitosos<< Posto abrindo cedo Abastecimento acontecendo Gestor olhando dados Porta sendo aberta com cuidado Um gesto humano de acolhimento como abraço (sem dor explícita) Uma coleira e cachorro sendo segurados com carinho (deathcare pet, sutil) Locução em off: Existem operações que não podem parar. Porque do outro lado…tem pessoas e vínculos. CENA 3: >> Imagens abstratas de dados, integrações, fluxos<< Locução em off: Enquanto todos veem o atendimento…poucos percebem o que sustenta tudo. A gestão. (Pausa curta) Quando ela falha, o cuidado se perde. Quando ela funciona, o humano aparece. CENA 4: >>A marca aparece na tela: Duofy<< Locução em off: A Duofy atua onde a gestão precisa ser precisa…especialmente quando o cuidado não pode falhar. CENA 5: >>Cortes alternando operações essenciais<< Locução em off: Da gestão de postos de combustíveis à gestão de operações de postos de combustiveis ou setor funerário com tecnologia líder. >>Selo aparece suavemente: Partner TOTVS<< Locução em off: Como Partner TOTVS, conectamos tecnologia a setores que exigem controle, respeito e continuidade. CENA 6: >>Tela limpa e branca e Silêncio controlado<< Locução em off: Para que o essencial continue funcionando. Assinatura: Duofy Gestão para postos de combustíveis | Gestão para deathcare. Tecnologia para o que não pode parar.",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": "EM APROVAÇAO"
+    },
+    {
+      "title": "CASE DE SUCESSO: Grupo Décio acelera a gestão com Duofy e TOTVS Varejo Postos de Combustíveis",
+      "brand_slug": "duofy_solucoes",
+      "recording_status": "2026-02-18 00:00:00",
+      "script": "Cena 1: Mulher A na pista do posto, movimento ao fundo. Ela olha direto pra câmera: Quando você opera uma rede de postos, não dá pra gerir no improviso. >>Texto na tela << Rede grande exige gestão de verdade. + Cena 2: Mulher B na sede. O Grupo Décio é uma rede de postos que atua em diferentes regiões, com operações que precisam rodar no mesmo padrão. >>Texto na tela << Grupo Décio | Rede de Postos de Combustíveis. + Cena 3: As duas aparecem alternando cortes (sede + posto). Mulher A: Quanto mais a rede cresce, mais complexo fica controlar dados, processos e decisões. Mulher B: E no nosso setor, decisão lenta vira prejuízo. >>Texto na tela << Escala sem controle trava o crescimento. + Cena 4: Sistema em uso, dashboards, equipe trabalhando. Mulher B fala olhando para câmera: Com a solução TOTVS Varejo Postos a gestão da rede ficou integrada e muito mais estratégica. Mulher A: Hoje a gente tem visão do todo, dados confiáveis e mais segurança para decidir. >>Texto na tela << TOTVS Varejo Postos + Duofy + Cena 5: Pista cheia, loja, time em ação. Mulher A: Isso reflete direto na operação. Mulher B: Mais controle, mais eficiência e uma rede preparada pra crescer com consistência. >>Texto na tela << Gestão centralizada. Operação alinhada. + Cena 6: As duas juntas, lado a lado, ambiente de posto ou sede. Mulher A: Quem entende de pista… Mulher B: …sabe que gestão certa faz toda a diferença. Assinatura na tela: Grupo Décio + Duofy + Selo Partner TOTVS | Tecnologia para redes de postos de combustíveis",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": "ROTEIRIZAR"
+    },
+    {
+      "title": "ENVIADO P AGENCIA",
+      "brand_slug": "duofy_solucoes",
+      "recording_status": "",
+      "script": "CARROSSEL: TENDÊNCIAS DO SETOR FUNERÁRIO (2025–2026) Slide 1 — O FUTURO DO SETOR FUNERÁRIO JÁ COMEÇOU Tendências que estão transformando o mercado no Brasil e no mundo Slide 2 — Mercado em crescimento acelerado * O setor funerário brasileiro movimenta cerca de R$ 13 bilhões/ano * E pode chegar a US$ 142,8 bilhões globalmente até 2026 O crescimento é impulsionado por: * Novos serviços * Mudança cultural * Inovação tecnológica (Fonte: Zurik Advisors / Sincep / Global Market Statistics). Slide 3 — Planejamento Antecipado Cada vez mais pessoas contratam serviços antes do falecimento, as funerárias deixam de ser reativas e passam a ser consultivas. Motivos: * Segurança financeira * Redução do impacto emocional * Organização familiar (Fonte: UAI / mercado brasileiro) Slide 4 — Digitalização do setor Experiência mais acessível e conectada. O funeral também entrou na era digital: * Contratação online * Velórios transmitidos ao vivo * Memoriais digitais (Fonte: Soluções Brasil) Slide 5 — Personalização extrema Adeus padrão tradicional, olá despedidas únicas! No exterior: até hologramas e IA para recriar memórias. Tendências: * Cerimônias temáticas * Homenagens personalizadas * Experiências imersivas (som, imagem, história de vida) (Fonte: Funermostra / El País) Slide 6 — Crescimento da cremação A cremação está em forte alta! +34,9% de crescimento em um ano no Brasil Motivos: * Praticidade * Custo * Sustentabilidade * Mudança cultural (Fonte: Grupo Zelo / mercado brasileiro) Slide 7 — Sustentabilidade A morte também está ficando mais sustentável com forte crescimento global. Confira as tendências: * Urnas biodegradáveis * Cemitérios ecológicos * Redução de emissões * Materiais recicláveis Slide 8 — Novos produtos e serviços O setor está se diversificando: * Planos com benefícios em vida (telemedicina, descontos) * Planos pet 🐾 * Assistência familiar completa * Serviços de luto e apoio emocional (Fonte: Estado de Minas) Slide 9 — Humanização e experiência O foco mudou: da morte para o cuidado com a família - o death care passa a ter uma jornada cada vez mais completa. * Acolhimento emocional * Conteúdos sobre luto * Experiência mais leve e significativa (Fonte: mercado brasileiro) Slide 10 — Profissionalização e consolidação O setor está mais estruturado e competitivo * Mais de 14 mil empresas no Brasil * Crescimento de grandes grupos * Gestão baseada em dados (Fonte: Por Dentro do RN) Slide 11 — Tendência global: tecnologia + IA O setor mais tradicional está se tornando tech Inovações emergentes: * IA para recriar imagens do falecido * Hologramas em cerimônias * Testamentos digitais * Gestão automatizada (Fonte: Funermostra / mercado internacional) Slide 12 — O setor funerário deixou de ser tradicional e virou um mercado de inovação, experiência e recorrência. Quem entender essas tendências sai na frente Quer um diagnóstico do seu negócio funerário? Fale com a gente! Assinatura DUOFY + NOME DA SOLUÇÃO + SELO PARCERIA TOTVS",
+      "scenes": "",
+      "lettering": "",
+      "caption": "",
+      "status": ""
+    }
+  ]
+}
