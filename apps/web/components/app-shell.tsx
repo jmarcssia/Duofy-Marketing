@@ -20,7 +20,6 @@ import {
   BookIcon,
   SearchIcon,
   SettingsIcon,
-  ShareIcon,
   ShieldCheckIcon
 } from "@/components/icons"
 
@@ -30,7 +29,7 @@ const navItems = [
   { href: "/memory", label: "Memória", icon: BookIcon },
   { href: "/approvals", label: "Revisão", icon: ShieldCheckIcon },
   { href: "/relatorios", label: "Relatórios", icon: ChartIcon },
-  { href: "/redes", label: "Redes & Tráfego", icon: ShareIcon },
+  // /redes (Redes & Tráfego) está fora do escopo V1 — oculto até haver integração real.
   { href: "/admin", label: "Administração", icon: SettingsIcon }
 ]
 
