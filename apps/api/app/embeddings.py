@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import math
 
 import httpx
@@ -9,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crypto import decrypt_secret
 from app.models import ProviderCredential
+
+logger = logging.getLogger(__name__)
 
 EMBEDDING_DIMENSIONS = 1536
 
@@ -65,13 +68,31 @@ async def embed_text(db: AsyncSession, text: str) -> list[float]:
         "Content-Type": "application/json",
     }
 
-    async with httpx.AsyncClient(timeout=60) as client:
-        response = await client.post(
-            f"{base_url}/embeddings",
-            headers=headers,
-            json=payload,
+    # Resiliência: se o provedor falhar/der timeout, degrada para o embedding local
+    # (com aviso) em vez de propagar 500 e derrubar o fluxo que usa RAG.
+    try:
+        async with httpx.AsyncClient(timeout=60) as client:
+            response = await client.post(
+                f"{base_url}/embeddings",
+                headers=headers,
+                json=payload,
+            )
+            response.raise_for_status()
+            data = response.json()
+    except Exception:
+        logger.warning(
+            "Embeddings via provedor '%s' falharam; usando embedding local (qualidade menor).",
+            credential.provider,
+            exc_info=True,
         )
-        response.raise_for_status()
-        data = response.json()
+        return _local_embedding(text)
 
-    return _fit_dimensions(data["data"][0]["embedding"])
+    embedding = data["data"][0]["embedding"]
+    if len(embedding) != EMBEDDING_DIMENSIONS:
+        logger.warning(
+            "Embedding do modelo '%s' tem dimensão %d, esperado %d; ajustando (pad/truncate).",
+            model,
+            len(embedding),
+            EMBEDDING_DIMENSIONS,
+        )
+    return _fit_dimensions(embedding)
