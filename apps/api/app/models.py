@@ -416,3 +416,37 @@ class ContentTheme(TimestampMixin, Base):
     status: Mapped[str | None] = mapped_column(String(80), index=True, nullable=True)
 
 
+class ResearchTheme(TimestampMixin, Base):
+    """Banco de temas de pesquisa — pautas para disparar pesquisas de mercado (por marca)."""
+
+    __tablename__ = "research_themes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    brand_slug: Mapped[str | None] = mapped_column(String(120), index=True, nullable=True)
+
+
+class Briefing(TimestampMixin, Base):
+    """Plano proposto pelo orquestrador antes de executar uma tarefa de agente."""
+
+    __tablename__ = "briefings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True, nullable=True)
+    brand_slug: Mapped[str | None] = mapped_column(String(120), index=True, nullable=True)
+    request_text: Mapped[str] = mapped_column(Text, nullable=False)
+    tipo: Mapped[str] = mapped_column(String(40), index=True, nullable=False)
+    objetivo: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    resumo_plano: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    agente_alvo: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    tema_sugerido: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    status: Mapped[str] = mapped_column(String(40), index=True, nullable=False, default="pending")
+    model_override: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    research_theme_id: Mapped[int | None] = mapped_column(
+        ForeignKey("research_themes.id"), nullable=True
+    )
+    result_kind: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    result_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+

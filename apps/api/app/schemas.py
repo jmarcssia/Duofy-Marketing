@@ -226,6 +226,63 @@ class ThemeImportResult(BaseModel):
     skipped: int
 
 
+class ResearchThemeCreate(BaseModel):
+    title: str = Field(min_length=2, max_length=255)
+    notes: str | None = Field(default=None, max_length=4000)
+    brand_slug: str | None = Field(default=None, max_length=120)
+
+
+class ResearchThemeRead(BaseModel):
+    id: int
+    title: str
+    notes: str | None = None
+    brand_slug: str | None = None
+
+
+class ResearchModelRead(BaseModel):
+    label: str
+    model_id: str
+
+
+class PlanRequest(BaseModel):
+    prompt: str = Field(min_length=2)
+    brand_slug: str | None = Field(default=None, max_length=120)
+
+
+class PlanFromThemeRequest(BaseModel):
+    research_theme_id: int
+    brand_slug: str | None = Field(default=None, max_length=120)
+
+
+class BriefingApproveRequest(BaseModel):
+    model_override: str | None = Field(default=None, max_length=120)
+    research_theme_id: int | None = None
+
+
+class BriefingRead(BaseModel):
+    id: int
+    brand_slug: str | None = None
+    request_text: str
+    tipo: str
+    objetivo: str
+    resumo_plano: str
+    agente_alvo: str | None = None
+    tema_sugerido: str | None = None
+    status: str
+    model_override: str | None = None
+    research_theme_id: int | None = None
+    result_kind: str | None = None
+    result_id: int | None = None
+    direct_answer: str | None = None  # preenchido quando tipo == "conversa"
+
+
+class BriefingApproveResponse(BaseModel):
+    briefing: BriefingRead
+    answer: str
+    result_kind: str | None = None
+    result_id: int | None = None
+
+
 class ContentOutputUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=2, max_length=255)
     content: str | None = Field(default=None, min_length=1)
