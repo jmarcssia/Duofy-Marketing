@@ -284,6 +284,42 @@ export type ContentTheme = {
   status: string | null
 }
 
+export type ResearchTheme = {
+  id: number
+  title: string
+  notes: string | null
+  brand_slug: string | null
+}
+
+export type ResearchModel = {
+  label: string
+  model_id: string
+}
+
+export type Briefing = {
+  id: number
+  brand_slug: string | null
+  request_text: string
+  tipo: "pesquisa" | "conteudo" | "imprensa" | "calendario" | "conversa"
+  objetivo: string
+  resumo_plano: string
+  agente_alvo: string | null
+  tema_sugerido: string | null
+  status: string
+  model_override: string | null
+  research_theme_id: number | null
+  result_kind: string | null
+  result_id: number | null
+  direct_answer: string | null
+}
+
+export type BriefingApproveResponse = {
+  briefing: Briefing
+  answer: string
+  result_kind: string | null
+  result_id: number | null
+}
+
 export type ModelCall = {
   id: number
   task_type: string
