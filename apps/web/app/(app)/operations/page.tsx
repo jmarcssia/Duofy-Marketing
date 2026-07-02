@@ -8,12 +8,10 @@ import {
   AlertTriangleIcon,
   BookIcon,
   CheckCircleIcon,
-  CloseIcon,
   CopyIcon,
   DownloadIcon,
   FileIcon,
   PlusIcon,
-  RefreshIcon,
   SearchIcon,
   SendIcon,
   SettingsIcon,
@@ -89,12 +87,6 @@ export default function OperationsPage() {
   const [content, setContent] = useState<ContentOutput[]>([])
   const [themes, setThemes] = useState<ContentTheme[]>([])
   const [loading, setLoading] = useState(true)
-
-  // Pesquisa (modal de criação)
-  const [researchOpen, setResearchOpen] = useState(false)
-  const [researchTheme, setResearchTheme] = useState("")
-  const [researchDepth, setResearchDepth] = useState<"quick" | "standard" | "deep">("quick")
-  const [researchBusy, setResearchBusy] = useState(false)
 
   // Criar novo conteúdo (barra da seção unificada)
   const [source, setSource] = useState<Source>("institucional")
@@ -204,26 +196,18 @@ export default function OperationsPage() {
     loadData()
   }
 
-  async function runResearch() {
-    if (researchTheme.trim().length < 3) return
+  async function openNewResearch() {
     const token = getTokenFromCookie()
-    if (!token || !brand) { setGenMsg("Selecione uma marca."); return }
-    setResearchBusy(true)
+    if (!token) return
     try {
-      const rep = await apiFetch<ResearchReport>("/api/research/run", token, {
+      const briefing = await apiFetch<Briefing>("/api/orchestrator/plan-research", token, {
         method: "POST",
-        body: JSON.stringify({ brand_slug: brand, theme: researchTheme.trim(), depth: researchDepth })
+        body: JSON.stringify({ brand_slug: brand || undefined })
       })
-      setResearchOpen(false)
-      setResearchTheme("")
-      setMessages((m) => [...m, { id: `s${Date.now()}`, role: "assistant", text: `Pesquisa criada e enviada ao Kanban: **${rep.title}** (#${rep.id}).`, time: now() }])
-      await loadData()
-      setSource("pesquisa")
-      setSelectedResearchId(rep.id)
+      setActiveBriefing(briefing)
     } catch (e: unknown) {
-      setMessages((m) => [...m, { id: `e${Date.now()}`, role: "assistant", text: e instanceof Error ? e.message : "Falha na pesquisa.", time: now(), error: true }])
+      setMessages((m) => [...m, { id: `e${Date.now()}`, role: "assistant", text: e instanceof Error ? e.message : "Erro ao abrir a pesquisa.", time: now(), error: true }])
     }
-    setResearchBusy(false)
   }
 
   async function generateContent() {
@@ -385,9 +369,8 @@ export default function OperationsPage() {
             <div ref={chatEndRef} />
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
-            <GhostButton className="text-xs" onClick={() => setResearchOpen(true)}><PlusIcon className="h-4 w-4" /> Nova pesquisa</GhostButton>
+            <GhostButton className="text-xs" onClick={openNewResearch}><PlusIcon className="h-4 w-4" /> Nova pesquisa</GhostButton>
             <GhostButton className="text-xs" onClick={() => coSectionRef.current?.scrollIntoView({ behavior: "smooth" })}><SparklesIcon className="h-4 w-4" /> Cocriar conteúdo</GhostButton>
-            <GhostButton className="text-xs" onClick={loadData}><RefreshIcon className="h-4 w-4" /> Atualizar</GhostButton>
           </div>
           <div className="mt-3 flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2">
             <div className="relative">
@@ -414,7 +397,7 @@ export default function OperationsPage() {
               <h2 className="text-base font-bold tracking-[-0.02em] text-ink">Kanban de Pesquisas</h2>
               <p className="text-xs text-muted">Clique para abrir · arraste entre colunas para mudar o status.</p>
             </div>
-            <button onClick={() => setResearchOpen(true)} className="duofy-tap flex items-center gap-1.5 rounded-lg bg-purple px-3 py-1.5 text-sm font-semibold text-white hover:bg-purple-deep">
+            <button onClick={openNewResearch} className="duofy-tap flex items-center gap-1.5 rounded-lg bg-purple px-3 py-1.5 text-sm font-semibold text-white hover:bg-purple-deep">
               <PlusIcon className="h-4 w-4" /> Nova pesquisa
             </button>
           </div>
@@ -423,7 +406,7 @@ export default function OperationsPage() {
           ) : reports.length === 0 ? (
             <div className="grid place-items-center rounded-xl border border-dashed border-line py-16 text-center">
               <p className="text-sm text-muted">Nenhuma pesquisa ainda.</p>
-              <button onClick={() => setResearchOpen(true)} className="mt-2 text-sm font-semibold text-purple">Criar primeira pesquisa →</button>
+              <button onClick={openNewResearch} className="mt-2 text-sm font-semibold text-purple">Criar primeira pesquisa →</button>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -621,35 +604,6 @@ export default function OperationsPage() {
           </div>
         )}
       </section>
-
-      {/* Modal de criação de pesquisa */}
-      {researchOpen && (
-        <div className="fixed inset-0 z-50 grid place-items-center p-4">
-          <div className="absolute inset-0 bg-ink/30 animate-fade-in" onClick={() => setResearchOpen(false)} aria-hidden="true" />
-          <div className="relative w-full max-w-lg rounded-2xl border border-line bg-white p-6 shadow-panel animate-scale-in">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-base font-bold text-ink">Nova pesquisa</h3>
-              <button onClick={() => setResearchOpen(false)} className="text-muted hover:text-ink"><CloseIcon className="h-5 w-5" /></button>
-            </div>
-            <label className="block text-xs font-semibold text-muted">Tema
-              <input value={researchTheme} onChange={(e) => setResearchTheme(e.target.value)} placeholder="Ex: tendências de IA para gestão de postos em 2026" className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:border-purple focus:outline-none" autoFocus />
-            </label>
-            <div className="mt-3 flex items-center gap-2">
-              <span className="text-xs font-semibold text-muted">Profundidade:</span>
-              {(["quick", "standard", "deep"] as const).map((d) => (
-                <button key={d} onClick={() => setResearchDepth(d)} className={`rounded-lg px-3 py-1 text-xs font-semibold transition ${researchDepth === d ? "bg-purple text-white" : "border border-line text-muted"}`}>{d === "quick" ? "Rápida" : d === "standard" ? "Padrão" : "Profunda"}</button>
-              ))}
-            </div>
-            <div className="mt-5 flex gap-2">
-              <button onClick={runResearch} disabled={researchBusy || researchTheme.trim().length < 3 || !brand} className="duofy-tap flex-1 rounded-lg bg-purple py-2.5 text-sm font-semibold text-white hover:bg-purple-deep disabled:opacity-50">
-                {researchBusy ? "Pesquisando…" : "Criar pesquisa"}
-              </button>
-              <button onClick={() => setResearchOpen(false)} className="duofy-tap rounded-lg border border-line px-4 py-2.5 text-sm font-medium text-ink hover:bg-surface">Cancelar</button>
-            </div>
-            {!brand && <p className="mt-2 text-xs text-red-600">Selecione uma marca no topo.</p>}
-          </div>
-        </div>
-      )}
 
       {activeBriefing && (
         <BriefingPanel

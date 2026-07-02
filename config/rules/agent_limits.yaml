@@ -7,6 +7,8 @@ token_budgets:
   orchestrator: 2000
   default: 1500
 research_depth:
-  quick:    { sources: 8,  excerpt: 1800 }
+  # Rápida: poucas fontes, sem Playwright — no mínimo 3 fontes.
+  quick:    { sources: 5,  excerpt: 1800 }
   standard: { sources: 12, excerpt: 3000 }
-  deep:     { sources: 15, excerpt: 4000 }
+  # Profunda: máximo que o sistema suporta (teto do validador = 30) + Playwright.
+  deep:     { sources: 30, excerpt: 6000 }

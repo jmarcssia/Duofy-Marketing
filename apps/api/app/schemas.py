@@ -254,9 +254,16 @@ class PlanFromThemeRequest(BaseModel):
     brand_slug: str | None = Field(default=None, max_length=120)
 
 
+class PlanResearchRequest(BaseModel):
+    brand_slug: str | None = Field(default=None, max_length=120)
+    theme: str | None = Field(default=None, max_length=255)
+
+
 class BriefingApproveRequest(BaseModel):
     model_override: str | None = Field(default=None, max_length=120)
     research_theme_id: int | None = None
+    theme_override: str | None = Field(default=None, max_length=255)
+    depth: Literal["quick", "deep"] | None = None
 
 
 class BriefingRead(BaseModel):

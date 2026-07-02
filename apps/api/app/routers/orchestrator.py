@@ -5,7 +5,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.briefing_service import approve_briefing, create_briefing, create_briefing_from_theme
+from app.briefing_service import (
+    approve_briefing,
+    create_blank_research_briefing,
+    create_briefing,
+    create_briefing_from_theme,
+)
 from app.db import get_db
 from app.dependencies import get_current_user
 from app.llm import LLMConfigurationError
@@ -17,6 +22,7 @@ from app.schemas import (
     BriefingRead,
     PlanFromThemeRequest,
     PlanRequest,
+    PlanResearchRequest,
     ResearchModelRead,
 )
 
@@ -75,6 +81,19 @@ async def plan_from_theme(
     return _briefing_read(briefing)
 
 
+@router.post("/plan-research", response_model=BriefingRead)
+async def plan_research(
+    payload: PlanResearchRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> BriefingRead:
+    """Entrada 'Nova pesquisa': abre um briefing de pesquisa em branco (sem LLM)."""
+    briefing = await create_blank_research_briefing(
+        db, user=current_user, brand_slug=payload.brand_slug, theme=payload.theme
+    )
+    return _briefing_read(briefing)
+
+
 @router.get("/briefings/{briefing_id}", response_model=BriefingRead)
 async def get_briefing(
     briefing_id: int,
@@ -108,6 +127,8 @@ async def approve(
         )
 
     model_override = payload.model_override
+    theme_override = payload.theme_override
+    depth = payload.depth
     if b.tipo == "pesquisa":
         if model_override and model_override not in allowed_research_model_ids():
             raise HTTPException(
@@ -115,7 +136,9 @@ async def approve(
                 detail="Modelo de pesquisa invalido (fora da lista permitida).",
             )
     else:
-        model_override = None  # so pesquisa aceita override
+        model_override = None  # so pesquisa aceita override de modelo
+        theme_override = None
+        depth = None
 
     try:
         answer, kind, result_id = await approve_briefing(
@@ -123,9 +146,20 @@ async def approve(
             briefing=b,
             model_override=model_override,
             research_theme_id=payload.research_theme_id,
+            theme_override=theme_override,
+            depth=depth,
         )
     except LLMConfigurationError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001 - erro do provedor/coleta vira mensagem legivel na UI
+        # A pesquisa faz rollback das mutacoes na falha; o briefing continua 'pending'
+        # (retryavel). Devolvemos a causa real em vez de um 500 sem CORS ("Failed to fetch").
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Falha ao executar a pesquisa: {str(exc)[:300]}",
+        ) from exc
 
     return BriefingApproveResponse(
         briefing=_briefing_read(b), answer=answer, result_kind=kind, result_id=result_id

@@ -77,25 +77,54 @@ async def create_briefing_from_theme(
     return briefing
 
 
+async def create_blank_research_briefing(
+    db: AsyncSession, *, user: User, brand_slug: str | None, theme: str | None = None
+) -> Briefing:
+    """Briefing de pesquisa em branco (entrada 'Nova pesquisa'): o usuario define o
+    tema, o modelo e a profundidade no painel antes de aprovar."""
+    title = (theme or "").strip() or None
+    briefing = Briefing(
+        user_id=user.id,
+        brand_slug=brand_slug,
+        request_text=f"Nova pesquisa de mercado: {title}" if title else "Nova pesquisa de mercado.",
+        tipo="pesquisa",
+        objetivo=(f"Pesquisar o tema '{title}'." if title else "Definir o tema da pesquisa."),
+        resumo_plano="Escolha o tema (digite ou selecione do banco), o modelo e a profundidade.",
+        agente_alvo="research",
+        tema_sugerido=title,
+        status="pending",
+    )
+    db.add(briefing)
+    await db.commit()
+    await db.refresh(briefing)
+    return briefing
+
+
 async def approve_briefing(
     db: AsyncSession,
     *,
     briefing: Briefing,
     model_override: str | None,
     research_theme_id: int | None,
+    theme_override: str | None = None,
+    depth: str | None = None,
 ) -> tuple[str, str | None, int | None]:
-    """Executa a tarefa aprovada. model_override so vale para pesquisa.
+    """Executa a tarefa aprovada. model_override/theme_override/depth so valem para pesquisa.
 
     Retorna (answer, kind, id).
     """
     if briefing.tipo == "pesquisa":
+        # Precedencia do tema: texto digitado no painel > tema do banco > tema sugerido.
         theme_id = research_theme_id or briefing.research_theme_id
-        theme_title = briefing.tema_sugerido or briefing.request_text
+        theme_title = (theme_override or "").strip() or briefing.tema_sugerido or ""
         if theme_id is not None:
             theme = await db.get(ResearchTheme, theme_id)
             if theme is not None:
-                theme_title = theme.title
                 briefing.research_theme_id = theme.id
+                if not theme_title:
+                    theme_title = theme.title
+        theme_title = theme_title or briefing.request_text
+        briefing.tema_sugerido = theme_title[:255]
         briefing.model_override = model_override  # ja validado no router
         output = await run_market_research(
             db,
@@ -103,6 +132,7 @@ async def approve_briefing(
                 brand_slug=briefing.brand_slug or "duofy_solucoes",
                 theme=theme_title[:255],
                 model=model_override,
+                depth=depth or "quick",
             ),
         )
         answer = f"Pesquisa concluida. Relatorio #{output.id} salvo em Pesquisas."
