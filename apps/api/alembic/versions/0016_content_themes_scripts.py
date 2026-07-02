@@ -30,8 +30,12 @@ def upgrade() -> None:
         sa.Column("kind", sa.String(length=120), nullable=True),
         sa.Column("owner", sa.String(length=120), nullable=True),
         sa.Column("status", sa.String(length=80), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
     op.create_index("ix_content_themes_brand_slug", "content_themes", ["brand_slug"])
     op.create_index("ix_content_themes_kind", "content_themes", ["kind"])
@@ -48,8 +52,12 @@ def upgrade() -> None:
         sa.Column("lettering", sa.Text(), nullable=True),
         sa.Column("caption", sa.Text(), nullable=True),
         sa.Column("status", sa.String(length=80), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
     op.create_index("ix_content_scripts_brand_slug", "content_scripts", ["brand_slug"])
     op.create_index("ix_content_scripts_status", "content_scripts", ["status"])

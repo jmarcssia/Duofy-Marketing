@@ -38,7 +38,9 @@ def _briefing_read(b: Briefing, *, direct_answer: str | None = None) -> Briefing
 async def list_research_models(
     _current_user: Annotated[User, Depends(get_current_user)],
 ) -> list[ResearchModelRead]:
-    return [ResearchModelRead(label=m["label"], model_id=m["model_id"]) for m in load_research_models()]
+    return [
+        ResearchModelRead(label=m["label"], model_id=m["model_id"]) for m in load_research_models()
+    ]
 
 
 @router.post("/plan", response_model=BriefingRead)
@@ -64,7 +66,9 @@ async def plan_from_theme(
 ) -> BriefingRead:
     theme = await db.get(ResearchTheme, payload.research_theme_id)
     if theme is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tema de pesquisa nao encontrado.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tema de pesquisa nao encontrado."
+        )
     briefing = await create_briefing_from_theme(
         db, user=current_user, theme=theme, brand_slug=payload.brand_slug
     )
@@ -79,7 +83,9 @@ async def get_briefing(
 ) -> BriefingRead:
     b = await db.get(Briefing, briefing_id)
     if b is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Briefing nao encontrado.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Briefing nao encontrado."
+        )
     return _briefing_read(b)
 
 
@@ -92,7 +98,9 @@ async def approve(
 ) -> BriefingApproveResponse:
     b = await db.get(Briefing, briefing_id)
     if b is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Briefing nao encontrado.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Briefing nao encontrado."
+        )
     if b.status != "pending":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -111,7 +119,10 @@ async def approve(
 
     try:
         answer, kind, result_id = await approve_briefing(
-            db, briefing=b, model_override=model_override, research_theme_id=payload.research_theme_id
+            db,
+            briefing=b,
+            model_override=model_override,
+            research_theme_id=payload.research_theme_id,
         )
     except LLMConfigurationError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc

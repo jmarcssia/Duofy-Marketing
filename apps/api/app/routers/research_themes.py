@@ -35,7 +35,10 @@ def _decode(raw: bytes | str) -> str:
 
 
 def _parse_csv(raw: bytes | str) -> list[dict]:
-    """CSV separador ';', colunas TITULO;NOTAS (NOTAS opcional). Ignora cabecalho e linhas vazias."""
+    """CSV separador ';', colunas TITULO;NOTAS (NOTAS opcional).
+
+    Ignora cabecalho e linhas vazias.
+    """
     reader = csv.reader(io.StringIO(_decode(raw)), delimiter=";")
     themes: list[dict] = []
     for i, row in enumerate(reader):
@@ -99,7 +102,9 @@ async def delete_research_theme(
 ) -> None:
     theme = await db.get(ResearchTheme, theme_id)
     if theme is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tema de pesquisa nao encontrado.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tema de pesquisa nao encontrado."
+        )
     title, brand = theme.title, theme.brand_slug
     await db.delete(theme)
     await db.commit()

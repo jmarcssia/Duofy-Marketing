@@ -43,7 +43,8 @@ async def create_briefing(
         answer = await _direct_answer(db, prompt, brand_slug)
         briefing.status = "answered"
         briefing.result_kind = "direct"
-        # guardamos a resposta direta fora da tabela (retornada no schema); nao persistimos texto longo aqui
+        # guardamos a resposta direta fora da tabela (retornada no schema); nao persistimos
+        # texto longo aqui
         db.add(briefing)
         await db.commit()
         await db.refresh(briefing)
@@ -77,9 +78,16 @@ async def create_briefing_from_theme(
 
 
 async def approve_briefing(
-    db: AsyncSession, *, briefing: Briefing, model_override: str | None, research_theme_id: int | None
+    db: AsyncSession,
+    *,
+    briefing: Briefing,
+    model_override: str | None,
+    research_theme_id: int | None,
 ) -> tuple[str, str | None, int | None]:
-    """Executa a tarefa aprovada. model_override so vale para pesquisa. Retorna (answer, kind, id)."""
+    """Executa a tarefa aprovada. model_override so vale para pesquisa.
+
+    Retorna (answer, kind, id).
+    """
     if briefing.tipo == "pesquisa":
         theme_id = research_theme_id or briefing.research_theme_id
         theme_title = briefing.tema_sugerido or briefing.request_text
@@ -109,8 +117,14 @@ async def approve_briefing(
     agent_slug = _AGENT_FOR_TIPO.get(briefing.tipo, "orchestrator")
     prompt = briefing.request_text
     if briefing.objetivo:
-        prompt = f"{briefing.request_text}\n\nObjetivo: {briefing.objetivo}\nPlano: {briefing.resumo_plano}"
-    run = await run_agent(db=db, agent_slug=agent_slug, prompt=prompt, brand_slug=briefing.brand_slug)
+        prompt = (
+            f"{briefing.request_text}\n\n"
+            f"Objetivo: {briefing.objetivo}\n"
+            f"Plano: {briefing.resumo_plano}"
+        )
+    run = await run_agent(
+        db=db, agent_slug=agent_slug, prompt=prompt, brand_slug=briefing.brand_slug
+    )
     answer = run.output or run.error or "(sem resposta)"
     briefing.status = "executed"
     briefing.result_kind = "agent_run"

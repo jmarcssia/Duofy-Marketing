@@ -1,4 +1,7 @@
-"""Carrega a lista de modelos LLM oferecidos no briefing de Pesquisa (config/research_models.yml)."""
+"""Carrega a lista de modelos LLM oferecidos no briefing de Pesquisa.
+
+Fonte: config/research_models.yml.
+"""
 
 from __future__ import annotations
 
@@ -12,7 +15,10 @@ logger = logging.getLogger(__name__)
 
 
 def load_research_models() -> list[dict]:
-    """Retorna [{"label", "model_id"}] apenas dos modelos habilitados. Lista vazia se o YAML sumir."""
+    """Retorna [{"label", "model_id"}] apenas dos modelos habilitados.
+
+    Lista vazia se o YAML sumir.
+    """
     try:
         data = yaml.safe_load(read_config_text("research_models.yml")) or {}
     except Exception as exc:  # arquivo ausente/ilegível não deve derrubar a API

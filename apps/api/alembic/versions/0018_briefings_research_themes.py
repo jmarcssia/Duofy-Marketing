@@ -26,8 +26,12 @@ def upgrade() -> None:
         sa.Column("title", sa.String(length=255), nullable=False),
         sa.Column("notes", sa.Text(), nullable=True),
         sa.Column("brand_slug", sa.String(length=120), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
     op.create_index("ix_research_themes_brand_slug", "research_themes", ["brand_slug"])
 
@@ -44,11 +48,17 @@ def upgrade() -> None:
         sa.Column("tema_sugerido", sa.String(length=255), nullable=True),
         sa.Column("status", sa.String(length=40), nullable=False, server_default="pending"),
         sa.Column("model_override", sa.String(length=120), nullable=True),
-        sa.Column("research_theme_id", sa.Integer(), sa.ForeignKey("research_themes.id"), nullable=True),
+        sa.Column(
+            "research_theme_id", sa.Integer(), sa.ForeignKey("research_themes.id"), nullable=True
+        ),
         sa.Column("result_kind", sa.String(length=80), nullable=True),
         sa.Column("result_id", sa.Integer(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
     op.create_index("ix_briefings_brand_slug", "briefings", ["brand_slug"])
     op.create_index("ix_briefings_status", "briefings", ["status"])
