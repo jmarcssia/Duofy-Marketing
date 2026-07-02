@@ -112,6 +112,7 @@ async def generate_content_output(
     agent = agent_result.scalar_one_or_none()
     if agent is None or not agent.is_active:
         raise LLMConfigurationError("Agente content_agent nao encontrado ou inativo.")
+    agent_slug = agent.slug  # captura local: db.rollback() no except expira o ORM
 
     brand_result = await db.execute(select(Brand).where(Brand.slug == payload.brand_slug))
     brand = brand_result.scalar_one_or_none()
@@ -204,7 +205,7 @@ async def generate_content_output(
     except Exception as exc:
         await db.rollback()
         run = AgentRun(
-            agent_slug=agent.slug,
+            agent_slug=agent_slug,
             provider=provider,
             model=model,
             prompt=user_prompt,

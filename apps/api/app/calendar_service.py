@@ -395,6 +395,7 @@ async def execute_calendar_event(db: AsyncSession, event: CalendarEvent) -> Cale
     if event.assigned_agent_slug not in AGENT_SLUGS:
         raise LLMConfigurationError("Evento sem agente executável.")
 
+    event_id = event.id  # captura local: db.rollback() no except expira o ORM
     briefing = str(
         (event.execution_payload or {}).get("briefing") or event.description or event.title
     )
@@ -454,11 +455,11 @@ async def execute_calendar_event(db: AsyncSession, event: CalendarEvent) -> Cale
         return event
     except Exception as exc:
         await db.rollback()
-        result = await db.execute(select(CalendarEvent).where(CalendarEvent.id == event.id))
+        result = await db.execute(select(CalendarEvent).where(CalendarEvent.id == event_id))
         failed_event = result.scalar_one()
         failed_event.status = "failed"
         failed_event.last_error = str(exc)
         await db.commit()
         await db.refresh(failed_event)
-        logger.exception("Calendar event execution failed: id=%s", event.id)
+        logger.exception("Calendar event execution failed: id=%s", event_id)
         return failed_event
