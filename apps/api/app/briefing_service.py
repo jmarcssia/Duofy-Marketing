@@ -126,7 +126,7 @@ async def approve_briefing(
         db=db, agent_slug=agent_slug, prompt=prompt, brand_slug=briefing.brand_slug
     )
     answer = run.output or run.error or "(sem resposta)"
-    briefing.status = "executed"
+    briefing.status = "executed" if run.status == "completed" else "failed"
     briefing.result_kind = "agent_run"
     briefing.result_id = run.id
     await db.commit()

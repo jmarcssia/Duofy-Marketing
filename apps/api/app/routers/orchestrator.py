@@ -101,7 +101,7 @@ async def approve(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Briefing nao encontrado."
         )
-    if b.status != "pending":
+    if b.status not in ("pending", "failed"):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Briefing ja processado (status={b.status}).",

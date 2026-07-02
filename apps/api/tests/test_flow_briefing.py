@@ -89,6 +89,43 @@ async def test_approve_ignores_model_override_for_non_research(client, auth_head
     assert approve.json()["briefing"]["model_override"] is None
 
 
+async def test_approve_marks_failed_and_allows_retry_when_agent_run_fails(
+    client, auth_headers, patch_ai, monkeypatch
+):
+    _force_plan(monkeypatch, "conteudo")
+
+    async def fake_call_llm_fails(*args, **kwargs):
+        raise RuntimeError("LLM down")
+
+    # aplicado apos _force_plan para vencer o monkeypatch de app.orchestrator.call_llm
+    monkeypatch.setattr("app.orchestrator.call_llm", fake_call_llm_fails, raising=False)
+
+    plan = client.post(
+        "/api/orchestrator/plan",
+        json={"prompt": "escreva um post", "brand_slug": "duofy"},
+        headers=auth_headers,
+    )
+    b = plan.json()
+    assert b["tipo"] == "conteudo" and b["status"] == "pending"
+    briefing_id = b["id"]
+
+    approve = client.post(
+        f"/api/orchestrator/briefings/{briefing_id}/approve",
+        json={},
+        headers=auth_headers,
+    )
+    assert approve.status_code == 200, approve.text
+    assert approve.json()["briefing"]["status"] == "failed"
+
+    retry = client.post(
+        f"/api/orchestrator/briefings/{briefing_id}/approve",
+        json={},
+        headers=auth_headers,
+    )
+    assert retry.status_code == 200, retry.text
+    assert retry.json()["briefing"]["status"] == "failed"
+
+
 async def test_plan_from_theme_skips_llm(client, auth_headers, patch_ai, monkeypatch):
     theme = client.post(
         "/api/research-themes",
