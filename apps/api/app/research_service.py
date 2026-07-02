@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent_config import brand_voice_section, read_agent_prompt
 from app.agent_limits import get_research_depth_limits, get_token_budget
+from app.agent_rules import min_sources_for
 from app.crypto import decrypt_secret
 from app.document_formatting import normalize_document_content
 from app.embeddings import embed_text, vector_to_sql
@@ -475,7 +476,7 @@ async def run_market_research(
         )
 
     collected_sources = await collect_research_sources(db, payload, brand)
-    _min = {"quick": 3, "deep": 5}.get(payload.depth, 3)
+    _min = min_sources_for("research_agent", payload.depth)
     _usable = count_usable_sources(collected_sources)
     if _usable < _min:
         raise InsufficientSourcesError(theme=payload.theme, found=_usable, needed=_min)

@@ -1,0 +1,28 @@
+# Regras de maquina por agente: injetadas no prompt E validadas apos a geracao.
+research_agent:
+  min_sources: { quick: 3, deep: 5 }
+  required_sections:
+    - "Resumo executivo"
+    - "Sinais de mercado"
+    - "Oportunidades"
+    - "Concorrentes"
+    - "Riscos"
+    - "Recomendações"
+    - "Sugestões de pauta"
+    - "Fontes"
+  citation_required: true
+  forbidden:
+    - "confiança nula"
+    - "ausência total de fontes"
+    - "vácuo de informação"
+    - "hipotético"
+content_agent:
+  required_sections:
+    default:
+      - "Objetivo editorial"
+      - "Conteúdo final"
+      - "CTA"
+  citation_required: false
+  forbidden:
+    - "[preencher]"
+    - "lorem ipsum"
