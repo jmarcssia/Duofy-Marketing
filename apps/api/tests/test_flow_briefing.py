@@ -47,6 +47,28 @@ async def test_conversa_returns_direct_answer_no_pending(client, auth_headers, p
 
 async def test_research_task_creates_pending_then_approves_with_model(client, auth_headers, patch_ai, monkeypatch):
     _force_plan(monkeypatch, "pesquisa", tema="IA no varejo")
+
+    # Evita depender de rede real: garante >= 3 fontes usaveis para passar na porta
+    # de fontes minimas (InsufficientSourcesError seria 422 com < 3 fontes "collected").
+    from app import research_service as rs
+
+    async def fake_collect(db_, payload, brand):
+        return [
+            rs.CollectedSource(
+                title=f"Fonte {i}",
+                url=f"https://example.com/{i}",
+                publisher="example.com",
+                published_at=None,
+                reliability="C",
+                source_kind="rss",
+                status="collected",
+                evidence="Evidencia de teste.",
+            )
+            for i in range(3)
+        ]
+
+    monkeypatch.setattr(rs, "collect_research_sources", fake_collect)
+
     plan = client.post("/api/orchestrator/plan", json={"prompt": "pesquise IA no varejo", "brand_slug": "duofy"}, headers=auth_headers)
     assert plan.status_code == 200, plan.text
     b = plan.json()

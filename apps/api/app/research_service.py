@@ -17,6 +17,7 @@ from app.agent_limits import get_research_depth_limits, get_token_budget
 from app.crypto import decrypt_secret
 from app.document_formatting import normalize_document_content
 from app.embeddings import embed_text, vector_to_sql
+from app.errors import InsufficientSourcesError
 from app.llm import LLMConfigurationError, call_llm, provider_for_model
 from app.models import (
     Agent,
@@ -474,6 +475,10 @@ async def run_market_research(
         )
 
     collected_sources = await collect_research_sources(db, payload, brand)
+    _min = {"quick": 3, "deep": 5}.get(payload.depth, 3)
+    _usable = count_usable_sources(collected_sources)
+    if _usable < _min:
+        raise InsufficientSourcesError(theme=payload.theme, found=_usable, needed=_min)
     agent_prompt = read_agent_prompt("research_agent")
     rag_context = await build_rag_context(
         db=db,

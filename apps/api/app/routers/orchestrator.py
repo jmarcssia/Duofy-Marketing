@@ -13,6 +13,7 @@ from app.briefing_service import (
 )
 from app.db import get_db
 from app.dependencies import get_current_user
+from app.errors import InsufficientSourcesError
 from app.llm import LLMConfigurationError
 from app.models import Briefing, ResearchTheme, User
 from app.research_models import allowed_research_model_ids, load_research_models
@@ -151,6 +152,15 @@ async def approve(
         )
     except LLMConfigurationError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except InsufficientSourcesError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Nao encontrei fontes suficientes sobre '{exc.theme}' "
+                f"(achei {exc.found}, preciso de {exc.needed}). "
+                "Refine o tema ou informe URLs."
+            ),
+        ) from exc
     except HTTPException:
         raise
     except Exception as exc:  # noqa: BLE001 - erro do provedor/coleta vira mensagem legivel na UI
