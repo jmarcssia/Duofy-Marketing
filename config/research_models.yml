@@ -1,0 +1,21 @@
+# Modelos LLM oferecidos no briefing de Pesquisa do Orquestrador.
+# Todos via OpenRouter (id com "/"). Editar aqui não exige deploy.
+models:
+  - label: "Gemini 3.1 Pro"
+    model_id: "google/gemini-3.1-pro"
+    enabled: true
+  - label: "GLM-5.2"
+    model_id: "z-ai/glm-5.2"
+    enabled: true
+  - label: "MiniMax M3"
+    model_id: "minimax/minimax-m3"
+    enabled: true
+  - label: "Claude Opus 4.8"
+    model_id: "anthropic/claude-opus-4.8"
+    enabled: true
+  - label: "GPT-5.5 Pro"
+    model_id: "openai/gpt-5.5-pro"
+    enabled: true
+  - label: "DeepSeek V4 Flash"
+    model_id: "deepseek/deepseek-v4-flash"
+    enabled: true
