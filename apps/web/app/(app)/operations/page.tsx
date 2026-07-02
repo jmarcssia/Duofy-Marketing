@@ -64,9 +64,10 @@ function isResearch(o: { format?: string; channel?: string; category?: string })
 export default function OperationsPage() {
   const { selected: brand } = useBrand()
 
-  // Orquestrador
+  // Orquestrador — time começa vazio para não quebrar a hidratação (server vs client);
+  // preenchido no cliente após o mount.
   const [messages, setMessages] = useState<ChatMsg[]>([
-    { id: "intro", role: "assistant", text: "Olá! Sou o Orquestrador. Posso disparar pesquisas e gerar conteúdo — o que criar aparece no Kanban e na Cocriação de conteúdos.", time: now() }
+    { id: "intro", role: "assistant", text: "Olá! Sou o Orquestrador. Posso disparar pesquisas e gerar conteúdo — o que criar aparece no Kanban e na Cocriação de conteúdos.", time: "" }
   ])
   const [input, setInput] = useState("")
   const [sending, setSending] = useState(false)
@@ -127,6 +128,10 @@ export default function OperationsPage() {
 
   useEffect(() => { loadData() }, [brand]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages])
+  // preenche o horário da intro só no cliente (evita mismatch de hidratação)
+  useEffect(() => {
+    setMessages((m) => m.map((x) => (x.id === "intro" && !x.time ? { ...x, time: now() } : x)))
+  }, [])
 
   const selectedResearch = reports.find((r) => r.id === selectedResearchId) ?? null
   const selectedTheme = themes.find((t) => t.id === themeId) ?? null
