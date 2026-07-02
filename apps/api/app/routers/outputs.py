@@ -34,6 +34,7 @@ from app.output_workflow import (
     restore_output_version,
 )
 from app.quality_guardian import latest_quality_review, review_output_quality
+from app.research_service import index_output_if_research
 from app.schemas import (
     ContentOutputRead,
     ContentOutputUpdate,
@@ -648,6 +649,11 @@ async def approve_output_endpoint(
         summary=f"Output aprovado: {output.title}",
     )
     await db.commit()
+    # Pesquisa aprovada entra no RAG automaticamente (idempotente).
+    try:
+        await index_output_if_research(db, output)
+    except Exception:  # noqa: BLE001 - indexacao nao deve derrubar a aprovacao
+        await db.rollback()
     return await _workflow_detail(db, output)
 
 

@@ -17,7 +17,7 @@ from fastapi import (
 )
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
@@ -26,6 +26,7 @@ from app.document_processing import chunk_text, estimate_tokens, extract_text
 from app.embeddings import embed_text, vector_to_sql
 from app.export_service import ExportDocument, ExportResult, export_document
 from app.models import Brand, Document, DocumentChunk, Source, User
+from app.rag import INSTITUTIONAL_BRAND
 from app.schemas import DocumentChunkRead, DocumentRead
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
@@ -112,12 +113,15 @@ async def upload_document(
             detail="Formato nao suportado. Use PDF, DOCX, TXT ou MD.",
         )
 
-    brand_result = await db.execute(select(Brand).where(Brand.slug == brand_slug))
-    if brand_result.scalar_one_or_none() is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Marca nao encontrada.",
-        )
+    # "institucional" e o slug sentinela para documentos que valem para TODAS as marcas
+    # no RAG — nao precisa (e nao deve) existir como Brand real.
+    if brand_slug != INSTITUTIONAL_BRAND:
+        brand_result = await db.execute(select(Brand).where(Brand.slug == brand_slug))
+        if brand_result.scalar_one_or_none() is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Marca nao encontrada.",
+            )
 
     content = await file.read()
     STORAGE_DIR.mkdir(parents=True, exist_ok=True)
@@ -196,6 +200,34 @@ async def list_documents(
     statement = statement.order_by(Document.created_at.desc()).limit(limit).offset(offset)
     result = await db.execute(statement)
     return [_document_read(document) for document in result.scalars().all()]
+
+
+@router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_document(
+    document_id: int,
+    _current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> None:
+    """Remove um documento do RAG: seus chunks, o registro e (best-effort) o arquivo."""
+    document = await db.get(Document, document_id)
+    if document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Documento nao encontrado."
+        )
+    await db.execute(delete(DocumentChunk).where(DocumentChunk.document_id == document_id))
+    source_id = document.source_id
+    stored_path = document.stored_path
+    await db.delete(document)
+    if source_id is not None:
+        source = await db.get(Source, source_id)
+        if source is not None:
+            await db.delete(source)
+    await db.commit()
+    try:
+        if stored_path:
+            Path(stored_path).unlink(missing_ok=True)
+    except Exception:
+        pass
 
 
 @router.get("/{document_id}/chunks", response_model=list[DocumentChunkRead])

@@ -7,6 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.embeddings import embed_text, vector_to_sql
 
+# brand_slug sentinela para documentos institucionais (aparecem no RAG de todas as marcas).
+INSTITUTIONAL_BRAND = "institucional"
+
 
 @dataclass(frozen=True)
 class MemoryHit:
@@ -40,9 +43,11 @@ async def search_memory(
         "limit": limit,
     }
     if brand_slug:
-        chunk_filters.append("dc.brand_slug = :brand_slug")
-        memory_filters.append("me.brand_slug = :brand_slug")
+        # Alem da marca ativa, inclui SEMPRE os documentos institucionais (valem p/ todas).
+        chunk_filters.append("(dc.brand_slug = :brand_slug OR dc.brand_slug = :institutional)")
+        memory_filters.append("(me.brand_slug = :brand_slug OR me.brand_slug = :institutional)")
         params["brand_slug"] = brand_slug
+        params["institutional"] = INSTITUTIONAL_BRAND
     if category:
         chunk_filters.append("dc.category = :category")
         memory_filters.append("me.category = :category")

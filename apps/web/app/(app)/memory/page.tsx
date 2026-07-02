@@ -93,6 +93,13 @@ export default function MemoryPage() {
   const [chunks, setChunks] = useState<DocumentChunk[] | null>(null)
   const [chunksLoading, setChunksLoading] = useState(false)
 
+  // Upload de documento (RAG)
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [uploadBrand, setUploadBrand] = useState<string>("")
+  const [uploadCategory, setUploadCategory] = useState("general")
+  const [uploadBusy, setUploadBusy] = useState(false)
+  const [uploadMsg, setUploadMsg] = useState<string | null>(null)
+
   // filters / search
   const [filter, setFilter] = useState("")
   const [ragQuery, setRagQuery] = useState("")
@@ -243,6 +250,37 @@ export default function MemoryPage() {
   }, [brand])
 
   useEffect(() => { load() }, [load])
+
+  useEffect(() => { setUploadBrand(brand || "institucional") }, [brand])
+
+  async function uploadDoc() {
+    const token = getTokenFromCookie()
+    if (!token || !uploadFile) return
+    setUploadBusy(true); setUploadMsg(null)
+    try {
+      const fd = new FormData()
+      fd.append("file", uploadFile)
+      fd.append("brand_slug", uploadBrand || "institucional")
+      fd.append("category", uploadCategory.trim() || "general")
+      fd.append("source_type", "upload")
+      await apiFetch("/api/documents/upload", token, { method: "POST", body: fd })
+      setUploadMsg("Documento enviado e indexado.")
+      setUploadFile(null)
+      await load()
+    } catch (e: unknown) {
+      setUploadMsg(e instanceof Error ? e.message : "Falha ao enviar documento.")
+    }
+    setUploadBusy(false)
+  }
+
+  async function deleteDoc(id: number) {
+    const token = getTokenFromCookie()
+    if (!token) return
+    setDocs((ds) => ds.filter((d) => d.id !== id))
+    setSelectedDoc((prev) => (prev && prev.id === id ? null : prev))
+    try { await apiFetch(`/api/documents/${id}`, token, { method: "DELETE" }) }
+    catch { await load() }
+  }
 
   // load chunks when a doc is selected
   useEffect(() => {
@@ -520,6 +558,45 @@ export default function MemoryPage() {
                 <RefreshIcon className="h-4 w-4" />
               </button>
             </div>
+            {/* Upload de novo documento */}
+            <div className="mt-4 grid gap-2 rounded-xl border border-dashed border-line p-3 md:grid-cols-[minmax(0,1fr)_160px_140px_auto]">
+              <label className="duofy-tap flex h-10 cursor-pointer items-center gap-2 truncate rounded-xl border border-line bg-white px-3 text-sm font-semibold text-ink hover:border-purple/40 hover:text-purple">
+                <PlusIcon className="h-4 w-4 shrink-0" />
+                <span className="truncate">{uploadFile ? uploadFile.name : "Escolher arquivo (.pdf, .docx, .txt, .md)"}</span>
+                <input
+                  type="file"
+                  accept=".pdf,.docx,.txt,.md"
+                  className="hidden"
+                  disabled={uploadBusy}
+                  onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
+                />
+              </label>
+              <select
+                value={uploadBrand}
+                onChange={(e) => setUploadBrand(e.target.value)}
+                disabled={uploadBusy}
+                className="h-10 rounded-xl border border-line bg-white px-3 text-sm text-ink outline-none focus:border-purple"
+              >
+                <option value="institucional">Institucional (todas as marcas)</option>
+                {brand && <option value={brand}>{brand}</option>}
+              </select>
+              <input
+                value={uploadCategory}
+                onChange={(e) => setUploadCategory(e.target.value)}
+                placeholder="Categoria"
+                disabled={uploadBusy}
+                className="h-10 rounded-xl border border-line bg-white px-3 text-sm text-ink outline-none placeholder:text-muted focus:border-purple"
+              />
+              <button
+                onClick={uploadDoc}
+                disabled={uploadBusy || !uploadFile}
+                className="duofy-tap flex h-10 items-center justify-center gap-1.5 rounded-xl bg-purple px-4 text-sm font-semibold text-white hover:bg-purple-deep disabled:opacity-50"
+              >
+                {uploadBusy ? "Enviando e indexando…" : <><PlusIcon className="h-4 w-4" /> Enviar</>}
+              </button>
+            </div>
+            {uploadMsg && <p className="mt-2 text-xs text-purple-deep">{uploadMsg}</p>}
+
             <div className="mt-4 flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-muted">
               <SearchIcon className="h-4 w-4" />
               <input
@@ -584,6 +661,14 @@ export default function MemoryPage() {
                                 className="duofy-tap rounded-lg border border-line px-2 py-1 text-[11px] font-semibold text-muted hover:border-purple/40 hover:text-purple"
                               >
                                 PDF
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); deleteDoc(d.id) }}
+                                title="Remover documento"
+                                aria-label="Remover documento"
+                                className="duofy-tap grid h-7 w-7 place-items-center rounded-lg border border-line text-muted hover:border-red/40 hover:text-red"
+                              >
+                                <CloseIcon className="h-3.5 w-3.5" />
                               </button>
                             </div>
                           </td>

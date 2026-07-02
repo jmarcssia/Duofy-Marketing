@@ -876,6 +876,13 @@ async def save_research_as_memory(
     output: Output,
     content: str,
 ) -> MemoryEntry:
+    # Dedupe: se esta pesquisa ja foi indexada no RAG, nao cria de novo.
+    existing = await db.execute(
+        select(MemoryEntry).where(MemoryEntry.output_id == output.id).limit(1)
+    )
+    found = existing.scalar_one_or_none()
+    if found is not None:
+        return found
     source = Source(
         name=f"Pesquisa: {output.title}",
         source_type="research_report",
@@ -898,12 +905,27 @@ async def save_research_as_memory(
         title=output.title,
         content=memory_text,
         source_id=source.id,
+        output_id=output.id,
         embedding=embedding,
     )
     db.add(memory)
     await db.commit()
     await db.refresh(memory)
     return memory
+
+
+async def index_output_if_research(db: AsyncSession, output: Output) -> None:
+    """Ao aprovar, indexa a pesquisa no RAG automaticamente (idempotente)."""
+    if output.channel != "Pesquisa":
+        return
+    version = await db.execute(
+        select(OutputVersion)
+        .where(OutputVersion.id == output.current_version_id)
+    )
+    current = version.scalar_one_or_none()
+    if current is None or not (current.content or "").strip():
+        return
+    await save_research_as_memory(db, output, current.content)
 
 
 def research_to_content_briefing(output: Output, content: str) -> str:
