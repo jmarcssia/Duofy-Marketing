@@ -8,9 +8,11 @@ import {
   ExternalLinkIcon,
   PencilIcon,
   RefreshIcon,
+  SparklesIcon,
   ZapIcon
 } from "@/components/icons"
 import {
+  executeCalendarCocreation,
   executeCalendarResearch,
   getCalendarEventDetail,
   type CalendarEvent,
@@ -56,6 +58,9 @@ export function EventDetailPanel({
   const [tab, setTab] = useState<Tab>("Visão geral")
   const [loading, setLoading] = useState(true)
   const [running, setRunning] = useState(false)
+  const [cocreating, setCocreating] = useState(false)
+  const [coChannel, setCoChannel] = useState("Instagram")
+  const [coFormat, setCoFormat] = useState("Carrossel")
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -92,10 +97,30 @@ export function EventDetailPanel({
     setRunning(false)
   }
 
+  async function runCocreation() {
+    const token = getTokenFromCookie()
+    if (!token || !brandSlug) return
+    setCocreating(true)
+    setError(null)
+    try {
+      const d = await executeCalendarCocreation(eventId, brandSlug, coChannel, coFormat, token)
+      setDetail(d)
+      onChanged()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Falha ao executar a cocriação.")
+      await load()
+      onChanged()
+    }
+    setCocreating(false)
+  }
+
   const st = detail ? statusMeta(detail.status) : null
   const research = detail ? isResearch(detail) : false
   const canExecute =
     research && detail !== null && ["draft", "briefing_incomplete", "ready", "failed"].includes(detail.status)
+  // Cocriação: liberada quando a pesquisa está aprovada (ou gate desligado) e ainda não há conteúdo.
+  const showCocreation =
+    detail !== null && detail.cocreation_unlocked && detail.content_output_id === null
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -169,7 +194,19 @@ export function EventDetailPanel({
                       <span className="font-semibold">Erro na execução:</span> {detail.last_error}
                     </div>
                   )}
-                  {research && <ResearchActions detail={detail} running={running} canExecute={canExecute} onRun={runResearch} />}
+                  {research && !detail.cocreation_unlocked && (
+                    <ResearchActions detail={detail} running={running} canExecute={canExecute} onRun={runResearch} />
+                  )}
+                  {showCocreation && (
+                    <CocreationActions
+                      cocreating={cocreating}
+                      channel={coChannel}
+                      format={coFormat}
+                      setChannel={setCoChannel}
+                      setFormat={setCoFormat}
+                      onRun={runCocreation}
+                    />
+                  )}
                 </div>
               )}
 
@@ -211,10 +248,23 @@ export function EventDetailPanel({
                   ) : (
                     <p className="text-muted">Nenhum resultado ainda. Execute a etapa de pesquisa.</p>
                   )}
-                  <div className="rounded-xl border border-dashed border-line p-3 text-xs text-muted">
-                    Peças de conteúdo (carrossel, legendas, etc.) aparecem aqui após a cocriação — liberada
-                    depois da aprovação da pesquisa. <span className="font-semibold">Próxima fase.</span>
-                  </div>
+                  {detail.content_output_id ? (
+                    <div className="rounded-xl border border-line p-3">
+                      <p className="font-semibold text-ink">Conteúdo #{detail.content_output_id}</p>
+                      <p className="mt-0.5 text-xs text-muted">
+                        Status do conteúdo: {detail.content_output_status ?? "—"}
+                        {detail.content_approved ? " • aprovado" : " • em revisão"}
+                      </p>
+                      <a href="/operations" className="duofy-tap mt-2 inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink hover:border-purple/40 hover:text-purple">
+                        <ExternalLinkIcon className="h-3.5 w-3.5" /> Abrir na Cocriação
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-line p-3 text-xs text-muted">
+                      As peças de conteúdo (carrossel, legendas, direção visual) aparecem aqui após a
+                      cocriação — liberada depois da aprovação da pesquisa.
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -283,6 +333,60 @@ function ResearchActions({
         >
           <ZapIcon className="h-4 w-4" /> {detail.status === "failed" ? "Tentar novamente" : "Executar pesquisa"}
         </button>
+      )}
+    </div>
+  )
+}
+
+const COCREATION_CHANNELS = ["Instagram", "LinkedIn", "Blog", "Email", "WhatsApp"]
+const COCREATION_FORMATS = ["Carrossel", "Post único", "Reels", "Stories", "Artigo", "Newsletter"]
+
+function CocreationActions({
+  cocreating,
+  channel,
+  format,
+  setChannel,
+  setFormat,
+  onRun
+}: {
+  cocreating: boolean
+  channel: string
+  format: string
+  setChannel: (v: string) => void
+  setFormat: (v: string) => void
+  onRun: () => void
+}) {
+  return (
+    <div className="mt-2 rounded-xl border border-purple/20 bg-purple/5 p-3">
+      <p className="text-sm font-semibold text-ink">Pesquisa aprovada — cocriação liberada</p>
+      <p className="mt-0.5 text-xs text-muted">Gere as peças consumindo a pesquisa aprovada. O conteúdo entra em revisão.</p>
+      {cocreating ? (
+        <div className="mt-2 flex items-center gap-2 text-sm text-purple">
+          <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+          </svg>
+          Cocriando conteúdo com o agente… pode levar até um minuto.
+        </div>
+      ) : (
+        <>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className="mb-1 block text-[11px] font-semibold text-muted">Canal</span>
+              <select value={channel} onChange={(e) => setChannel(e.target.value)} className="w-full rounded-lg border border-line px-2.5 py-2 text-sm text-ink focus:border-purple focus:outline-none">
+                {COCREATION_CHANNELS.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-[11px] font-semibold text-muted">Formato</span>
+              <select value={format} onChange={(e) => setFormat(e.target.value)} className="w-full rounded-lg border border-line px-2.5 py-2 text-sm text-ink focus:border-purple focus:outline-none">
+                {COCREATION_FORMATS.map((f) => <option key={f} value={f}>{f}</option>)}
+              </select>
+            </label>
+          </div>
+          <button onClick={onRun} className="duofy-tap mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-purple py-2.5 text-sm font-semibold text-white hover:bg-purple-deep">
+            <SparklesIcon className="h-4 w-4" /> Cocriar conteúdo
+          </button>
+        </>
       )}
     </div>
   )

@@ -12,6 +12,7 @@ import pytest
 from sqlalchemy import select
 
 from app.models import AgentRun, AgentTask, CalendarEvent, Output, OutputVersion
+from app.schemas import ContentPackage
 
 pytestmark = pytest.mark.anyio
 
@@ -66,6 +67,51 @@ def stub_research(monkeypatch):
 
     monkeypatch.setattr("app.calendar_workflow.run_market_research", fake_run)
     return fake_run
+
+
+@pytest.fixture
+def stub_cocreation(monkeypatch):
+    """Substitui generate_content_package por um Output de conteúdo real (sem LLM)."""
+    async def fake_gen(db, payload):
+        run = AgentRun(
+            agent_slug="content_agent", provider="openrouter", model="m",
+            prompt="p", output="# Conteúdo\nmd", status="completed",
+        )
+        db.add(run)
+        await db.flush()
+        output = Output(
+            brand_slug=payload.brand_slug, category="content_generation",
+            channel=payload.channel, format=payload.format, title="Carrossel gerado",
+            briefing=payload.theme, status=payload.status, provider="openrouter",
+            model="m", agent_run_id=run.id,
+        )
+        db.add(output)
+        await db.flush()
+        version = OutputVersion(
+            output_id=output.id, version_number=1, content="# Conteúdo\nmd",
+            editor_note="inicial", structured_json=None,
+        )
+        db.add(version)
+        await db.flush()
+        output.current_version_id = version.id
+        pkg = ContentPackage(brand_slug=payload.brand_slug, channel=payload.channel,
+                             format=payload.format)
+        return output, version, pkg, []
+
+    monkeypatch.setattr("app.calendar_workflow.generate_content_package", fake_gen)
+    return fake_gen
+
+
+async def _run_and_approve_research(client, headers, db, event_id):
+    """Executa a pesquisa e aprova o Output (efeito da página do Agente de Pesquisa)."""
+    client.post(f"/api/calendar/{event_id}/execute-research",
+                params={"brand_slug": "duofy"}, headers=headers)
+    event = (
+        await db.execute(select(CalendarEvent).where(CalendarEvent.id == event_id))
+    ).scalar_one()
+    output = await db.get(Output, event.research_output_id)
+    output.status = "approved"
+    await db.commit()
 
 
 def _create_event(client, headers, **over):
@@ -218,3 +264,52 @@ async def test_execute_research_requires_brand_slug(client, auth_headers):
     # sem brand_slug -> 422 (query obrigatória)
     resp = client.post(f"/api/calendar/{body['id']}/execute-research", headers=auth_headers)
     assert resp.status_code == 422
+
+
+async def test_cocreation_blocked_before_research_approval(
+    client, auth_headers, stub_research, stub_cocreation
+):
+    body = _create_event(client, auth_headers)
+    # executa pesquisa, mas NÃO aprova
+    client.post(f"/api/calendar/{body['id']}/execute-research",
+                params={"brand_slug": "duofy"}, headers=auth_headers)
+    resp = client.post(f"/api/calendar/{body['id']}/execute-cocreation",
+                       params={"brand_slug": "duofy"}, headers=auth_headers)
+    assert resp.status_code == 400  # gate: pesquisa não aprovada
+    assert "aprova" in resp.json()["detail"].lower()
+
+
+async def test_execute_cocreation_after_approval_links_content_and_advances(
+    client, auth_headers, db, stub_research, stub_cocreation
+):
+    body = _create_event(client, auth_headers)
+    await _run_and_approve_research(client, auth_headers, db, body["id"])
+
+    resp = client.post(
+        f"/api/calendar/{body['id']}/execute-cocreation",
+        params={"brand_slug": "duofy", "channel": "Instagram", "format": "Carrossel"},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200, resp.text
+    detail = resp.json()
+    assert detail["content_output_id"] is not None
+    assert detail["current_step"] == "review"
+    steps = {s["key"]: s["status"] for s in detail["steps"]}
+    assert steps["cocreation"] == "done"
+    assert steps["research_approval"] == "done"
+    assert steps["review"] == "current"
+
+    # Output de conteúdo real vinculado + AgentTask de conteúdo
+    output = await db.get(Output, detail["content_output_id"])
+    assert output is not None and output.category == "content_generation"
+    task = (
+        await db.execute(select(AgentTask).where(AgentTask.id == detail["agent_task_id"]))
+    ).scalar_one()
+    assert task.task_type == "content" and task.output_id == detail["content_output_id"]
+
+
+async def test_cocreation_cross_brand_denied(client, auth_headers, stub_research, stub_cocreation):
+    body = _create_event(client, auth_headers)
+    resp = client.post(f"/api/calendar/{body['id']}/execute-cocreation",
+                       params={"brand_slug": "postos"}, headers=auth_headers)
+    assert resp.status_code == 404

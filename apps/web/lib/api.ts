@@ -296,6 +296,8 @@ export type CalendarEventDetail = CalendarEvent & {
   research_output_status: string | null
   research_approved: boolean
   cocreation_unlocked: boolean
+  content_output_status: string | null
+  content_approved: boolean
 }
 
 export function getCalendarEventDetail(id: number, brandSlug: string, token: string) {
@@ -308,6 +310,21 @@ export function getCalendarEventDetail(id: number, brandSlug: string, token: str
 export function executeCalendarResearch(id: number, brandSlug: string, token: string) {
   return apiFetch<CalendarEventDetail>(
     `/api/calendar/${id}/execute-research?brand_slug=${encodeURIComponent(brandSlug)}`,
+    token,
+    { method: "POST", body: "{}" }
+  )
+}
+
+export function executeCalendarCocreation(
+  id: number,
+  brandSlug: string,
+  channel: string,
+  format: string,
+  token: string
+) {
+  const qs = new URLSearchParams({ brand_slug: brandSlug, channel, format }).toString()
+  return apiFetch<CalendarEventDetail>(
+    `/api/calendar/${id}/execute-cocreation?${qs}`,
     token,
     { method: "POST", body: "{}" }
   )

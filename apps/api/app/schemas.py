@@ -596,6 +596,8 @@ class CalendarEventDetail(CalendarEventRead):
     research_output_status: str | None = None
     research_approved: bool = False
     cocreation_unlocked: bool = False
+    content_output_status: str | None = None
+    content_approved: bool = False
 
 
 class CalendarGenerateRequest(BaseModel):
