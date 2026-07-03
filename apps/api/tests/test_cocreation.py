@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from app.cocreation_service import has_forbidden_prompt, validate_package
+from app.cocreation_service import _extract_json, has_forbidden_prompt, validate_package
 from app.schemas import ContentPackage
 
 pytestmark = pytest.mark.anyio
@@ -69,6 +69,17 @@ def test_validate_package_flags_forbidden_prompt():
     pkg = ContentPackage.model_validate(data)
     warns = validate_package(pkg)
     assert any("proibido" in w.lower() for w in warns)
+
+
+def test_extract_json_tolerates_llm_noise():
+    # fences de code block
+    assert _extract_json('```json\n{"a": 1}\n```')["a"] == 1
+    # virgula final antes de fechar
+    assert _extract_json('{"a": 1, "b": 2,}')["b"] == 2
+    # quebra de linha literal dentro de string (invalido em JSON estrito)
+    assert "\n" in _extract_json('{"texto": "linha1\nlinha2"}')["texto"]
+    # texto ao redor do objeto
+    assert _extract_json('Segue o JSON: {"x": "ok"} pronto.')["x"] == "ok"
 
 
 def test_has_forbidden_prompt_detects_tokens():

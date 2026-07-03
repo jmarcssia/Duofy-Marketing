@@ -148,6 +148,10 @@ def _user_prompt(
         "(sem texto ao redor, sem ```), exatamente neste formato:",
         _PACKAGE_SHAPE,
         "",
+        "JSON valido e obrigatorio: escape aspas internas com \\\" e nao use quebras de linha "
+        "literais dentro de valores string (use \\n). Para citacoes no texto, prefira aspas "
+        "tipograficas (« ») em vez de aspas retas.",
+        "",
         "Regras de saida:",
         "- captions: as legendas de canais DIFERENTES devem ser DIFERENTES entre si. Instagram ="
         " proximo, leitura rapida, paragrafos curtos, CTA de interacao/salvamento. LinkedIn ="
@@ -203,12 +207,63 @@ def _user_prompt(
     return "\n".join(lines)
 
 
+_FENCE_RE = re.compile(r"^```(?:json)?\s*|\s*```$", re.IGNORECASE)
+_TRAILING_COMMA_RE = re.compile(r",(\s*[}\]])")
+
+
+def _escape_bare_controls(text: str) -> str:
+    """Escapa quebras de linha/tabs literais que aparecem DENTRO de strings JSON.
+
+    Modelos as vezes inserem \\n cru dentro de um valor string, o que invalida o JSON.
+    Percorre o texto rastreando se estamos dentro de uma string e escapa os controles crus.
+    """
+    out: list[str] = []
+    in_string = False
+    escaped = False
+    for ch in text:
+        if escaped:
+            out.append(ch)
+            escaped = False
+            continue
+        if ch == "\\":
+            out.append(ch)
+            escaped = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            out.append(ch)
+            continue
+        if in_string and ch == "\n":
+            out.append("\\n")
+        elif in_string and ch == "\r":
+            out.append("\\r")
+        elif in_string and ch == "\t":
+            out.append("\\t")
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
 def _extract_json(raw: str) -> dict:
-    text = (raw or "").strip()
+    """Extrai um objeto JSON tolerando os erros comuns de LLM (fences, virgula final,
+    controles crus dentro de strings). Levanta ValueError se nao houver JSON recuperavel."""
+    text = _FENCE_RE.sub("", (raw or "").strip())
     start, end = text.find("{"), text.rfind("}")
     if start == -1 or end <= start:
         raise ValueError("Resposta sem JSON.")
-    return json.loads(text[start : end + 1])
+    candidate = text[start : end + 1]
+    for attempt in (
+        candidate,
+        _TRAILING_COMMA_RE.sub(r"\1", candidate),
+        _escape_bare_controls(candidate),
+        _TRAILING_COMMA_RE.sub(r"\1", _escape_bare_controls(candidate)),
+    ):
+        try:
+            return json.loads(attempt)
+        except json.JSONDecodeError:
+            continue
+    # Ultima tentativa: expor o erro real para o chamador decidir (retry/reparo).
+    return json.loads(candidate)
 
 
 def validate_package(pkg: ContentPackage) -> list[str]:
@@ -346,6 +401,13 @@ async def _research_context(db: AsyncSession, research_output_id: int | None) ->
     return f"Pesquisa #{output.id} — {output.title}\n{content[:9000]}"
 
 
+def _to_package(data: dict, brand: Brand) -> ContentPackage:
+    data.setdefault("brand_slug", brand.slug)
+    data.setdefault("channel", "")  # o chamador sobrescreve com o valor do payload
+    data.setdefault("format", "")
+    return ContentPackage.model_validate(data)
+
+
 async def _call_package(
     db: AsyncSession,
     *,
@@ -356,11 +418,14 @@ async def _call_package(
     system_prompt: str,
     user_prompt: str,
 ) -> tuple[ContentPackage, str, str, str]:
-    """Chama o LLM (com uma retentativa se o JSON vier invalido). Retorna (pkg, provider,
-    model, prompt_usado)."""
-    budget = max(await get_token_budget(db, "content_agent"), 8000)
+    """Chama o LLM e devolve um pacote valido, tolerando o JSON as vezes malformado que o
+    modo JSON via OpenRouter/Claude nao garante. Estrategia: (1) gera; (2) regera com instrucao
+    corretiva; (3) chamada dedicada de REPARO do texto cru para JSON valido. Retorna
+    (pkg, provider, model, prompt_usado)."""
+    budget = max(await get_token_budget(db, "content_agent"), 12000)
     attempt_prompt = user_prompt
     last_error = ""
+    last_raw = ""
     for _attempt in range(2):
         result = await call_llm(
             credential=credential,
@@ -373,18 +438,38 @@ async def _call_package(
             json_mode=True,
             max_tokens=budget,
         )
+        last_raw = result.output
         try:
-            data = _extract_json(result.output)
-            data.setdefault("brand_slug", brand.slug)
-            pkg = ContentPackage.model_validate(data)
+            pkg = _to_package(_extract_json(result.output), brand)
             return pkg, result.provider, result.model, attempt_prompt
-        except Exception as exc:  # noqa: BLE001 - retenta uma vez com instrucao corretiva
+        except Exception as exc:  # noqa: BLE001 - trata na proxima tentativa/reparo
             last_error = str(exc)[:200]
             attempt_prompt = (
                 user_prompt
-                + "\n\nATENCAO: retorne SOMENTE um objeto JSON valido no formato pedido, "
-                "sem nenhum texto fora do JSON."
+                + "\n\nATENCAO: sua resposta anterior nao era JSON valido. Retorne SOMENTE um "
+                "objeto JSON valido no formato pedido, sem texto fora do JSON, escapando aspas "
+                'internas com \\" e sem quebras de linha literais dentro de valores string.'
             )
+
+    # Reparo final: pede ao modelo para consertar o proprio texto cru em JSON valido.
+    repair = await call_llm(
+        credential=credential,
+        model=model,
+        system_prompt="Voce conserta JSON. Devolva SOMENTE um objeto JSON valido, sem "
+        "comentarios, sem ```; preserve todo o conteudo, apenas corrija a sintaxe.",
+        user_prompt="Converta o texto abaixo em um objeto JSON valido e completo, escapando "
+        'aspas internas com \\" e quebras de linha com \\n:\n\n' + last_raw,
+        task_type="cocreation",
+        agent_slug=agent.slug,
+        brand_slug=brand.slug,
+        json_mode=True,
+        max_tokens=budget,
+    )
+    try:
+        pkg = _to_package(_extract_json(repair.output), brand)
+        return pkg, repair.provider, repair.model, attempt_prompt
+    except Exception as exc:  # noqa: BLE001
+        last_error = str(exc)[:200] or last_error
     raise LLMConfigurationError(f"O modelo nao retornou um pacote valido: {last_error}")
 
 

@@ -27,7 +27,7 @@ async def test_token_budget_falls_back_to_config(monkeypatch):
         return None  # nada no Admin
     monkeypatch.setattr(agent_limits, "_setting_value", fake_setting)
     # default do YAML
-    assert await agent_limits.get_token_budget(object(), "content_agent") == 4000
+    assert await agent_limits.get_token_budget(object(), "content_agent") == 12000
 
 
 @pytest.mark.anyio
@@ -43,7 +43,7 @@ async def test_token_budget_invalid_db_value_falls_back(monkeypatch):
     async def fake_setting(db, key):
         return "isto nao e json"
     monkeypatch.setattr(agent_limits, "_setting_value", fake_setting)
-    assert await agent_limits.get_token_budget(object(), "content_agent") == 4000
+    assert await agent_limits.get_token_budget(object(), "content_agent") == 12000
 
 
 @pytest.mark.anyio

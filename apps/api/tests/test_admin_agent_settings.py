@@ -54,7 +54,7 @@ async def test_get_agent_settings_merges_saved_with_defaults(monkeypatch):
     # Saved value overrides config default for research_agent
     assert result.token_budgets["research_agent"] == 9000
     # Non-overridden default from agent_limits.yaml is still present
-    assert result.token_budgets["content_agent"] == 4000
+    assert result.token_budgets["content_agent"] == 12000
 
 
 @pytest.mark.anyio
