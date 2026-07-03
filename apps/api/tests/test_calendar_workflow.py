@@ -11,7 +11,7 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import select
 
-from app.models import AgentRun, AgentTask, CalendarEvent, Output, OutputVersion
+from app.models import AgentRun, AgentTask, CalendarEvent, Output, OutputVersion, User
 from app.schemas import ContentPackage
 
 pytestmark = pytest.mark.anyio
@@ -313,3 +313,89 @@ async def test_cocreation_cross_brand_denied(client, auth_headers, stub_research
     resp = client.post(f"/api/calendar/{body['id']}/execute-cocreation",
                        params={"brand_slug": "postos"}, headers=auth_headers)
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# F3 — automação: pausar/retomar, histórico de tentativas, gates da auto-execução
+# ---------------------------------------------------------------------------
+
+
+async def test_pause_and_resume(client, auth_headers):
+    body = _create_event(client, auth_headers, execution_mode="auto")
+    paused = client.post(f"/api/calendar/{body['id']}/pause",
+                         params={"brand_slug": "duofy"}, headers=auth_headers)
+    assert paused.status_code == 200, paused.text
+    assert paused.json()["is_paused"] is True
+    resumed = client.post(f"/api/calendar/{body['id']}/resume",
+                          params={"brand_slug": "duofy"}, headers=auth_headers)
+    assert resumed.status_code == 200
+    assert resumed.json()["is_paused"] is False
+
+
+async def test_pause_cross_brand_denied(client, auth_headers):
+    body = _create_event(client, auth_headers)
+    resp = client.post(f"/api/calendar/{body['id']}/pause",
+                       params={"brand_slug": "postos"}, headers=auth_headers)
+    assert resp.status_code == 404
+
+
+async def test_history_reflects_attempts(client, auth_headers, stub_research):
+    body = _create_event(client, auth_headers)
+    client.post(f"/api/calendar/{body['id']}/execute-research",
+                params={"brand_slug": "duofy"}, headers=auth_headers)
+    detail = client.get(f"/api/calendar/{body['id']}", params={"brand_slug": "duofy"},
+                        headers=auth_headers).json()
+    assert len(detail["history"]) >= 1
+    attempt = detail["history"][0]
+    assert attempt["kind"] == "research"
+    assert attempt["trigger"] == "manual"
+    assert attempt["status"] == "completed"
+
+
+class _FakeRedis:
+    """Redis mínimo p/ testar os gates do scheduler sem infra (set NX)."""
+
+    def __init__(self):
+        self.keys: set[str] = set()
+
+    async def set(self, key, value, ex=None, nx=False):  # noqa: A003
+        if nx and key in self.keys:
+            return False
+        self.keys.add(key)
+        return True
+
+
+async def _make_auto_event(db, *, approved: bool, paused: bool) -> int:
+    admin = (await db.execute(select(User))).scalars().first()
+    output = await _make_research_output(db, "duofy", status="approved" if approved else "draft")
+    event = CalendarEvent(
+        brand_slug="duofy", title="Auto pesquisa", event_type="research",
+        status="awaiting_approval", start_at=output.created_at, execution_mode="auto",
+        is_paused=paused, research_output_id=output.id, created_by=admin.id,
+    )
+    db.add(event)
+    await db.commit()
+    await db.refresh(event)
+    return event.id
+
+
+async def test_auto_cocreation_gates(db, monkeypatch):
+    """A auto-cocriação só roda com pesquisa aprovada e evento não pausado."""
+    from app import calendar_scheduler
+
+    calls: list[int] = []
+
+    async def fake_exec(db_, event, user, trigger="manual"):
+        calls.append(event.id)
+        return event
+
+    monkeypatch.setattr(calendar_scheduler, "execute_cocreation", fake_exec)
+
+    approved_active = await _make_auto_event(db, approved=True, paused=False)
+    await _make_auto_event(db, approved=True, paused=True)     # pausado -> skip
+    await _make_auto_event(db, approved=False, paused=False)   # não aprovado -> skip
+
+    await calendar_scheduler._execute_due_cocreation_events(db, _FakeRedis())
+
+    assert approved_active in calls
+    assert len(calls) == 1  # só o aprovado e não pausado

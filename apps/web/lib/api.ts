@@ -282,6 +282,7 @@ export type CalendarEvent = {
   briefing_id: number | null
   agent_task_id: number | null
   created_by: number | null
+  is_paused: boolean
 }
 
 export type CalendarStep = {
@@ -291,6 +292,17 @@ export type CalendarStep = {
   detail: string | null
 }
 
+export type CalendarAttempt = {
+  id: number
+  kind: string
+  trigger: string
+  status: string
+  output_id: number | null
+  error: string | null
+  created_at: string
+  updated_at: string
+}
+
 export type CalendarEventDetail = CalendarEvent & {
   steps: CalendarStep[]
   research_output_status: string | null
@@ -298,6 +310,7 @@ export type CalendarEventDetail = CalendarEvent & {
   cocreation_unlocked: boolean
   content_output_status: string | null
   content_approved: boolean
+  history: CalendarAttempt[]
 }
 
 export function getCalendarEventDetail(id: number, brandSlug: string, token: string) {
@@ -325,6 +338,15 @@ export function executeCalendarCocreation(
   const qs = new URLSearchParams({ brand_slug: brandSlug, channel, format }).toString()
   return apiFetch<CalendarEventDetail>(
     `/api/calendar/${id}/execute-cocreation?${qs}`,
+    token,
+    { method: "POST", body: "{}" }
+  )
+}
+
+export function setCalendarEventPaused(id: number, brandSlug: string, paused: boolean, token: string) {
+  const action = paused ? "pause" : "resume"
+  return apiFetch<CalendarEventDetail>(
+    `/api/calendar/${id}/${action}?brand_slug=${encodeURIComponent(brandSlug)}`,
     token,
     { method: "POST", body: "{}" }
   )

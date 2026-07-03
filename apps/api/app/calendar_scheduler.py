@@ -10,7 +10,14 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.calendar_service import execute_calendar_event
-from app.calendar_workflow import RESEARCH_EVENT_TYPES, execute_research, is_research_event
+from app.calendar_workflow import (
+    APPROVED_STATUS,
+    RESEARCH_EVENT_TYPES,
+    _output_status,
+    execute_cocreation,
+    execute_research,
+    is_research_event,
+)
 from app.db import AsyncSessionLocal
 from app.models import CalendarEvent, User
 from app.settings import get_settings
@@ -49,6 +56,7 @@ async def execute_due_calendar_events() -> int:
                 await execute_calendar_event(db, event)
                 executed += 1
             executed += await _execute_due_research_events(db, redis)
+            executed += await _execute_due_cocreation_events(db, redis)
     finally:
         await redis.aclose()
     return executed
@@ -66,6 +74,7 @@ async def _execute_due_research_events(db: AsyncSession, redis: Redis) -> int:
         select(CalendarEvent)
         .where(
             CalendarEvent.execution_mode == "auto",
+            CalendarEvent.is_paused.is_(False),
             CalendarEvent.status.in_(("ready", "scheduled")),
             CalendarEvent.auto_execute_at.is_not(None),
             CalendarEvent.auto_execute_at <= now,
@@ -89,10 +98,48 @@ async def _execute_due_research_events(db: AsyncSession, redis: Redis) -> int:
         if user is None:
             continue
         try:
-            await execute_research(db, event, user)
+            await execute_research(db, event, user, trigger="auto")
             executed += 1
         except Exception:
             logger.exception("Auto research execution failed: event=%s", event.id)
+    return executed
+
+
+async def _execute_due_cocreation_events(db: AsyncSession, redis: Redis) -> int:
+    """Auto-cocriação: continua o pipeline sozinho SÓ depois da aprovação humana da pesquisa.
+
+    Só para eventos automáticos, não pausados, com pesquisa aprovada e sem conteúdo ainda.
+    A aprovação humana da pesquisa é a trava de segurança; falha não re-tenta (status=failed).
+    Idempotência: lock Redis dedicado + guarda de status em execute_cocreation.
+    """
+    result = await db.execute(
+        select(CalendarEvent)
+        .where(
+            CalendarEvent.execution_mode == "auto",
+            CalendarEvent.is_paused.is_(False),
+            CalendarEvent.research_output_id.is_not(None),
+            CalendarEvent.content_output_id.is_(None),
+            CalendarEvent.created_by.is_not(None),
+            CalendarEvent.status.notin_(("running", "in_progress", "failed", "cancelled")),
+        )
+        .order_by(CalendarEvent.updated_at.asc())
+        .limit(3)
+    )
+    executed = 0
+    for event in list(result.scalars().all()):
+        if await _output_status(db, event.research_output_id) != APPROVED_STATUS:
+            continue  # aguarda a aprovação humana da pesquisa
+        lock_key = f"duofy:calendar:cocreation:{event.id}:lock"
+        if not await redis.set(lock_key, "1", ex=LOCK_SECONDS, nx=True):
+            continue
+        user = await db.get(User, event.created_by)
+        if user is None:
+            continue
+        try:
+            await execute_cocreation(db, event, user, trigger="auto")
+            executed += 1
+        except Exception:
+            logger.exception("Auto cocreation failed: event=%s", event.id)
     return executed
 
 

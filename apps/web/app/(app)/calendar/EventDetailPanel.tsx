@@ -15,6 +15,7 @@ import {
   executeCalendarCocreation,
   executeCalendarResearch,
   getCalendarEventDetail,
+  setCalendarEventPaused,
   type CalendarEvent,
   type CalendarEventDetail,
   type CalendarStep
@@ -114,6 +115,19 @@ export function EventDetailPanel({
     setCocreating(false)
   }
 
+  async function togglePause() {
+    const token = getTokenFromCookie()
+    if (!token || !brandSlug || !detail) return
+    setError(null)
+    try {
+      const d = await setCalendarEventPaused(eventId, brandSlug, !detail.is_paused, token)
+      setDetail(d)
+      onChanged()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Falha ao alterar a pausa.")
+    }
+  }
+
   const st = detail ? statusMeta(detail.status) : null
   const research = detail ? isResearch(detail) : false
   const canExecute =
@@ -132,6 +146,7 @@ export function EventDetailPanel({
             <div className="flex items-center gap-2">
               {detail && <Badge tone="slate">{eventTypeLabel(detail.event_type)}</Badge>}
               {st && <Badge tone={st.tone}>{st.label}</Badge>}
+              {detail?.is_paused && <Badge tone="amber">Pausado</Badge>}
             </div>
             <p className="mt-1 truncate text-base font-bold text-ink">{detail?.title ?? "Carregando…"}</p>
           </div>
@@ -273,20 +288,50 @@ export function EventDetailPanel({
                   <Row label="Modo" value={detail.execution_mode === "auto" ? "Automática" : "Manual"} />
                   <Row label="Execução automática em" value={fmtDateTime(detail.auto_execute_at)} />
                   <Row label="Exige aprovação da pesquisa" value={detail.requires_research_approval ? "Sim" : "Não"} />
+                  <Row label="Estado" value={detail.is_paused ? "Pausado" : "Ativo"} />
+                  {detail.execution_mode === "auto" && (
+                    <button
+                      onClick={togglePause}
+                      className={`duofy-tap flex w-full items-center justify-center gap-2 rounded-lg border py-2.5 text-sm font-semibold transition ${detail.is_paused ? "border-purple bg-purple text-white hover:bg-purple-deep" : "border-line text-ink hover:border-purple/40 hover:text-purple"}`}
+                    >
+                      {detail.is_paused ? "Retomar automação" : "Pausar automação"}
+                    </button>
+                  )}
                   <p className="rounded-lg border border-line bg-panel/50 p-2.5 text-xs text-muted">
-                    No modo automático, o agendador executa a pesquisa no horário definido (idempotente). A cocriação
-                    continua exigindo aprovação humana. Pausar/retomar e histórico de tentativas entram na próxima fase.
+                    No modo automático, o agendador executa a pesquisa no horário definido e, após a aprovação
+                    humana da pesquisa, dispara a cocriação — tudo idempotente. Pause para o agendador ignorar o
+                    evento; a publicação (Meta) fica para a próxima fase.
                   </p>
                 </div>
               )}
 
               {tab === "Histórico" && (
-                <div className="space-y-2 text-sm">
+                <div className="space-y-3 text-sm">
                   <Row label="Criado em" value={fmtDateTime(detail.created_at)} />
                   <Row label="Atualizado em" value={fmtDateTime(detail.updated_at)} />
-                  {detail.agent_task_id && <Row label="Tarefa de execução" value={`AgentTask #${detail.agent_task_id}`} />}
-                  {detail.agent_run_id && <Row label="Execução do agente" value={`AgentRun #${detail.agent_run_id}`} />}
-                  <p className="pt-1 text-xs text-muted">A trilha completa de auditoria fica registrada em audit_events.</p>
+                  <p className="pt-1 text-xs font-semibold text-muted">Tentativas de execução</p>
+                  {detail.history.length === 0 ? (
+                    <p className="text-xs text-muted">Nenhuma execução ainda.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {detail.history.map((h) => (
+                        <li key={h.id} className="rounded-xl border border-line p-2.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-semibold text-ink">
+                              {h.kind === "research" ? "Pesquisa" : "Cocriação"}
+                              <span className="ml-1 text-xs font-normal text-muted">· {h.trigger === "auto" ? "automática" : "manual"}</span>
+                            </span>
+                            <Badge tone={h.status === "completed" ? "green" : h.status === "failed" ? "red" : "amber"}>{h.status}</Badge>
+                          </div>
+                          <p className="mt-0.5 text-[11px] text-muted">
+                            {fmtDateTime(h.created_at)}{h.output_id ? ` · Output #${h.output_id}` : ""}
+                          </p>
+                          {h.error && <p className="mt-0.5 line-clamp-2 text-[11px] text-red">{h.error}</p>}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <p className="pt-1 text-xs text-muted">Trilha completa registrada em audit_events.</p>
                 </div>
               )}
             </>

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import logging
 
-from sqlalchemy import select
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cocreation_service import generate_content_package
@@ -21,6 +21,7 @@ from app.llm import LLMConfigurationError
 from app.models import AgentTask, CalendarEvent, Output, User
 from app.research_service import run_market_research
 from app.schemas import (
+    CalendarAttempt,
     CalendarEventDetail,
     CalendarStep,
     CreationRequest,
@@ -141,12 +142,49 @@ def build_steps(
     return [step(key, label) for key, label in PIPELINE]
 
 
+async def event_history(db: AsyncSession, event: CalendarEvent) -> list[CalendarAttempt]:
+    """Histórico de tentativas do evento — derivado dos AgentTask (não duplica).
+
+    Filtra por marca + tipo (research/content) e casa o calendar_event_id no metadata_json.
+    """
+    rows = (
+        await db.execute(
+            select(AgentTask)
+            .where(
+                AgentTask.brand_slug == event.brand_slug,
+                AgentTask.task_type.in_(("research", "content")),
+            )
+            .order_by(desc(AgentTask.id))
+            .limit(80)
+        )
+    ).scalars().all()
+    out: list[CalendarAttempt] = []
+    for task in rows:
+        meta = task.metadata_json or {}
+        if meta.get("calendar_event_id") != event.id:
+            continue
+        out.append(
+            CalendarAttempt(
+                id=task.id,
+                kind="research" if task.task_type == "research" else "content",
+                trigger=str(meta.get("trigger", "manual")),
+                status=task.status,
+                output_id=task.output_id,
+                error=task.error,
+                created_at=task.created_at,
+                updated_at=task.updated_at,
+            )
+        )
+    return out
+
+
 async def event_detail(db: AsyncSession, event: CalendarEvent) -> CalendarEventDetail:
     research_status = await _output_status(db, event.research_output_id)
     content_status = await _output_status(db, event.content_output_id)
     steps = build_steps(event, research_status, content_status)
     research_approved = research_status == APPROVED_STATUS
     cocreation_unlocked = research_approved or not event.requires_research_approval
+    history = await event_history(db, event)
     base = CalendarEventDetail.model_validate(event, from_attributes=True)
     return base.model_copy(
         update={
@@ -156,12 +194,13 @@ async def event_detail(db: AsyncSession, event: CalendarEvent) -> CalendarEventD
             "cocreation_unlocked": cocreation_unlocked,
             "content_output_status": content_status,
             "content_approved": content_status == APPROVED_STATUS,
+            "history": history,
         }
     )
 
 
 async def execute_research(
-    db: AsyncSession, event: CalendarEvent, user: User
+    db: AsyncSession, event: CalendarEvent, user: User, trigger: str = "manual"
 ) -> CalendarEvent:
     """Executa a pesquisa pelo evento reusando o Agente de Pesquisa.
 
@@ -190,7 +229,7 @@ async def execute_research(
         status="running",
         input=theme,
         output_type="research",
-        metadata_json={"calendar_event_id": event_id, "source": "calendar"},
+        metadata_json={"calendar_event_id": event_id, "source": "calendar", "trigger": trigger},
     )
     db.add(task)
     await db.flush()
@@ -257,6 +296,7 @@ async def execute_cocreation(
     user: User,
     channel: str = "Instagram",
     content_format: str = "Carrossel",
+    trigger: str = "manual",
 ) -> CalendarEvent:
     """Dispara a cocriação pelo evento reusando o Agente de Cocriação.
 
@@ -282,7 +322,12 @@ async def execute_cocreation(
         status="running",
         input=theme,
         output_type="content",
-        metadata_json={"calendar_event_id": event_id, "source": "calendar", "kind": "cocreation"},
+        metadata_json={
+            "calendar_event_id": event_id,
+            "source": "calendar",
+            "kind": "cocreation",
+            "trigger": trigger,
+        },
     )
     db.add(task)
     await db.flush()

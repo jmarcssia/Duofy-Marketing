@@ -383,6 +383,9 @@ class CalendarEvent(TimestampMixin, Base):
     briefing_id: Mapped[int | None] = mapped_column(ForeignKey("briefings.id"), nullable=True)
     agent_task_id: Mapped[int | None] = mapped_column(ForeignKey("agent_tasks.id"), nullable=True)
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    is_paused: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
 
 
 class Source(TimestampMixin, Base):

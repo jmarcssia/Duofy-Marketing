@@ -304,6 +304,46 @@ async def execute_cocreation_endpoint(
     return await event_detail(db, event)
 
 
+@router.post("/{event_id}/pause", response_model=CalendarEventDetail)
+async def pause_event(
+    event_id: int,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    brand_slug: Annotated[str, Query(min_length=2)],
+) -> CalendarEventDetail:
+    """Pausa a automação do evento (o agendador passa a ignorá-lo). `brand_slug` verificado."""
+    event = await _get_event_or_404(db, event_id, brand_slug)
+    event.is_paused = True
+    await record_audit_event(
+        db, user=current_user, action="calendar.event_paused",
+        entity_type="calendar_event", entity_id=event.id, status=event.status,
+        brand_slug=event.brand_slug, summary=f"Automação pausada: {event.title}",
+    )
+    await db.commit()
+    await db.refresh(event)
+    return await event_detail(db, event)
+
+
+@router.post("/{event_id}/resume", response_model=CalendarEventDetail)
+async def resume_event(
+    event_id: int,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    brand_slug: Annotated[str, Query(min_length=2)],
+) -> CalendarEventDetail:
+    """Retoma a automação do evento. `brand_slug` verificado."""
+    event = await _get_event_or_404(db, event_id, brand_slug)
+    event.is_paused = False
+    await record_audit_event(
+        db, user=current_user, action="calendar.event_resumed",
+        entity_type="calendar_event", entity_id=event.id, status=event.status,
+        brand_slug=event.brand_slug, summary=f"Automação retomada: {event.title}",
+    )
+    await db.commit()
+    await db.refresh(event)
+    return await event_detail(db, event)
+
+
 @router.post("/{event_id}/run-now", response_model=CalendarEventRead)
 async def run_event_now(
     event_id: int,

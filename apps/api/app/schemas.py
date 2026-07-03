@@ -580,6 +580,7 @@ class CalendarEventRead(BaseModel):
     briefing_id: int | None = None
     agent_task_id: int | None = None
     created_by: int | None = None
+    is_paused: bool = False
 
 
 class CalendarStep(BaseModel):
@@ -587,6 +588,19 @@ class CalendarStep(BaseModel):
     label: str
     status: Literal["done", "current", "pending", "locked"]
     detail: str | None = None
+
+
+class CalendarAttempt(BaseModel):
+    """Tentativa de execucao (derivada de AgentTask, nao duplicada)."""
+
+    id: int
+    kind: str  # research | content
+    trigger: str  # manual | auto
+    status: str
+    output_id: int | None = None
+    error: str | None = None
+    created_at: datetime
+    updated_at: datetime
 
 
 class CalendarEventDetail(CalendarEventRead):
@@ -598,6 +612,7 @@ class CalendarEventDetail(CalendarEventRead):
     cocreation_unlocked: bool = False
     content_output_status: str | None = None
     content_approved: bool = False
+    history: list[CalendarAttempt] = Field(default_factory=list)
 
 
 class CalendarGenerateRequest(BaseModel):
