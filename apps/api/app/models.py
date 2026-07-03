@@ -2,7 +2,18 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    func,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import UserDefinedType
 
@@ -348,6 +359,30 @@ class CalendarEvent(TimestampMixin, Base):
     output_id: Mapped[int | None] = mapped_column(ForeignKey("outputs.id"), nullable=True)
     agent_run_id: Mapped[int | None] = mapped_column(ForeignKey("agent_runs.id"), nullable=True)
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Workflow V1: evento como unidade de trabalho (pesquisa -> aprovacao -> cocriacao).
+    # Amplia sem duplicar Output/AgentTask/Briefing (apenas referencias).
+    execution_mode: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="manual", server_default="manual"
+    )
+    auto_execute_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    requires_research_approval: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
+    current_step: Mapped[str] = mapped_column(
+        String(40), nullable=False, default="briefing", server_default="briefing"
+    )
+    objective: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    research_output_id: Mapped[int | None] = mapped_column(
+        ForeignKey("outputs.id"), nullable=True
+    )
+    content_output_id: Mapped[int | None] = mapped_column(
+        ForeignKey("outputs.id"), nullable=True
+    )
+    briefing_id: Mapped[int | None] = mapped_column(ForeignKey("briefings.id"), nullable=True)
+    agent_task_id: Mapped[int | None] = mapped_column(ForeignKey("agent_tasks.id"), nullable=True)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
 
 
 class Source(TimestampMixin, Base):

@@ -491,21 +491,43 @@ class ResearchContentBriefingResponse(BaseModel):
     briefing: str
 
 
+# Estados do evento: legados (planned/in_progress/completed) + workflow V1.
+CalendarEventStatus = Literal[
+    "draft",
+    "briefing_incomplete",
+    "ready",
+    "planned",
+    "scheduled",
+    "in_progress",
+    "running",
+    "awaiting_approval",
+    "approved",
+    "completed",
+    "cancelled",
+    "failed",
+]
+CalendarExecutionMode = Literal["manual", "auto"]
+
+
 class CalendarEventCreate(BaseModel):
     brand_slug: str = Field(min_length=2, max_length=120)
     category: str = Field(default="general", min_length=2, max_length=120)
     title: str = Field(min_length=2, max_length=255)
     description: str = ""
     event_type: str = Field(default="content", min_length=2, max_length=80)
-    status: Literal["planned", "scheduled", "in_progress", "completed", "cancelled", "failed"] = (
-        "planned"
-    )
+    status: CalendarEventStatus = "draft"
     channel: str | None = Field(default=None, max_length=80)
     format: str | None = Field(default=None, max_length=80)
     start_at: datetime
     end_at: datetime | None = None
     assigned_agent_slug: str | None = Field(default=None, max_length=120)
     execution_payload: dict | None = None
+    # Workflow V1
+    objective: str = ""
+    execution_mode: CalendarExecutionMode = "manual"
+    auto_execute_at: datetime | None = None
+    requires_research_approval: bool = True
+    briefing_id: int | None = None
 
 
 class CalendarEventUpdate(BaseModel):
@@ -514,16 +536,18 @@ class CalendarEventUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=2, max_length=255)
     description: str | None = None
     event_type: str | None = Field(default=None, min_length=2, max_length=80)
-    status: (
-        Literal["planned", "scheduled", "in_progress", "completed", "cancelled", "failed"]
-        | None
-    ) = None
+    status: CalendarEventStatus | None = None
     channel: str | None = Field(default=None, max_length=80)
     format: str | None = Field(default=None, max_length=80)
     start_at: datetime | None = None
     end_at: datetime | None = None
     assigned_agent_slug: str | None = Field(default=None, max_length=120)
     execution_payload: dict | None = None
+    # Workflow V1
+    objective: str | None = None
+    execution_mode: CalendarExecutionMode | None = None
+    auto_execute_at: datetime | None = None
+    requires_research_approval: bool | None = None
 
 
 class CalendarEventRead(BaseModel):
@@ -545,6 +569,33 @@ class CalendarEventRead(BaseModel):
     last_error: str | None
     created_at: datetime
     updated_at: datetime
+    # Workflow V1
+    objective: str = ""
+    execution_mode: str = "manual"
+    auto_execute_at: datetime | None = None
+    requires_research_approval: bool = True
+    current_step: str = "briefing"
+    research_output_id: int | None = None
+    content_output_id: int | None = None
+    briefing_id: int | None = None
+    agent_task_id: int | None = None
+    created_by: int | None = None
+
+
+class CalendarStep(BaseModel):
+    key: str
+    label: str
+    status: Literal["done", "current", "pending", "locked"]
+    detail: str | None = None
+
+
+class CalendarEventDetail(CalendarEventRead):
+    """Read + pipeline derivado (nao persistido) e gate de aprovacao da pesquisa."""
+
+    steps: list[CalendarStep] = Field(default_factory=list)
+    research_output_status: str | None = None
+    research_approved: bool = False
+    cocreation_unlocked: bool = False
 
 
 class CalendarGenerateRequest(BaseModel):

@@ -14,12 +14,15 @@ from app.calendar_service import (
     execute_calendar_event,
     generate_calendar_events,
 )
+from app.calendar_workflow import event_detail, execute_research
 from app.db import get_db
 from app.dependencies import get_current_user
+from app.errors import InsufficientSourcesError
 from app.llm import LLMConfigurationError
 from app.models import CalendarEvent, User
 from app.schemas import (
     CalendarEventCreate,
+    CalendarEventDetail,
     CalendarEventRead,
     CalendarEventUpdate,
     CalendarGenerateRequest,
@@ -29,32 +32,21 @@ router = APIRouter(prefix="/api/calendar", tags=["calendar"])
 
 
 def _event_read(event: CalendarEvent) -> CalendarEventRead:
-    return CalendarEventRead(
-        id=event.id,
-        brand_slug=event.brand_slug,
-        category=event.category,
-        title=event.title,
-        description=event.description,
-        event_type=event.event_type,
-        status=event.status,
-        channel=event.channel,
-        format=event.format,
-        start_at=event.start_at,
-        end_at=event.end_at,
-        assigned_agent_slug=event.assigned_agent_slug,
-        execution_payload=event.execution_payload,
-        output_id=event.output_id,
-        agent_run_id=event.agent_run_id,
-        last_error=event.last_error,
-        created_at=event.created_at,
-        updated_at=event.updated_at,
-    )
+    return CalendarEventRead.model_validate(event, from_attributes=True)
 
 
-async def _get_event_or_404(db: AsyncSession, event_id: int) -> CalendarEvent:
+async def _get_event_or_404(
+    db: AsyncSession, event_id: int, brand_slug: str | None = None
+) -> CalendarEvent:
+    """Carrega o evento e impede acesso cross-brand (IDOR).
+
+    Quando `brand_slug` é fornecido, o evento precisa pertencer àquela marca; um mismatch
+    responde 404 (não vaza existência de eventos de outras marcas). As rotas sensíveis do
+    workflow exigem `brand_slug`; as rotas genéricas o verificam quando enviado.
+    """
     result = await db.execute(select(CalendarEvent).where(CalendarEvent.id == event_id))
     event = result.scalar_one_or_none()
-    if event is None:
+    if event is None or (brand_slug is not None and event.brand_slug != brand_slug):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evento nao encontrado.")
     return event
 
@@ -118,7 +110,7 @@ async def create_event(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> CalendarEventRead:
     try:
-        event = await create_calendar_event(db, payload)
+        event = await create_calendar_event(db, payload, created_by=current_user.id)
     except LLMConfigurationError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     await record_audit_event(
@@ -143,8 +135,9 @@ async def update_event(
     payload: CalendarEventUpdate,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    brand_slug: str | None = None,
 ) -> CalendarEventRead:
-    event = await _get_event_or_404(db, event_id)
+    event = await _get_event_or_404(db, event_id, brand_slug)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(event, field, value)
     await record_audit_event(
@@ -169,8 +162,9 @@ async def cancel_event(
     event_id: int,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    brand_slug: str | None = None,
 ) -> CalendarEventRead:
-    event = await _get_event_or_404(db, event_id)
+    event = await _get_event_or_404(db, event_id, brand_slug)
     event.status = "cancelled"
     await record_audit_event(
         db,
@@ -220,13 +214,67 @@ async def generate_events(
     return [_event_read(event) for event in events]
 
 
+@router.get("/{event_id}", response_model=CalendarEventDetail)
+async def get_event(
+    event_id: int,
+    _current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    brand_slug: Annotated[str, Query(min_length=2)],
+) -> CalendarEventDetail:
+    """Detalhe do evento com o pipeline derivado (Briefing→Pesquisa→Aprovação→…).
+
+    `brand_slug` é obrigatório e verificado (isolamento por marca / anti-IDOR)."""
+    event = await _get_event_or_404(db, event_id, brand_slug)
+    return await event_detail(db, event)
+
+
+@router.post("/{event_id}/execute-research", response_model=CalendarEventDetail)
+async def execute_research_endpoint(
+    event_id: int,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    brand_slug: Annotated[str, Query(min_length=2)],
+) -> CalendarEventDetail:
+    """Executa a pesquisa pelo evento (Agente de Pesquisa real) e para em 'aguardando
+    aprovação'. `brand_slug` obrigatório e verificado."""
+    event = await _get_event_or_404(db, event_id, brand_slug)
+    try:
+        event = await execute_research(db, event, current_user)
+    except InsufficientSourcesError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+    except LLMConfigurationError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Falha ao executar a pesquisa: {exc}",
+        ) from exc
+    await record_audit_event(
+        db,
+        user=current_user,
+        action="calendar.research_executed",
+        entity_type="calendar_event",
+        entity_id=event.id,
+        status=event.status,
+        brand_slug=event.brand_slug,
+        agent_slug="research_agent",
+        summary=f"Pesquisa executada pelo calendário: {event.title}",
+        metadata={"output_id": event.research_output_id, "agent_task_id": event.agent_task_id},
+    )
+    await db.commit()
+    return await event_detail(db, event)
+
+
 @router.post("/{event_id}/run-now", response_model=CalendarEventRead)
 async def run_event_now(
     event_id: int,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    brand_slug: str | None = None,
 ) -> CalendarEventRead:
-    event = await _get_event_or_404(db, event_id)
+    event = await _get_event_or_404(db, event_id, brand_slug)
     event.status = "in_progress"
     await db.commit()
     await db.refresh(event)

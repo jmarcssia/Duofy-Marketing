@@ -150,11 +150,14 @@ def _event_create_to_model(payload: CalendarEventCreate) -> CalendarEvent:
     return CalendarEvent(**payload.model_dump())
 
 
-async def create_calendar_event(db: AsyncSession, payload: CalendarEventCreate) -> CalendarEvent:
+async def create_calendar_event(
+    db: AsyncSession, payload: CalendarEventCreate, created_by: int | None = None
+) -> CalendarEvent:
     await _get_brand(db, payload.brand_slug)
     if payload.assigned_agent_slug and payload.assigned_agent_slug not in AGENT_SLUGS:
         raise LLMConfigurationError("Agente atribuido nao suportado pelo calendario.")
     event = _event_create_to_model(payload)
+    event.created_by = created_by
     db.add(event)
     await db.commit()
     await db.refresh(event)
