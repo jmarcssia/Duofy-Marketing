@@ -24,8 +24,8 @@ import {
 } from "@/components/icons"
 
 const navItems = [
-  { href: "/operations", label: "Operações", icon: GridIcon },
   { href: "/calendar", label: "Calendário", icon: CalendarIcon },
+  { href: "/operations", label: "Operações", icon: GridIcon },
   { href: "/memory", label: "Memória", icon: BookIcon },
   { href: "/approvals", label: "Revisão", icon: ShieldCheckIcon },
   { href: "/relatorios", label: "Relatórios", icon: ChartIcon },

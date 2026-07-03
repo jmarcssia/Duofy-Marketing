@@ -271,6 +271,46 @@ export type CalendarEvent = {
   last_error: string | null
   created_at: string
   updated_at: string
+  // Workflow V1
+  objective: string
+  execution_mode: string
+  auto_execute_at: string | null
+  requires_research_approval: boolean
+  current_step: string
+  research_output_id: number | null
+  content_output_id: number | null
+  briefing_id: number | null
+  agent_task_id: number | null
+  created_by: number | null
+}
+
+export type CalendarStep = {
+  key: string
+  label: string
+  status: "done" | "current" | "pending" | "locked"
+  detail: string | null
+}
+
+export type CalendarEventDetail = CalendarEvent & {
+  steps: CalendarStep[]
+  research_output_status: string | null
+  research_approved: boolean
+  cocreation_unlocked: boolean
+}
+
+export function getCalendarEventDetail(id: number, brandSlug: string, token: string) {
+  return apiFetch<CalendarEventDetail>(
+    `/api/calendar/${id}?brand_slug=${encodeURIComponent(brandSlug)}`,
+    token
+  )
+}
+
+export function executeCalendarResearch(id: number, brandSlug: string, token: string) {
+  return apiFetch<CalendarEventDetail>(
+    `/api/calendar/${id}/execute-research?brand_slug=${encodeURIComponent(brandSlug)}`,
+    token,
+    { method: "POST", body: "{}" }
+  )
 }
 
 export type ContentTheme = {
