@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     db_pool_timeout: int = 30
     db_pool_recycle: int = 1800
     jwt_secret_key: str = DEFAULT_JWT_SECRET
+    # C2: segredo SEPARADO para a criptografia Fernet das chaves de provedor. Se definido,
+    # rotacionar JWT_SECRET_KEY NÃO invalida as chaves cifradas. Se None, cai no jwt_secret_key
+    # (retrocompatível — chaves já cifradas continuam decifráveis).
+    fernet_secret_key: str | None = None
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 720
     backend_cors_origins: str = "http://localhost:3000"
@@ -54,6 +58,9 @@ class Settings(BaseSettings):
             problems.append(f"JWT_SECRET_KEY tem menos de {_MIN_JWT_SECRET_LEN} caracteres")
         if self.admin_password == DEFAULT_ADMIN_PASSWORD:
             problems.append("ADMIN_PASSWORD ainda e o valor default")
+        # C3: senha default do Postgres embutida na DATABASE_URL nao pode ir para producao.
+        if "duofy:duofy@" in self.database_url:
+            problems.append("DATABASE_URL usa a senha default do Postgres (duofy)")
 
         if problems:
             raise ValueError(

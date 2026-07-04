@@ -12,6 +12,7 @@ from app.settings import (
 
 STRONG_JWT = "x7Qm2vL9pR4tZ8wK3nB6yH1sD5fG0jC2aE4uI7oP9rT1mN3"  # >=32, sem 'change-me'
 STRONG_ADMIN = "S3nh4-Admin-Forte-2026"
+SAFE_DB = "postgresql+asyncpg://duofy_app:S3nh4Forte@db:5432/duofy_v1"
 
 
 def test_production_rejects_default_jwt_secret() -> None:
@@ -37,11 +38,22 @@ def test_production_rejects_default_admin_password() -> None:
         )
 
 
+def test_production_rejects_default_db_password() -> None:
+    with pytest.raises(ValidationError):
+        Settings(
+            app_env="production",
+            jwt_secret_key=STRONG_JWT,
+            admin_password=STRONG_ADMIN,
+            database_url="postgresql+asyncpg://duofy:duofy@db:5432/duofy_v1",
+        )
+
+
 def test_production_accepts_strong_secrets() -> None:
     settings = Settings(
         app_env="production",
         jwt_secret_key=STRONG_JWT,
         admin_password=STRONG_ADMIN,
+        database_url=SAFE_DB,
     )
     assert settings.app_env == "production"
 
