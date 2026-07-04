@@ -5,7 +5,7 @@ import ipaddress
 import re
 import socket
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, date, datetime
 from urllib.parse import parse_qs, quote_plus, unquote, urlparse
 
 import feedparser
@@ -27,6 +27,7 @@ from app.document_formatting import normalize_document_content
 from app.embeddings import embed_text, vector_to_sql
 from app.errors import InsufficientSourcesError
 from app.llm import LLMConfigurationError, call_llm, provider_for_model
+from app.metrics import estimate_cost_usd, latency_ms, record_model_call
 from app.models import (
     Agent,
     AgentRun,
@@ -38,6 +39,7 @@ from app.models import (
     ResearchSource,
     Source,
 )
+from app.prompt_safety import sanitize_prompt_input
 from app.rag import build_rag_context
 from app.schemas import ResearchRunRequest
 
@@ -529,8 +531,61 @@ def _research_angles(theme: str, depth: str) -> list[str]:
     return [theme, f"{theme} dados mercado Brasil"]
 
 
+async def _record_web_search_call(
+    *,
+    started_at: datetime,
+    model: str,
+    brand_slug: str | None,
+    usage: dict | None,
+    status: str,
+    error: str | None,
+) -> None:
+    """V5: rastreia uma chamada de web-search no ModelCall (best-effort)."""
+    ended_at = datetime.now(UTC)
+    usage = usage if isinstance(usage, dict) else None
+    input_tokens = int((usage or {}).get("prompt_tokens") or 0) or None
+    output_tokens = int((usage or {}).get("completion_tokens") or 0) or None
+    total_raw = (usage or {}).get("total_tokens")
+    total_tokens = (
+        int(total_raw) if total_raw else ((input_tokens or 0) + (output_tokens or 0)) or None
+    )
+    try:
+        cost = estimate_cost_usd(
+            provider="openrouter", model=model,
+            input_tokens=input_tokens or 0, output_tokens=output_tokens or 0,
+            raw_usage=usage,
+        )
+    except Exception:
+        cost = None
+    try:
+        await record_model_call(
+            task_type="web_search",
+            task_id=None,
+            agent_slug="research_agent",
+            brand_slug=brand_slug,
+            provider="openrouter",
+            model=model,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            total_tokens=total_tokens,
+            estimated_cost_usd=cost,
+            latency_ms=latency_ms(started_at, ended_at),
+            status=status,
+            error=error,
+            raw_usage=usage,
+        )
+    except Exception:
+        # o rastreamento nunca pode derrubar a coleta de fontes
+        pass
+
+
 async def _openrouter_web_search(
-    client: httpx.AsyncClient, base_url: str, api_key: str, model: str, query: str
+    client: httpx.AsyncClient,
+    base_url: str,
+    api_key: str,
+    model: str,
+    query: str,
+    brand_slug: str | None = None,
 ) -> list[dict]:
     body = {
         "model": model,
@@ -546,6 +601,11 @@ async def _openrouter_web_search(
         "plugins": [{"id": "web", "max_results": 10}],
         "max_tokens": 400,
     }
+    started_at = datetime.now(UTC)
+    status = "completed"
+    error: str | None = None
+    usage: dict | None = None
+    annotations: list[dict] = []
     try:
         response = await client.post(
             f"{base_url}/chat/completions",
@@ -553,13 +613,24 @@ async def _openrouter_web_search(
             json=body,
         )
         response.raise_for_status()
-        return response.json().get("choices", [{}])[0].get("message", {}).get("annotations") or []
-    except Exception:
-        return []
+        data = response.json()
+        if isinstance(data, dict):
+            usage = data.get("usage")
+            annotations = (
+                data.get("choices", [{}])[0].get("message", {}).get("annotations") or []
+            )
+    except Exception as exc:  # noqa: BLE001
+        status = "failed"
+        error = str(exc)[:500]
+    await _record_web_search_call(
+        started_at=started_at, model=model, brand_slug=brand_slug,
+        usage=usage, status=status, error=error,
+    )
+    return annotations
 
 
 async def _openrouter_web_candidates(
-    db: AsyncSession, theme: str, depth: str
+    db: AsyncSession, theme: str, depth: str, brand_slug: str | None = None
 ) -> list[SourceCandidate]:
     """Busca web ROBUSTA e AGRESSIVA via OpenRouter (plugin 'web').
 
@@ -583,7 +654,9 @@ async def _openrouter_web_candidates(
     seen: set[str] = set()
     async with httpx.AsyncClient(timeout=90) as client:
         for angle in _research_angles(theme, depth):
-            for annotation in await _openrouter_web_search(client, base_url, api_key, model, angle):
+            for annotation in await _openrouter_web_search(
+                client, base_url, api_key, model, angle, brand_slug=brand_slug
+            ):
                 citation = annotation.get("url_citation") or {}
                 url = str(citation.get("url") or "").strip()
                 if not url.startswith("http") or url in seen:
@@ -621,7 +694,9 @@ async def collect_research_sources(
         for url in payload.source_urls
     ]
     # Coletor primario robusto: busca web agressiva via OpenRouter (multi-angulo).
-    candidates.extend(await _openrouter_web_candidates(db, payload.theme, payload.depth))
+    candidates.extend(
+        await _openrouter_web_candidates(db, payload.theme, payload.depth, brand.slug)
+    )
     # Best-effort: DuckDuckGo (amplitude extra quando disponivel; [] se bloquear).
     candidates.extend(await _duckduckgo_candidates(payload.theme, brand, sources))
     try:
@@ -765,15 +840,16 @@ def _user_prompt(
             f"- Nome: {brand.name}",
             f"- Slug: {brand.slug}",
             f"- Nicho: {brand.niche}",
-            f"- Descricao: {brand.description}",
+            f"- Descricao: {sanitize_prompt_input(brand.description, max_len=2000)}",
             "",
             "Escopo da pesquisa:",
-            f"- Tema: {payload.theme}",
-            f"- Periodo: {payload.period}",
+            f"- Tema: {sanitize_prompt_input(payload.theme, max_len=255)}",
+            f"- Periodo: {sanitize_prompt_input(payload.period, max_len=80)}",
             f"- Profundidade: {payload.depth}",
             "",
             "Memoria RAG relevante:",
-            rag_context or "Nenhuma memoria relevante encontrada.",
+            sanitize_prompt_input(rag_context, max_len=8000, preserve_newlines=True)
+            or "Nenhuma memoria relevante encontrada.",
             "",
             f"Fontes externas analisadas ({len(sources)} fontes; use os numeros [n] para citar):",
             _sources_block(sources),

@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.access import accessible_brands, assert_brand_access
 from app.audit_service import record_audit_event
 from app.db import get_db
 from app.dependencies import get_current_user
@@ -96,7 +97,9 @@ async def _report_read(db: AsyncSession, output: Output) -> ResearchReportRead:
     )
 
 
-async def _get_report_or_404(db: AsyncSession, output_id: int) -> Output:
+async def _get_report_or_404(
+    db: AsyncSession, output_id: int, user: User | None = None
+) -> Output:
     result = await db.execute(
         select(Output).where(
             Output.id == output_id,
@@ -110,6 +113,8 @@ async def _get_report_or_404(db: AsyncSession, output_id: int) -> Output:
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Relatorio de pesquisa nao encontrado.",
         )
+    if user is not None:  # C1: isolamento por marca
+        assert_brand_access(user, output.brand_slug)
     return output
 
 
@@ -160,7 +165,7 @@ async def run_research(
 
 @router.get("/reports", response_model=list[ResearchReportRead])
 async def list_reports(
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     brand_slug: str | None = None,
     status_filter: Annotated[str | None, Query(alias="status")] = None,
@@ -172,6 +177,9 @@ async def list_reports(
         Output.channel == "Pesquisa",
         Output.format == "research_report",
     )
+    allowed = accessible_brands(current_user)  # C1: só as marcas do usuário
+    if allowed is not None:
+        statement = statement.where(Output.brand_slug.in_(allowed))
     if brand_slug:
         statement = statement.where(Output.brand_slug == brand_slug)
     if status_filter:
@@ -191,10 +199,10 @@ async def list_reports(
 @router.get("/reports/{report_id}", response_model=ResearchReportRead)
 async def get_report(
     report_id: int,
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ResearchReportRead:
-    output = await _get_report_or_404(db, report_id)
+    output = await _get_report_or_404(db, report_id, current_user)
     return await _report_read(db, output)
 
 
@@ -204,7 +212,7 @@ async def save_report_memory(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ResearchMemoryResponse:
-    output = await _get_report_or_404(db, report_id)
+    output = await _get_report_or_404(db, report_id, current_user)
     content = await _current_content_or_404(db, output)
     memory = await save_research_as_memory(db, output, content)
     await record_audit_event(
@@ -232,7 +240,7 @@ async def use_report_in_content(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ResearchContentBriefingResponse:
-    output = await _get_report_or_404(db, report_id)
+    output = await _get_report_or_404(db, report_id, current_user)
     content = await _current_content_or_404(db, output)
     await record_audit_event(
         db,

@@ -26,6 +26,12 @@ async def test_update_agent_settings_persists(monkeypatch):
     monkeypatch.setattr(admin, "_setting_value", fake_get)
 
     class _Db:
+        def add(self, _obj):
+            pass
+
+        async def flush(self):
+            pass
+
         async def commit(self):
             pass
 
@@ -33,7 +39,7 @@ async def test_update_agent_settings_persists(monkeypatch):
         token_budgets={"research_agent": 8000},
         research_depth={"deep": {"sources": 20, "excerpt": 5000}},
     )
-    result = await admin.update_agent_settings(payload, _current_user=None, db=_Db())
+    result = await admin.update_agent_settings(payload, current_user=None, db=_Db())
     assert result.token_budgets["research_agent"] == 8000
     assert json.loads(store[admin.AGENT_TOKEN_BUDGETS_KEY])["research_agent"] == 8000
 
@@ -68,6 +74,6 @@ async def test_update_agent_settings_rejects_out_of_range(monkeypatch):
     with pytest.raises(HTTPException):
         await admin.update_agent_settings(
             AgentSettingsUpdate(token_budgets={"research_agent": 999999}, research_depth={}),
-            _current_user=None,
+            current_user=None,
             db=_Db(),
         )

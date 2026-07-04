@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.access import accessible_brands, assert_brand_access
 from app.db import get_db
 from app.dependencies import get_current_user
 from app.models import AuditEvent, QualityReview, User
@@ -60,12 +61,14 @@ def _quality_review_item(review: QualityReview) -> QualityReviewListItem:
 
 @router.get("/summary", response_model=OperationsSummary)
 async def get_operations_summary(
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     start: datetime | None = None,
     end: datetime | None = None,
     brand_slug: str | None = None,
 ) -> OperationsSummary:
+    if brand_slug:  # C1: não permite consultar marca fora do escopo
+        assert_brand_access(current_user, brand_slug)
     return OperationsSummary(
         **await operations_summary(db, start=start, end=end, brand_slug=brand_slug)
     )
@@ -100,7 +103,7 @@ async def list_quality_reviews(
 
 @router.get("/audit-events", response_model=list[AuditEventRead])
 async def list_audit_events(
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     start: datetime | None = None,
     end: datetime | None = None,
@@ -110,6 +113,8 @@ async def list_audit_events(
     status_filter: Annotated[str | None, Query(alias="status")] = None,
     limit: Annotated[int, Query(ge=1, le=300)] = 120,
 ) -> list[AuditEventRead]:
+    if brand_slug:  # C1
+        assert_brand_access(current_user, brand_slug)
     statement = apply_audit_filters(
         select(AuditEvent),
         start=start,
@@ -119,5 +124,8 @@ async def list_audit_events(
         entity_type=entity_type,
         status=status_filter,
     )
+    allowed = accessible_brands(current_user)  # C1: restringe a trilha às marcas do usuário
+    if allowed is not None:
+        statement = statement.where(AuditEvent.brand_slug.in_(allowed))
     result = await db.execute(statement.order_by(AuditEvent.created_at.desc()).limit(limit))
     return [_audit_event_read(event) for event in result.scalars().all()]

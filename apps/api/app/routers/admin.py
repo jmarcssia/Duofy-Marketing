@@ -155,12 +155,22 @@ async def get_quality_settings(
 @router.put("/quality-settings", response_model=QualitySettingsRead)
 async def update_quality_settings(
     payload: QualitySettingsUpdate,
-    _current_user: Annotated[User, Depends(require_admin)],
+    current_user: Annotated[User, Depends(require_admin)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> QualitySettingsRead:
     await _upsert_setting(db, QUALITY_REVIEW_MODE_KEY, payload.review_mode)
     await _upsert_setting(db, QUALITY_REVIEW_PROVIDER_KEY, payload.provider or "")
     await _upsert_setting(db, QUALITY_REVIEW_MODEL_KEY, payload.model or "")
+    await record_audit_event(
+        db, user=current_user, action="admin.quality_settings_updated",
+        entity_type="settings", status="success",
+        summary="Configurações de qualidade atualizadas",
+        metadata={
+            "review_mode": payload.review_mode,
+            "provider": payload.provider,
+            "model": payload.model,
+        },
+    )
     await db.commit()
     return QualitySettingsRead(
         review_mode=payload.review_mode,
@@ -214,13 +224,22 @@ async def get_agent_settings(
 @router.put("/agent-settings", response_model=AgentSettingsRead)
 async def update_agent_settings(
     payload: AgentSettingsUpdate,
-    _current_user: Annotated[User, Depends(require_admin)],
+    current_user: Annotated[User, Depends(require_admin)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> AgentSettingsRead:
     _validate_budgets(payload.token_budgets)
     _validate_depth(payload.research_depth)
     await _upsert_setting(db, AGENT_TOKEN_BUDGETS_KEY, json.dumps(payload.token_budgets))
     await _upsert_setting(db, RESEARCH_DEPTH_LIMITS_KEY, json.dumps(payload.research_depth))
+    await record_audit_event(
+        db, user=current_user, action="admin.agent_settings_updated",
+        entity_type="settings", status="success",
+        summary="Limites de agentes atualizados",
+        metadata={
+            "token_budgets": payload.token_budgets,
+            "research_depth": payload.research_depth,
+        },
+    )
     await db.commit()
     return AgentSettingsRead(
         token_budgets=payload.token_budgets, research_depth=payload.research_depth
@@ -231,7 +250,7 @@ async def update_agent_settings(
 async def upsert_provider(
     provider: str,
     payload: ProviderCredentialUpdate,
-    _current_user: Annotated[User, Depends(require_admin)],
+    current_user: Annotated[User, Depends(require_admin)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ProviderCredentialRead:
     if provider != payload.provider:
@@ -258,6 +277,21 @@ async def upsert_provider(
     if payload.api_key:
         credential.api_key_encrypted = encrypt_secret(payload.api_key)
 
+    await db.flush()  # garante id para a trilha (credencial nova)
+    await record_audit_event(
+        db, user=current_user, action="admin.provider_updated",
+        entity_type="provider", entity_id=credential.id, status="success",
+        summary=f"Provedor {credential.provider} atualizado",
+        metadata={
+            "provider": credential.provider,
+            "display_name": credential.display_name,
+            "default_model": credential.default_model,
+            "base_url": credential.base_url,
+            "is_enabled": credential.is_enabled,
+            # NUNCA gravar a chave; apenas se houve troca.
+            "api_key_changed": bool(payload.api_key),
+        },
+    )
     await db.commit()
     await db.refresh(credential)
     return _provider_read(credential)
