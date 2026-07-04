@@ -6,6 +6,7 @@ import { AreaLineChart, DonutChart, HBarChart, Legend } from "@/components/chart
 import { Segmented, StatCard } from "@/components/ui"
 import { Markdown } from "@/components/markdown"
 import {
+  AlertTriangleIcon,
   ChartIcon,
   CheckCircleIcon,
   DatabaseIcon,
@@ -14,9 +15,10 @@ import {
   MoreIcon,
   PhoneIcon,
   RefreshIcon,
+  SendIcon,
   ZapIcon
 } from "@/components/icons"
-import { apiFetch, type MetricsSummary, type ModelCall, type InternalReport } from "@/lib/api"
+import { apiFetch, type InternalReport, type MetricsSummary, type ModelCall, type Publication } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
 import { useBrand } from "@/lib/brand-context"
 import { downloadFile, exportPath } from "@/lib/download"
@@ -46,6 +48,7 @@ export default function RelatoriosPage() {
   const [reports, setReports] = useState<InternalReport[]>([])
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<Period>("30")
+  const [publishedCount, setPublishedCount] = useState(0)
 
   const load = useCallback(async () => {
     const token = getTokenFromCookie()
@@ -57,14 +60,17 @@ export default function RelatoriosPage() {
     if (start) params.set("start", start)
     const qs = params.toString() ? `?${params.toString()}` : ""
     const callsQs = `?limit=300${params.toString() ? `&${params.toString()}` : ""}`
-    const [s, c, r] = await Promise.allSettled([
+    const pubQs = brand ? `?brand_slug=${encodeURIComponent(brand)}&status=published` : "?status=published"
+    const [s, c, r, p] = await Promise.allSettled([
       apiFetch<MetricsSummary>(`/api/metrics/summary${qs}`, token),
       apiFetch<ModelCall[]>(`/api/metrics/model-calls${callsQs}`, token),
-      apiFetch<InternalReport[]>(`/api/reports?limit=10`, token)
+      apiFetch<InternalReport[]>(`/api/reports?limit=10`, token),
+      apiFetch<Publication[]>(`/api/publications${pubQs}`, token)
     ])
     if (s.status === "fulfilled") setSummary(s.value)
     if (c.status === "fulfilled") setCalls(c.value)
     if (r.status === "fulfilled") setReports(r.value)
+    setPublishedCount(p.status === "fulfilled" ? p.value.length : 0)
     setLoading(false)
   }, [brand, period])
 
@@ -112,9 +118,24 @@ export default function RelatoriosPage() {
         { icon: <DatabaseIcon className="h-5 w-5" />, tone: "teal" as const, label: "Tokens totais", value: num(summary.total_tokens) },
         { icon: <ZapIcon className="h-5 w-5" />, tone: "amber" as const, label: "Tokens entrada/saída", value: `${num(summary.total_input_tokens)} / ${num(summary.total_output_tokens)}` },
         { icon: <CheckCircleIcon className="h-5 w-5" />, tone: "green" as const, label: "Concluídas", value: `${summary.completed_calls}/${summary.total_calls}` },
-        { icon: <RefreshIcon className="h-5 w-5" />, tone: "pink" as const, label: "Latência média", value: summary.avg_latency_ms ? `${(summary.avg_latency_ms / 1000).toFixed(1)}s` : "—" }
+        { icon: <RefreshIcon className="h-5 w-5" />, tone: "pink" as const, label: "Latência média", value: summary.avg_latency_ms ? `${(summary.avg_latency_ms / 1000).toFixed(1)}s` : "—" },
+        { icon: <SendIcon className="h-5 w-5" />, tone: "indigo" as const, label: "Publicações realizadas", value: num(publishedCount) }
       ]
     : []
+
+  const insights = useMemo(() => {
+    if (!summary) return [] as string[]
+    const out: string[] = []
+    const rate = summary.total_calls ? Math.round((summary.completed_calls / summary.total_calls) * 100) : 0
+    out.push(`${rate}% das chamadas de modelo concluíram no período (${summary.completed_calls}/${summary.total_calls}).`)
+    const topCost = [...(summary.by_agent ?? [])].sort((a, b) => b.cost - a.cost)[0]
+    if (topCost && summary.estimated_cost_usd > 0)
+      out.push(`"${topCost.key}" concentra ${Math.round((topCost.cost / summary.estimated_cost_usd) * 100)}% do custo de IA.`)
+    const topModel = [...(summary.by_model ?? [])].sort((a, b) => b.tokens - a.tokens)[0]
+    if (topModel) out.push(`Modelo mais usado: ${topModel.key.replace("~", "")} (${num(topModel.tokens)} tokens).`)
+    if (publishedCount > 0) out.push(`${publishedCount} publicação(ões) registrada(s) no período.`)
+    return out
+  }, [summary, publishedCount])
 
   const totalTokens = summary?.total_tokens ?? 0
 
@@ -216,6 +237,39 @@ export default function RelatoriosPage() {
                 </tbody>
               </table>
             </TableCard>
+          </div>
+
+          {/* Insights automáticos + métricas de mídia (honestas) */}
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <section className="duofy-card rounded-2xl p-5">
+              <h3 className="flex items-center gap-1.5 text-base font-bold text-ink"><ZapIcon className="h-4 w-4 text-purple" /> Insights automáticos</h3>
+              <ul className="mt-3 space-y-2">
+                {insights.length === 0 ? (
+                  <li className="text-sm text-muted">Sem dados suficientes para insights.</li>
+                ) : insights.map((s, i) => (
+                  <li key={i} className="flex items-start gap-2 rounded-xl border border-line bg-panel/40 p-3 text-xs text-ink/90"><ZapIcon className="mt-0.5 h-4 w-4 shrink-0 text-purple" /> {s}</li>
+                ))}
+              </ul>
+            </section>
+
+            <section className="duofy-card rounded-2xl p-5">
+              <h3 className="text-base font-bold text-ink">Métricas de mídia</h3>
+              <p className="text-xs text-muted">Dependem de integrações externas — sem dados inventados.</p>
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {[
+                  { label: "Tráfego pago", note: "Requer integração de Ads (Meta/Google)." },
+                  { label: "Alcance orgânico", note: "Requer Meta Graph API." },
+                  { label: "Leads nutridos", note: "Requer integração de CRM/e-mail." }
+                ].map((m) => (
+                  <div key={m.label} className="rounded-xl border border-dashed border-line p-3">
+                    <p className="text-xs text-muted">{m.label}</p>
+                    <p className="mt-0.5 text-lg font-bold text-ink">—</p>
+                    <p className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-amber"><AlertTriangleIcon className="h-3.5 w-3.5" /> Configuração pendente</p>
+                    <p className="mt-1 text-[10px] leading-tight text-muted">{m.note}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
           </div>
 
           {/* Relatórios internos gerados */}
