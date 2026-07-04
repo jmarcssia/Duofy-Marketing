@@ -22,6 +22,20 @@ class UserRead(BaseModel):
     role: Literal["admin", "manager"]
 
 
+class AdminUserRead(BaseModel):
+    id: int
+    email: EmailStr
+    name: str
+    role: str
+    is_active: bool
+    brand_scope: list[str] | None = None  # None = todas as marcas (C1)
+
+
+class UserBrandScopeUpdate(BaseModel):
+    # None ou lista vazia => acesso a todas as marcas.
+    brand_scope: list[str] | None = None
+
+
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8)

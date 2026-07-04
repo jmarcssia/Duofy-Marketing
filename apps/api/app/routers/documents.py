@@ -20,6 +20,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.access import accessible_brands, assert_brand_access
 from app.db import get_db
 from app.dependencies import get_current_user
 from app.document_processing import chunk_text, estimate_tokens, extract_text
@@ -49,7 +50,7 @@ def _document_read(document: Document) -> DocumentRead:
     )
 
 
-async def _get_document_or_404(db: AsyncSession, document_id: int) -> Document:
+async def _get_document_or_404(db: AsyncSession, document_id: int, user: User) -> Document:
     result = await db.execute(select(Document).where(Document.id == document_id))
     document = result.scalar_one_or_none()
     if document is None:
@@ -57,6 +58,7 @@ async def _get_document_or_404(db: AsyncSession, document_id: int) -> Document:
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Documento nao encontrado.",
         )
+    assert_brand_access(user, document.brand_slug)  # C1: isolamento por marca
     return document
 
 
@@ -191,6 +193,9 @@ async def list_documents(
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[DocumentRead]:
     statement = select(Document)
+    allowed = accessible_brands(_current_user)  # C1: restringe às marcas do usuário
+    if allowed is not None:
+        statement = statement.where(Document.brand_slug.in_(allowed))
     if brand_slug:
         statement = statement.where(Document.brand_slug == brand_slug)
     if category:
@@ -214,6 +219,7 @@ async def delete_document(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Documento nao encontrado."
         )
+    assert_brand_access(_current_user, document.brand_slug)  # C1: isolamento por marca
     await db.execute(delete(DocumentChunk).where(DocumentChunk.document_id == document_id))
     source_id = document.source_id
     stored_path = document.stored_path
@@ -236,7 +242,7 @@ async def list_document_chunks(
     _current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[DocumentChunkRead]:
-    await _get_document_or_404(db, document_id)
+    await _get_document_or_404(db, document_id, _current_user)
     chunks = await _document_chunks(db, document_id)
     return [
         DocumentChunkRead(
@@ -256,7 +262,7 @@ async def download_document(
     _current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> FileResponse:
-    document = await _get_document_or_404(db, document_id)
+    document = await _get_document_or_404(db, document_id, _current_user)
     path = Path(document.stored_path)
     if not path.exists() or not path.is_file():
         raise HTTPException(
@@ -277,7 +283,7 @@ async def export_indexed_document(
     db: Annotated[AsyncSession, Depends(get_db)],
     format: Annotated[str, Query(pattern="^(pdf|docx|md|html)$")] = "pdf",
 ) -> Response:
-    document = await _get_document_or_404(db, document_id)
+    document = await _get_document_or_404(db, document_id, _current_user)
     chunks = await _document_chunks(db, document.id)
     exported = await run_in_threadpool(
         export_document, _document_export(document, chunks), format

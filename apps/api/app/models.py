@@ -53,6 +53,8 @@ class User(TimestampMixin, Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(32), nullable=False, default="manager")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # C1: lista de slugs de marca que o usuario pode acessar. NULL/vazio = todas (retrocompat).
+    brand_scope: Mapped[list | None] = mapped_column(JSON, nullable=True)
 
 
 class Brand(TimestampMixin, Base):

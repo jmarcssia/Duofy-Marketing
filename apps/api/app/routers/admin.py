@@ -9,11 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent_limits import AGENT_TOKEN_BUDGETS_KEY, RESEARCH_DEPTH_LIMITS_KEY
 from app.agent_limits import _config as _limits_config
+from app.audit_service import record_audit_event
 from app.crypto import decrypt_secret, encrypt_secret, mask_secret
 from app.db import get_db
 from app.dependencies import require_admin
 from app.models import Agent, ProviderCredential, User
 from app.schemas import (
+    AdminUserRead,
     AgentRead,
     AgentSettingsRead,
     AgentSettingsUpdate,
@@ -21,6 +23,7 @@ from app.schemas import (
     ProviderCredentialUpdate,
     QualitySettingsRead,
     QualitySettingsUpdate,
+    UserBrandScopeUpdate,
 )
 from app.settings_store import _setting_value, _upsert_setting
 
@@ -41,6 +44,45 @@ def _normalize_base_url(provider: str, base_url: str | None) -> str | None:
         if normalized.endswith("/chat/completions"):
             return normalized.removesuffix("/chat/completions")
     return normalized
+
+
+def _admin_user_read(user: User) -> AdminUserRead:
+    return AdminUserRead(
+        id=user.id, email=user.email, name=user.name, role=user.role,
+        is_active=user.is_active, brand_scope=user.brand_scope or None,
+    )
+
+
+@router.get("/users", response_model=list[AdminUserRead])
+async def list_users(
+    _current_user: Annotated[User, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[AdminUserRead]:
+    result = await db.execute(select(User).order_by(User.id.asc()))
+    return [_admin_user_read(user) for user in result.scalars().all()]
+
+
+@router.put("/users/{user_id}/brand-scope", response_model=AdminUserRead)
+async def set_user_brand_scope(
+    user_id: int,
+    payload: UserBrandScopeUpdate,
+    current_user: Annotated[User, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> AdminUserRead:
+    """C1: define as marcas que o usuario pode acessar (None/vazio = todas)."""
+    user = await db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario nao encontrado.")
+    user.brand_scope = payload.brand_scope or None
+    await record_audit_event(
+        db, user=current_user, action="admin.user_brand_scope_set",
+        entity_type="user", entity_id=user.id, status="success",
+        summary=f"Escopo de marcas de {user.email} atualizado",
+        metadata={"brand_scope": user.brand_scope},
+    )
+    await db.commit()
+    await db.refresh(user)
+    return _admin_user_read(user)
 
 
 @router.get("/agents", response_model=list[AgentRead])

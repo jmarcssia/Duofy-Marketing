@@ -8,6 +8,7 @@ from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.access import accessible_brands, assert_brand_access
 from app.audit_service import record_audit_event
 from app.db import get_db
 from app.dependencies import get_current_user
@@ -113,7 +114,7 @@ async def _workflow_detail(db: AsyncSession, output: Output) -> OutputWorkflowDe
     )
 
 
-async def _get_output_or_404(db: AsyncSession, output_id: int) -> Output:
+async def _get_output_or_404(db: AsyncSession, output_id: int, user: User) -> Output:
     result = await db.execute(select(Output).where(Output.id == output_id))
     output = result.scalar_one_or_none()
     if output is None:
@@ -121,6 +122,7 @@ async def _get_output_or_404(db: AsyncSession, output_id: int) -> Output:
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Output nao encontrado.",
         )
+    assert_brand_access(user, output.brand_slug)  # C1: isolamento por marca
     return output
 
 
@@ -263,7 +265,7 @@ def _output_export_document(output: Output, version: OutputVersion) -> ExportDoc
 
 @router.get("", response_model=list[ContentOutputRead])
 async def list_outputs(
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     brand_slug: str | None = None,
     category: str | None = None,
@@ -273,6 +275,9 @@ async def list_outputs(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> list[ContentOutputRead]:
     statement = select(Output)
+    allowed = accessible_brands(current_user)  # C1: restringe a listagem às marcas do usuário
+    if allowed is not None:
+        statement = statement.where(Output.brand_slug.in_(allowed))
     if brand_slug:
         statement = statement.where(Output.brand_slug == brand_slug)
     if category:
@@ -294,20 +299,20 @@ async def list_outputs(
 @router.get("/{output_id}", response_model=OutputWorkflowDetail)
 async def get_output(
     output_id: int,
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> OutputWorkflowDetail:
-    output = await _get_output_or_404(db, output_id)
+    output = await _get_output_or_404(db, output_id, current_user)
     return await _workflow_detail(db, output)
 
 
 @router.get("/{output_id}/comments", response_model=list[OutputCommentRead])
 async def list_output_comments(
     output_id: int,
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[OutputCommentRead]:
-    await _get_output_or_404(db, output_id)
+    await _get_output_or_404(db, output_id, current_user)
     result = await db.execute(
         select(OutputComment)
         .where(OutputComment.output_id == output_id)
@@ -323,7 +328,7 @@ async def create_output_comment(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> OutputCommentRead:
-    await _get_output_or_404(db, output_id)
+    await _get_output_or_404(db, output_id, current_user)
     if payload.version_id is not None:
         version = await get_output_version(db, output_id, payload.version_id)
         if version is None:
@@ -363,7 +368,7 @@ async def update_output_comment(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> OutputCommentRead:
-    await _get_output_or_404(db, output_id)
+    await _get_output_or_404(db, output_id, current_user)
     result = await db.execute(
         select(OutputComment).where(
             OutputComment.id == comment_id,
@@ -470,7 +475,7 @@ async def review_output_quality_endpoint(
     db: Annotated[AsyncSession, Depends(get_db)],
     payload: Annotated[QualityReviewRequest | None, Body()] = None,
 ) -> OutputWorkflowDetail:
-    output = await _get_output_or_404(db, output_id)
+    output = await _get_output_or_404(db, output_id, current_user)
     try:
         review = await review_output_quality(
             db,
@@ -506,10 +511,10 @@ async def review_output_quality_endpoint(
 @router.get("/{output_id}/versions", response_model=list[ContentOutputVersionRead])
 async def get_output_versions(
     output_id: int,
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[ContentOutputVersionRead]:
-    await _get_output_or_404(db, output_id)
+    await _get_output_or_404(db, output_id, current_user)
     versions = await output_versions(db, output_id)
     return [_version_read(version) for version in versions]
 
@@ -522,10 +527,10 @@ async def compare_output_versions(
     output_id: int,
     from_version_id: int,
     to_version_id: int,
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> OutputVersionCompareRead:
-    await _get_output_or_404(db, output_id)
+    await _get_output_or_404(db, output_id, current_user)
     from_version = await get_output_version(db, output_id, from_version_id)
     to_version = await get_output_version(db, output_id, to_version_id)
     if from_version is None or to_version is None:
@@ -548,7 +553,7 @@ async def restore_output_version_endpoint(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> OutputWorkflowDetail:
-    output = await _get_output_or_404(db, output_id)
+    output = await _get_output_or_404(db, output_id, current_user)
     version = await get_output_version(db, output_id, version_id)
     if version is None:
         raise HTTPException(
@@ -577,20 +582,20 @@ async def restore_output_version_endpoint(
 @router.get("/{output_id}/pdf")
 async def export_output_pdf(
     output_id: int,
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Response:
-    return await export_output(output_id, _current_user, db, "pdf")
+    return await export_output(output_id, current_user, db, "pdf")
 
 
 @router.get("/{output_id}/export")
 async def export_output(
     output_id: int,
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     format: Annotated[str, Query(pattern="^(pdf|docx|md|html)$")] = "pdf",
 ) -> Response:
-    output = await _get_output_or_404(db, output_id)
+    output = await _get_output_or_404(db, output_id, current_user)
     current_version = await _current_version_or_404(db, output)
     export_data = _output_export_document(output, current_version)
     exported = await run_in_threadpool(export_document, export_data, format)
@@ -604,7 +609,7 @@ async def update_output(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> OutputWorkflowDetail:
-    output = await _get_output_or_404(db, output_id)
+    output = await _get_output_or_404(db, output_id, current_user)
     try:
         output = await edit_output(db, output, payload)
     except OutputWorkflowError as exc:
@@ -633,7 +638,7 @@ async def approve_output_endpoint(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> OutputWorkflowDetail:
-    output = await _get_output_or_404(db, output_id)
+    output = await _get_output_or_404(db, output_id, current_user)
     try:
         output = await approve_output(db, output, current_user)
     except OutputWorkflowError as exc:
@@ -664,7 +669,7 @@ async def reject_output_endpoint(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> OutputWorkflowDetail:
-    output = await _get_output_or_404(db, output_id)
+    output = await _get_output_or_404(db, output_id, current_user)
     try:
         output = await reject_output(db, output, current_user, payload.feedback)
     except OutputWorkflowError as exc:
@@ -691,7 +696,7 @@ async def request_adjustment_endpoint(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> OutputWorkflowDetail:
-    output = await _get_output_or_404(db, output_id)
+    output = await _get_output_or_404(db, output_id, current_user)
     try:
         output = await request_adjustment(db, output, current_user, payload.feedback)
     except OutputWorkflowError as exc:
@@ -723,7 +728,7 @@ async def move_output(
     Diferente das transições com efeitos (approve/reject), apenas ajusta o status
     e registra auditoria — usado pelo drag-and-drop e pelo seletor de status.
     """
-    output = await _get_output_or_404(db, output_id)
+    output = await _get_output_or_404(db, output_id, current_user)
     previous = output.status
     output.status = payload.status
     await record_audit_event(
@@ -747,7 +752,7 @@ async def archive_output_endpoint(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> OutputWorkflowDetail:
-    output = await _get_output_or_404(db, output_id)
+    output = await _get_output_or_404(db, output_id, current_user)
     output = await archive_output(db, output, current_user)
     await record_audit_event(
         db,
