@@ -1,328 +1,310 @@
 "use client"
 
+import Link from "next/link"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-import { Avatar, Badge, GhostButton, Tabs } from "@/components/ui"
 import {
-  AlertTriangleIcon,
-  BookIcon,
+  ArrowRightIcon,
+  CalendarIcon,
   CheckCircleIcon,
+  FileIcon,
   RefreshIcon,
+  SearchIcon,
+  SendIcon,
   SettingsIcon,
-  ShieldCheckIcon,
-  SparklesIcon
+  ShieldCheckIcon
 } from "@/components/icons"
 import {
-  apiFetch,
-  type ContentOutput,
-  type OutputWorkflowDetail
-} from "@/lib/api"
+  Badge,
+  FieldSelect,
+  GhostButton,
+  PageHeader,
+  Tabs,
+  type Tone
+} from "@/components/ui"
+import { apiFetch, type CalendarEvent, type ContentOutput } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
-import { Markdown } from "@/components/markdown"
-import { downloadFile, exportPath } from "@/lib/download"
 import { useBrand } from "@/lib/brand-context"
-import type { Tone } from "@/components/ui"
+
+type Kind = "pesquisa" | "conteudo" | "evento" | "publicacao"
+type Bucket = "pendente" | "ajuste" | "aprovado" | "concluido"
+type Priority = "alta" | "media" | "baixa"
 
 const STATUS_META: Record<string, { label: string; tone: Tone }> = {
-  draft: { label: "Rascunho", tone: "amber" },
+  draft: { label: "Rascunho", tone: "slate" },
   review: { label: "Em revisão", tone: "blue" },
+  awaiting_approval: { label: "Aguardando aprovação", tone: "amber" },
   approved: { label: "Aprovado", tone: "green" },
   needs_adjustment: { label: "Ajuste solicitado", tone: "amber" },
   rejected: { label: "Rejeitado", tone: "red" },
-  archived: { label: "Arquivado", tone: "slate" }
+  archived: { label: "Arquivado", tone: "slate" },
+  completed: { label: "Concluído", tone: "green" }
 }
 
-function fmtDate(iso: string): string {
-  try { return new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) } catch { return iso }
+const KIND_META: Record<Kind, { label: string; tone: Tone; href: string }> = {
+  pesquisa: { label: "Pesquisa", tone: "purple", href: "/research" },
+  conteudo: { label: "Conteúdo", tone: "blue", href: "/content" },
+  evento: { label: "Evento", tone: "indigo", href: "/calendar" },
+  publicacao: { label: "Publicação", tone: "teal", href: "/publicacoes" }
+}
+
+const PRIORITY_TONE: Record<Priority, Tone> = { alta: "red", media: "amber", baixa: "slate" }
+
+type Item = {
+  key: string
+  kind: Kind
+  outputId: number | null // aprovável em lote quando não-nulo
+  title: string
+  brand: string
+  status: string
+  priority: Priority
+  bucket: Bucket
+  updatedAt: string
+}
+
+function isResearch(o: ContentOutput): boolean {
+  return o.category === "research" || (o.format?.includes("research") ?? false)
+}
+function ageDays(iso: string): number {
+  const ms = Date.now() - new Date(iso).getTime()
+  return Math.max(0, Math.floor(ms / 86_400_000))
+}
+function ageLabel(iso: string): string {
+  const d = ageDays(iso)
+  return d === 0 ? "hoje" : d === 1 ? "há 1 dia" : `há ${d} dias`
 }
 
 export default function ReviewPage() {
   const { selected: brand } = useBrand()
-  const [tab, setTab] = useState<"todos" | "pesquisas" | "conteudos">("todos")
   const [outputs, setOutputs] = useState<ContentOutput[]>([])
+  const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedId, setSelectedId] = useState<number | null>(null)
-  const [detail, setDetail] = useState<OutputWorkflowDetail | null>(null)
-  const [acting, setActing] = useState<string | null>(null)
+  const [tab, setTab] = useState<"todos" | Bucket>("pendente")
+  const [fKind, setFKind] = useState<"" | Kind>("")
+  const [fPriority, setFPriority] = useState<"" | Priority>("")
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [acting, setActing] = useState(false)
+  const [msg, setMsg] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     const token = getTokenFromCookie()
     if (!token) { setLoading(false); return }
     setLoading(true)
+    const bq = brand ? `&brand_slug=${encodeURIComponent(brand)}` : ""
     try {
-      const data = await apiFetch<ContentOutput[]>("/api/outputs?limit=100", token)
-      const filtered = brand ? data.filter((o) => o.brand_slug === brand) : data
-      setOutputs(filtered)
-      setSelectedId((prev) => (prev && filtered.some((o) => o.id === prev) ? prev : filtered[0]?.id ?? null))
+      const [o, e] = await Promise.all([
+        apiFetch<ContentOutput[]>(`/api/outputs?limit=100${bq}`, token).catch(() => []),
+        apiFetch<CalendarEvent[]>(`/api/calendar?limit=300${bq}`, token).catch(() => [])
+      ])
+      setOutputs(o)
+      setEvents(e)
     } catch {
-      setOutputs([])
+      setOutputs([]); setEvents([])
     }
+    setSelected(new Set())
     setLoading(false)
   }, [brand])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { void load() }, [load])
 
-  const loadDetail = useCallback(async (id: number) => {
-    const token = getTokenFromCookie()
-    if (!token) return
-    setDetail(null)
-    try {
-      const d = await apiFetch<OutputWorkflowDetail>(`/api/outputs/${id}`, token)
-      setDetail(d)
-    } catch { setDetail(null) }
-  }, [])
+  const items = useMemo<Item[]>(() => {
+    const list: Item[] = []
+    // Outputs (pesquisas + conteúdos) — marca do topo escopa a visão.
+    for (const o of outputs) {
+      if (brand && o.brand_slug !== brand) continue
+      const kind: Kind = isResearch(o) ? "pesquisa" : "conteudo"
+      const bucket: Bucket =
+        o.status === "needs_adjustment" ? "ajuste"
+          : o.status === "approved" ? "aprovado"
+            : o.status === "archived" ? "concluido"
+              : "pendente"
+      const priority: Priority =
+        o.status === "review" || o.status === "awaiting_approval" ? "alta"
+          : o.status === "needs_adjustment" ? "media" : "baixa"
+      list.push({
+        key: `o${o.id}`, kind, outputId: o.id, title: o.title, brand: o.brand_slug,
+        status: o.status, priority, bucket, updatedAt: o.updated_at
+      })
+    }
+    // Eventos + publicações (do calendário)
+    for (const e of events) {
+      if (e.status === "cancelled") continue
+      if (brand && e.brand_slug !== brand) continue
+      let kind: Kind | null = null
+      let bucket: Bucket = "pendente"
+      if (e.published_at) { kind = "publicacao"; bucket = "concluido" }
+      else if (e.current_step === "publish") { kind = "publicacao"; bucket = "pendente" }
+      else if (e.status === "awaiting_approval" || e.current_step === "research_approval" || e.current_step === "review") { kind = "evento" }
+      if (!kind) continue
+      const priority: Priority = bucket === "pendente" ? "alta" : "baixa"
+      list.push({
+        key: `e${e.id}`, kind, outputId: null, title: e.title, brand: e.brand_slug,
+        status: e.published_at ? "completed" : (e.status === "awaiting_approval" ? "awaiting_approval" : "review"),
+        priority, bucket, updatedAt: e.updated_at
+      })
+    }
+    return list.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))
+  }, [outputs, events, brand])
 
-  useEffect(() => {
-    if (selectedId != null) loadDetail(selectedId)
-    else setDetail(null)
-  }, [selectedId, loadDetail])
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { todos: items.length, pendente: 0, ajuste: 0, aprovado: 0, concluido: 0 }
+    for (const it of items) c[it.bucket]++
+    return c
+  }, [items])
 
-  const queue = useMemo(() => {
-    if (tab === "pesquisas") return outputs.filter((o) => o.category === "research" || o.format?.includes("research"))
-    if (tab === "conteudos") return outputs.filter((o) => o.category !== "research" && !o.format?.includes("research"))
-    return outputs
-  }, [outputs, tab])
+  const filtered = useMemo(() => items.filter((it) => {
+    if (tab !== "todos" && it.bucket !== tab) return false
+    if (fKind && it.kind !== fKind) return false
+    if (fPriority && it.priority !== fPriority) return false
+    return true
+  }), [items, tab, fKind, fPriority])
 
-  async function act(kind: "approve" | "request-adjustment" | "reject" | "quality-review" | "archive") {
-    if (selectedId == null) return
+  const selectableIds = useMemo(() => filtered.filter((it) => it.outputId && it.bucket !== "concluido").map((it) => it.outputId as number), [filtered])
+
+  function toggle(id: number) {
+    setSelected((s) => {
+      const n = new Set(s)
+      if (n.has(id)) n.delete(id)
+      else n.add(id)
+      return n
+    })
+  }
+  function toggleAll() {
+    setSelected((s) => s.size === selectableIds.length ? new Set() : new Set(selectableIds))
+  }
+
+  async function batch(kind: "approve" | "request-adjustment") {
+    const ids = Array.from(selected)
+    if (ids.length === 0) return
     const token = getTokenFromCookie()
     if (!token) return
     let body = "{}"
-    if (kind === "request-adjustment" || kind === "reject") {
-      const feedback = window.prompt(kind === "reject" ? "Motivo da rejeição:" : "O que precisa ser ajustado?")
+    if (kind === "request-adjustment") {
+      const feedback = window.prompt("Ajuste a solicitar para os itens selecionados:")
       if (feedback == null) return
       body = JSON.stringify({ feedback })
     }
-    setActing(kind)
-    try {
-      const d = await apiFetch<OutputWorkflowDetail>(`/api/outputs/${selectedId}/${kind}`, token, { method: "POST", body })
-      setDetail(d)
-      await load()
-    } catch (e: unknown) {
-      window.alert(e instanceof Error ? e.message : "Falha na ação.")
+    setActing(true); setMsg(null)
+    let ok = 0
+    for (const id of ids) {
+      try { await apiFetch(`/api/outputs/${id}/${kind}`, token, { method: "POST", body }); ok++ } catch { /* segue */ }
     }
-    setActing(null)
+    setMsg(`${ok}/${ids.length} item(ns) processado(s).`)
+    await load()
+    setActing(false)
   }
 
-  const selected = outputs.find((o) => o.id === selectedId) ?? null
-  const review = detail?.latest_quality_review ?? null
+  const TABS = [
+    { id: "pendente" as const, label: `Pendentes (${counts.pendente})` },
+    { id: "ajuste" as const, label: `Ajustes (${counts.ajuste})` },
+    { id: "aprovado" as const, label: `Aprovados (${counts.aprovado})` },
+    { id: "concluido" as const, label: `Concluídos (${counts.concluido})` },
+    { id: "todos" as const, label: `Todos (${counts.todos})` }
+  ]
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="flex items-center gap-2 text-[30px] font-extrabold tracking-[-0.04em] text-ink">
-          <ShieldCheckIcon className="h-7 w-7 text-purple" /> Revisão
-        </h1>
-        <p className="mt-1 text-sm text-muted">Revise e aprove os outputs gerados pelos agentes antes de enviá-los para a Memória ou para as Operações.</p>
+      <PageHeader
+        title="Central de Revisão"
+        subtitle="Pendências consolidadas de pesquisas, conteúdos, eventos e publicações — aprove em lote ou abra no local certo."
+        icon={<ShieldCheckIcon className="h-5 w-5" />}
+        right={<GhostButton onClick={() => void load()}><RefreshIcon className="h-4 w-4" /> Atualizar</GhostButton>}
+      />
+
+      <div className="flex flex-wrap items-center gap-3">
+        <Tabs value={tab} onChange={setTab} tabs={TABS} />
       </div>
 
-      <div className="flex items-center justify-between">
-        <Tabs
-          value={tab}
-          onChange={setTab}
-          tabs={[
-            { id: "todos", label: `Todos (${outputs.length})` },
-            { id: "pesquisas", label: "Pesquisas" },
-            { id: "conteudos", label: "Conteúdos" }
-          ]}
-        />
-        <button onClick={load} className="flex items-center gap-1.5 text-sm font-medium text-muted hover:text-purple">
-          <RefreshIcon className="h-4 w-4" /> Atualizar
-        </button>
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-white p-3">
+        <div className="w-40"><FieldSelect value={fKind} onChange={(v) => setFKind(v as "" | Kind)} options={[{ value: "", label: "Tipo: todos" }, { value: "pesquisa", label: "Pesquisas" }, { value: "conteudo", label: "Conteúdos" }, { value: "evento", label: "Eventos" }, { value: "publicacao", label: "Publicações" }]} /></div>
+        <div className="w-40"><FieldSelect value={fPriority} onChange={(v) => setFPriority(v as "" | Priority)} options={[{ value: "", label: "Prioridade: todas" }, { value: "alta", label: "Alta" }, { value: "media", label: "Média" }, { value: "baixa", label: "Baixa" }]} /></div>
+        {selectableIds.length > 0 && (
+          <button onClick={toggleAll} className="text-xs font-semibold text-muted hover:text-purple">
+            {selected.size === selectableIds.length ? "Limpar seleção" : `Selecionar ${selectableIds.length} aprováveis`}
+          </button>
+        )}
+        <span className="ml-auto text-xs text-muted">{filtered.length} item(ns)</span>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)_316px]">
-        {/* Fila */}
-        <section className="duofy-card h-fit rounded-2xl p-4">
-          <div className="mb-3 flex items-center justify-between px-1">
-            <h2 className="text-base font-bold text-ink">Fila de revisão</h2>
-            <Badge tone="purple">{queue.length} itens</Badge>
+      {/* Barra de ações em lote */}
+      {selected.size > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-purple/30 bg-purple-soft/40 p-3">
+          <span className="text-sm font-semibold text-purple-deep">{selected.size} selecionado(s)</span>
+          <button onClick={() => batch("approve")} disabled={acting} className="duofy-tap inline-flex items-center gap-1.5 rounded-lg bg-purple px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-deep disabled:opacity-50">
+            <CheckCircleIcon className="h-4 w-4" /> Aprovar selecionados
+          </button>
+          <button onClick={() => batch("request-adjustment")} disabled={acting} className="duofy-tap inline-flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink hover:border-purple/40 hover:text-purple disabled:opacity-50">
+            <SettingsIcon className="h-4 w-4" /> Solicitar ajuste
+          </button>
+          <button onClick={() => setSelected(new Set())} className="text-xs font-semibold text-muted hover:text-purple">Limpar</button>
+          {msg && <span className="text-xs text-muted">{msg}</span>}
+        </div>
+      )}
+
+      {/* Lista consolidada */}
+      <div className="duofy-card rounded-2xl p-3">
+        {loading ? (
+          <div className="space-y-2 p-2">{[1, 2, 3, 4].map((i) => <div key={i} className="duofy-skeleton h-16 rounded-xl" />)}</div>
+        ) : filtered.length === 0 ? (
+          <div className="grid place-items-center gap-2 py-16 text-center">
+            <CheckCircleIcon className="h-8 w-8 text-green" />
+            <p className="text-sm text-muted">Nada nesta visão. Tudo em dia por aqui.</p>
           </div>
-          {loading ? (
-            <div className="space-y-2.5">{[1, 2, 3].map((i) => <div key={i} className="h-20 animate-pulse rounded-xl bg-line/50" />)}</div>
-          ) : queue.length === 0 ? (
-            <p className="px-1 py-8 text-center text-sm text-muted">Nada na fila desta categoria.</p>
-          ) : (
-            <ul className="max-h-[640px] space-y-2.5 overflow-y-auto duofy-scroll pr-1">
-              {queue.map((item) => {
-                const active = selectedId === item.id
-                const st = STATUS_META[item.status] ?? { label: item.status, tone: "slate" as Tone }
-                return (
-                  <li key={item.id}>
-                    <button onClick={() => setSelectedId(item.id)} className={`w-full rounded-xl border p-3 text-left transition ${active ? "border-purple bg-purple-soft/40 ring-1 ring-purple/20" : "border-line hover:border-purple/40"}`}>
-                      <div className="flex items-start gap-2.5">
-                        <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-md bg-purple-soft text-purple">
-                          <BookIcon className="h-4 w-4" />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="line-clamp-2 text-sm font-semibold leading-snug text-ink">{item.title}</p>
-                          <p className="text-xs text-muted">{item.channel} · {item.category}</p>
-                          <div className="mt-2 flex items-center gap-2">
-                            <span className="text-xs text-muted">#{item.id}</span>
-                            <Badge tone={st.tone} className="ml-auto">{st.label}</Badge>
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </section>
-
-        {/* Editor */}
-        <section className="duofy-card rounded-2xl p-5">
-          {!selected ? (
-            <div className="grid place-items-center py-20 text-center text-sm text-muted">Selecione um item da fila.</div>
-          ) : (
-            <>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <h2 className="flex flex-wrap items-center gap-2 text-lg font-bold tracking-[-0.02em] text-ink">
-                  <ShieldCheckIcon className="h-5 w-5 shrink-0 text-purple" /> {selected.title}
-                  <Badge tone={(STATUS_META[selected.status]?.tone) ?? "slate"}>{STATUS_META[selected.status]?.label ?? selected.status}</Badge>
-                </h2>
-                <div className="flex shrink-0 items-center gap-1.5">
-                  {(["pdf", "docx", "md"] as const).map((fmt) => (
-                    <button
-                      key={fmt}
-                      onClick={async () => {
-                        const token = getTokenFromCookie()
-                        if (!token) return
-                        try {
-                          await downloadFile(exportPath(`/api/outputs/${selected.id}`, fmt), token, `duofy-${selected.id}.${fmt}`)
-                        } catch { /* erro silencioso */ }
-                      }}
-                      className="duofy-tap rounded-lg border border-line bg-white px-2.5 py-1.5 text-xs font-semibold text-muted hover:border-purple/40 hover:text-purple"
-                    >
-                      {fmt.toUpperCase()}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-xs">
-                <Meta label="Agente" value={`run #${selected.agent_run_id ?? "—"}`} />
-                <Meta label="Marca" value={selected.brand_slug} />
-                <Meta label="Canal" value={selected.channel} />
-                <Meta label="Modelo" value={selected.model.replace("~", "")} />
-                <Meta label="Atualizado" value={fmtDate(selected.updated_at)} />
-                <Meta label="Versão" value={`v${selected.current_version_number ?? 1}`} />
-              </div>
-
-              {/* Conteúdo */}
-              <div className="mt-4 rounded-xl border border-line bg-white p-4">
-                {!detail ? (
-                  <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="duofy-skeleton h-4 rounded" />)}</div>
-                ) : detail.current_content ? (
-                  <Markdown content={detail.current_content} />
-                ) : (
-                  <p className="text-sm text-muted">Sem conteúdo.</p>
-                )}
-              </div>
-
-              {/* Briefing */}
-              <div className="mt-4 rounded-xl border border-line bg-panel p-3">
-                <p className="text-xs font-semibold text-muted">Briefing original</p>
-                <p className="mt-1 text-sm text-ink/80">{selected.briefing}</p>
-              </div>
-
-              {/* Versões */}
-              {detail && detail.versions.length > 0 && (
-                <div className="mt-4 rounded-xl border border-line p-4">
-                  <p className="mb-3 text-sm font-bold text-ink">Histórico de versões <span className="ml-1 text-xs font-normal text-muted">{detail.versions.length} versão(ões)</span></p>
-                  <ul className="space-y-2">
-                    {detail.versions.slice().reverse().map((v) => (
-                      <li key={v.id} className="flex items-center gap-3 text-sm">
-                        <span className="font-semibold text-ink">v{v.version_number}</span>
-                        {v.id === detail.current_version_id ? <Badge tone="green">Atual</Badge> : null}
-                        {v.editor_note ? <span className="truncate text-xs text-muted">{v.editor_note}</span> : null}
-                        <span className="ml-auto text-xs text-muted">{fmtDate(v.created_at)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </>
-          )}
-        </section>
-
-        {/* Guardião */}
-        <aside className="duofy-card h-fit rounded-2xl p-5">
-          <h2 className="flex items-center gap-2 text-base font-bold text-ink"><ShieldCheckIcon className="h-5 w-5 text-purple" /> Guardião</h2>
-
-          {review ? (
-            <>
-              <p className="mt-4 text-sm font-semibold text-muted">Pontuação de qualidade</p>
-              <div className="mt-1 flex items-center gap-2">
-                <span className="text-3xl font-extrabold text-ink">{Math.round(review.score)}</span>
-                <span className="text-sm text-muted">/100</span>
-                <Badge tone={review.passed ? "green" : "amber"} className="ml-1">{review.passed ? "Aprovado" : "Atenção"}</Badge>
-              </div>
-              {review.summary && <p className="mt-2 text-xs text-muted">{review.summary}</p>}
-
-              {review.required_fixes?.length > 0 && (
-                <div className="mt-4">
-                  <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-ink">Correções necessárias <Badge tone="amber">{review.required_fixes.length}</Badge></p>
-                  <ul className="space-y-2">
-                    {review.required_fixes.map((a, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-ink/80"><AlertTriangleIcon className="mt-0.5 h-4 w-4 shrink-0 text-amber" />{a}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {review.optional_improvements?.length > 0 && (
-                <div className="mt-3 rounded-xl bg-green/5 p-3">
-                  <p className="flex items-center gap-2 text-sm font-semibold text-ink"><SparklesIcon className="h-4 w-4 text-green" /> Melhorias sugeridas</p>
-                  <ul className="mt-1 space-y-1 text-xs text-muted">
-                    {review.optional_improvements.slice(0, 3).map((s, i) => <li key={i}>• {s}</li>)}
-                  </ul>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="mt-4 grid place-items-center rounded-xl border border-dashed border-line py-8 text-center">
-              <ShieldCheckIcon className="h-6 w-6 text-muted" />
-              <p className="mt-1.5 text-xs text-muted">Sem avaliação do Guardião ainda.</p>
-              <button
-                onClick={() => act("quality-review")}
-                disabled={!selected || acting === "quality-review"}
-                className="mt-2 rounded-lg bg-purple px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
-              >
-                {acting === "quality-review" ? "Avaliando…" : "Rodar Guardião"}
-              </button>
-            </div>
-          )}
-
-          <div className="mt-5 space-y-2.5 border-t border-line pt-4">
-            <button
-              onClick={() => act("approve")}
-              disabled={!selected || acting != null || selected?.status === "approved"}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-green py-3 text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-50"
-            >
-              <CheckCircleIcon className="h-5 w-5" /> {acting === "approve" ? "Aprovando…" : selected?.status === "approved" ? "Aprovado" : "Aprovar"}
-            </button>
-            <GhostButton className="w-full justify-center" onClick={() => act("request-adjustment")} disabled={!selected || acting != null}>
-              <SettingsIcon className="h-4 w-4" /> Solicitar ajuste
-            </GhostButton>
-            <GhostButton className="w-full justify-center" onClick={() => act("quality-review")} disabled={!selected || acting != null}>
-              <ShieldCheckIcon className="h-4 w-4" /> Rodar Guardião
-            </GhostButton>
-            <GhostButton className="w-full justify-center" onClick={() => act("reject")} disabled={!selected || acting != null}>
-              <AlertTriangleIcon className="h-4 w-4" /> Rejeitar
-            </GhostButton>
-          </div>
-          <p className="mt-4 text-center text-[11px] text-muted">Ações registradas no histórico de auditoria.</p>
-        </aside>
+        ) : (
+          <ul className="divide-y divide-line">
+            {filtered.map((it) => {
+              const km = KIND_META[it.kind]
+              const sm = STATUS_META[it.status] ?? { label: it.status, tone: "slate" as Tone }
+              const canSelect = it.outputId != null && it.bucket !== "concluido"
+              return (
+                <li key={it.key} className="flex items-center gap-3 px-2 py-3">
+                  <input
+                    type="checkbox"
+                    disabled={!canSelect}
+                    checked={it.outputId != null && selected.has(it.outputId)}
+                    onChange={() => it.outputId && toggle(it.outputId)}
+                    className="h-4 w-4 shrink-0 rounded border-line accent-purple disabled:opacity-30"
+                    aria-label="Selecionar"
+                  />
+                  <span className={`h-2.5 w-2.5 shrink-0 rounded-full`} title={`Prioridade ${it.priority}`} style={{ background: it.priority === "alta" ? "#ef4444" : it.priority === "media" ? "#d97706" : "#cbd5e1" }} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-ink">{it.title}</p>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                      <Badge tone={km.tone}>{km.label}</Badge>
+                      <Badge tone={sm.tone}>{sm.label}</Badge>
+                      <span className="text-[11px] text-muted">{it.brand} · {ageLabel(it.updatedAt)}</span>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    {it.outputId != null && it.bucket !== "concluido" && it.bucket !== "aprovado" && (
+                      <button
+                        onClick={async () => {
+                          const token = getTokenFromCookie()
+                          if (!token) return
+                          try { await apiFetch(`/api/outputs/${it.outputId}/approve`, token, { method: "POST", body: "{}" }); await load() } catch { /* ignore */ }
+                        }}
+                        className="duofy-tap hidden rounded-lg border border-line px-2.5 py-1.5 text-xs font-semibold text-green hover:border-green/40 sm:inline-flex"
+                      >
+                        Aprovar
+                      </button>
+                    )}
+                    <Link href={km.href} className="duofy-tap inline-flex items-center gap-1 rounded-lg bg-purple/10 px-2.5 py-1.5 text-xs font-semibold text-purple hover:bg-purple/20">
+                      Abrir <ArrowRightIcon className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        )}
       </div>
-    </div>
-  )
-}
 
-function Meta({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-muted">{label}</p>
-      <p className="flex items-center gap-1.5 font-semibold text-ink">{value}</p>
+      <div className="flex flex-wrap gap-4 text-[11px] text-muted">
+        <span className="inline-flex items-center gap-1.5"><SearchIcon className="h-3.5 w-3.5" /> Pesquisa → Agente de Pesquisa</span>
+        <span className="inline-flex items-center gap-1.5"><FileIcon className="h-3.5 w-3.5" /> Conteúdo → Agente de Cocriação</span>
+        <span className="inline-flex items-center gap-1.5"><CalendarIcon className="h-3.5 w-3.5" /> Evento → Calendário</span>
+        <span className="inline-flex items-center gap-1.5"><SendIcon className="h-3.5 w-3.5" /> Publicação → Publicações</span>
+      </div>
     </div>
   )
 }
