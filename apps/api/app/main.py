@@ -29,6 +29,7 @@ from app.routers import (
     orchestrator,
     outputs,
     press,
+    publications,
     reports,
     research,
     research_themes,
@@ -92,6 +93,7 @@ app.include_router(calendar.router)
 app.include_router(press.router)
 app.include_router(metrics.router)
 app.include_router(operations.router)
+app.include_router(publications.router)
 app.include_router(reports.router)
 app.include_router(tasks.router)
 app.include_router(themes.router)

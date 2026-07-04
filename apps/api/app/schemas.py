@@ -939,3 +939,70 @@ class CocreationRefineRequest(BaseModel):
     instruction: str | None = Field(default=None, max_length=2000)
     model: str | None = Field(default=None, max_length=120)
     provider: str | None = Field(default=None, max_length=40)
+
+
+# ---------------- Publicações e Canais (FASE 9) ----------------
+
+
+class PublicationChannelCreate(BaseModel):
+    brand_slug: str
+    platform: Literal["instagram", "facebook", "meta"]
+    display_name: str = Field(min_length=1, max_length=160)
+    external_id: str | None = None
+
+
+class PublicationChannelRead(BaseModel):
+    id: int
+    brand_slug: str
+    platform: str
+    display_name: str
+    external_id: str | None
+    status: str
+    last_error: str | None
+    created_at: datetime
+
+
+class PublicationCreate(BaseModel):
+    brand_slug: str
+    channel_id: int | None = None
+    output_id: int | None = None
+    title: str = Field(default="", max_length=255)
+    caption: str = ""
+    first_comment: str | None = None
+    hashtags: str | None = None
+    media_paths: list[str] = Field(default_factory=list)
+    post_type: Literal["feed", "stories", "reels"] = "feed"
+    scheduled_at: datetime | None = None
+
+
+class PublicationUpdate(BaseModel):
+    channel_id: int | None = None
+    title: str | None = None
+    caption: str | None = None
+    first_comment: str | None = None
+    hashtags: str | None = None
+    media_paths: list[str] | None = None
+    post_type: Literal["feed", "stories", "reels"] | None = None
+    scheduled_at: datetime | None = None
+    status: Literal["draft", "scheduled"] | None = None
+
+
+class PublicationRead(BaseModel):
+    id: int
+    brand_slug: str
+    channel_id: int | None
+    output_id: int | None
+    title: str
+    caption: str
+    first_comment: str | None
+    hashtags: str | None
+    media_paths: list[str]
+    post_type: str
+    status: str
+    mode: str
+    scheduled_at: datetime | None
+    published_at: datetime | None
+    publish_ref: str | None
+    last_error: str | None
+    created_at: datetime
+    updated_at: datetime

@@ -242,6 +242,58 @@ class ContentPiece(TimestampMixin, Base):
     decided_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
 
 
+class PublicationChannel(TimestampMixin, Base):
+    """Canal de publicação (Instagram/Facebook via Meta). A conexão real é fase futura."""
+
+    __tablename__ = "publication_channels"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    brand_slug: Mapped[str] = mapped_column(String(120), index=True, nullable=False)
+    platform: Mapped[str] = mapped_column(String(40), nullable=False)  # instagram|facebook|meta
+    display_name: Mapped[str] = mapped_column(String(160), nullable=False)
+    external_id: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    # pending|connected|expired|error
+    status: Mapped[str] = mapped_column(
+        String(20), index=True, nullable=False, default="pending", server_default="pending"
+    )
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+
+
+class Publication(TimestampMixin, Base):
+    """Publicação preparada (fila). Meta real é stub; 'manual' registra publicação externa."""
+
+    __tablename__ = "publications"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    brand_slug: Mapped[str] = mapped_column(String(120), index=True, nullable=False)
+    channel_id: Mapped[int | None] = mapped_column(
+        ForeignKey("publication_channels.id"), nullable=True
+    )
+    output_id: Mapped[int | None] = mapped_column(ForeignKey("outputs.id"), nullable=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False, default="", server_default="")
+    caption: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    first_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    hashtags: Mapped[str | None] = mapped_column(Text, nullable=True)
+    media_paths: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    # feed|stories|reels
+    post_type: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="feed", server_default="feed"
+    )
+    # draft|scheduled|published|error
+    status: Mapped[str] = mapped_column(
+        String(20), index=True, nullable=False, default="draft", server_default="draft"
+    )
+    mode: Mapped[str] = mapped_column(  # manual|meta
+        String(20), nullable=False, default="manual", server_default="manual"
+    )
+    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    publish_ref: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+
+
 class OutputComment(TimestampMixin, Base):
     __tablename__ = "output_comments"
 

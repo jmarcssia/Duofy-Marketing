@@ -731,3 +731,36 @@ export async function apiFetch<T>(path: string, _token?: string, init?: RequestI
 
   return response.json() as Promise<T>
 }
+
+// --- FASE 9: Publicações e Canais ---
+export type PublicationChannel = {
+  id: number
+  brand_slug: string
+  platform: string
+  display_name: string
+  external_id: string | null
+  status: string
+  last_error: string | null
+  created_at: string
+}
+
+export type Publication = {
+  id: number
+  brand_slug: string
+  channel_id: number | null
+  output_id: number | null
+  title: string
+  caption: string
+  first_comment: string | null
+  hashtags: string | null
+  media_paths: string[]
+  post_type: string
+  status: string
+  mode: string
+  scheduled_at: string | null
+  published_at: string | null
+  publish_ref: string | null
+  last_error: string | null
+  created_at: string
+  updated_at: string
+}
