@@ -137,12 +137,16 @@ abas + pipeline + executar pesquisa), `lib/api.ts` (tipos+helpers), `components/
 
 ## 8. Plano em fases
 
-- **F1 (esta entrega):** banco + schemas + `calendar_workflow` + rotas + brand-scoping + criar/executar/aprovar
-  pesquisa pelo calendário + primeira UI (views, filtros, cards, painel com pipeline, executar pesquisa) + testes.
-- **F2:** cocriação disparada do evento (reusa `cocreation_service`), peças/subpeças (`calendar_event_items`),
-  aprovação por peça.
-- **F3:** execução automática plena (scheduler para `execution_mode=auto`), pausar/retomar, histórico de tentativas.
-- **F4:** publicação (Meta) — apenas arquitetura preparada agora, sem integração.
+- **F1 — entregue** (ed1547c+ee2a985): banco + schemas + `calendar_workflow` + rotas + brand-scoping +
+  criar/executar/aprovar pesquisa pelo calendário + UI (views, filtros, cards, pipeline, executar pesquisa) + testes.
+- **F2 — entregue** (696ddf0): cocriação disparada do evento (reusa `cocreation_service`, consome a pesquisa
+  aprovada), vínculo do conteúdo, avanço para Revisão + UI + testes.
+- **F3 — entregue** (9aeab9b): automação plena — pausar/retomar (`is_paused`, migration 0021), histórico de
+  tentativas (derivado dos `AgentTask`), auto-cocriação após aprovação humana da pesquisa + UI + testes.
+- **F4 — entregue** (7b7351d): arquitetura de publicação (migration 0022) — `publishers.py` com `MetaPublisher`
+  **stub** (sem integração real, nunca finge sucesso) + `ManualPublisher`; etapa Publicação real gated pela
+  aprovação do conteúdo + UI + testes. A integração real com a **Meta** (Graph API + token/OAuth) é o próximo
+  passo, plugável em `MetaPublisher.publish` sem tocar no resto do workflow.
 
 ---
 
