@@ -52,7 +52,13 @@ function CopyButton({ text, label = "Copiar" }: { text: string; label?: string }
   )
 }
 
-export function CocreationPanel({ onClose }: { onClose: () => void }) {
+export function CocreationPanel({
+  onClose,
+  initialResearchId
+}: {
+  onClose?: () => void
+  initialResearchId?: string
+}) {
   const { selected: brand } = useBrand()
   const [models, setModels] = useState<ResearchModel[]>([])
 
@@ -66,7 +72,7 @@ export function CocreationPanel({ onClose }: { onClose: () => void }) {
   const [depth, setDepth] = useState("rapida")
   const [observacoes, setObservacoes] = useState("")
   const [model, setModel] = useState("")
-  const [researchId, setResearchId] = useState<string>("")
+  const [researchId, setResearchId] = useState<string>(initialResearchId ?? "")
 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -138,9 +144,11 @@ export function CocreationPanel({ onClose }: { onClose: () => void }) {
           <h2 className="text-base font-bold tracking-[-0.02em] text-ink">Cocriação estruturada</h2>
           {result && <Badge tone="purple">v{result.version_number}</Badge>}
         </div>
-        <button onClick={onClose} className="duofy-tap grid h-8 w-8 place-items-center rounded-lg border border-line text-muted hover:border-purple/40 hover:text-purple" aria-label="Fechar">
-          <CloseIcon className="h-4 w-4" />
-        </button>
+        {onClose && (
+          <button onClick={onClose} className="duofy-tap grid h-8 w-8 place-items-center rounded-lg border border-line text-muted hover:border-purple/40 hover:text-purple" aria-label="Fechar">
+            <CloseIcon className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {!result && (

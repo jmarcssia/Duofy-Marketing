@@ -19,18 +19,30 @@ import {
   HelpIcon,
   BookIcon,
   SearchIcon,
+  SendIcon,
   SettingsIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  SparklesIcon
 } from "@/components/icons"
 
+// Navegação principal V2 — Calendário permanece o centro operacional, mas Pesquisa,
+// Cocriação e Publicações passam a ter páginas próprias. Memória vira item secundário.
 const navItems = [
-  { href: "/calendar", label: "Calendário", icon: CalendarIcon },
   { href: "/operations", label: "Operações", icon: GridIcon },
-  { href: "/memory", label: "Memória", icon: BookIcon },
+  { href: "/calendar", label: "Calendário", icon: CalendarIcon },
+  { href: "/research", label: "Agente de Pesquisa", icon: SearchIcon },
+  { href: "/content", label: "Agente de Cocriação", icon: SparklesIcon },
   { href: "/approvals", label: "Revisão", icon: ShieldCheckIcon },
+  { href: "/publicacoes", label: "Publicações", icon: SendIcon },
   { href: "/relatorios", label: "Relatórios", icon: ChartIcon },
   // /redes (Redes & Tráfego) está fora do escopo V1 — oculto até haver integração real.
   { href: "/admin", label: "Administração", icon: SettingsIcon }
+]
+
+// Itens secundários (rodapé da sidebar) — acessíveis, fora da barra principal.
+const secondaryItems = [
+  { href: "/memory", label: "Memória", icon: BookIcon },
+  { href: "/admin", label: "Ajuda e suporte", icon: HelpIcon }
 ]
 
 type SearchResults = {
@@ -269,11 +281,24 @@ function SidebarBody({ pathname, onNavigate }: { pathname: string; onNavigate?: 
       <div className="mt-8 flex-1 overflow-y-auto duofy-scroll">
         <NavLinks pathname={pathname} onNavigate={onNavigate} />
       </div>
-      <div className="border-t border-line pt-3">
-        <Link href="/admin" onClick={onNavigate} className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-[15px] font-medium text-muted transition hover:bg-purple-soft/50 hover:text-ink">
-          <HelpIcon className="h-5 w-5" />
-          Ajuda e suporte
-        </Link>
+      <div className="space-y-1 border-t border-line pt-3">
+        {secondaryItems.map((item) => {
+          const Icon = item.icon
+          const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+          return (
+            <Link
+              key={item.label}
+              href={item.href}
+              onClick={onNavigate}
+              className={`flex items-center gap-3 rounded-xl px-3.5 py-3 text-[15px] font-medium transition ${
+                active ? "bg-purple-soft text-purple" : "text-muted hover:bg-purple-soft/50 hover:text-ink"
+              }`}
+            >
+              <Icon className="h-5 w-5" />
+              {item.label}
+            </Link>
+          )
+        })}
       </div>
     </>
   )
