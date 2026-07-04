@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useState, useEffect, useCallback } from "react"
 import { Badge } from "@/components/ui"
 import { PlusIcon, RefreshIcon } from "@/components/icons"
@@ -306,7 +307,8 @@ export default function AdminPage() {
 
       {/* Tab bar */}
       <div className="border-b border-line bg-white px-6">
-        <div className="flex gap-0">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex gap-0">
           {TABS.map((t) => (
             <button
               key={t.id}
@@ -320,6 +322,13 @@ export default function AdminPage() {
               {t.label}
             </button>
           ))}
+          </div>
+          <Link
+            href="/admin/acessos"
+            className="duofy-tap inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-purple hover:bg-purple-soft"
+          >
+            Acessos &amp; Auditoria →
+          </Link>
         </div>
       </div>
 

@@ -24,7 +24,9 @@ class UserRead(BaseModel):
 
 class AdminUserRead(BaseModel):
     id: int
-    email: EmailStr
+    # str (não EmailStr): é um modelo de saída lendo e-mails já persistidos; EmailStr rejeita
+    # domínios reservados como '.local' (ex.: admin@duofy.local) e derrubava GET /admin/users (500).
+    email: str
     name: str
     role: str
     is_active: bool
