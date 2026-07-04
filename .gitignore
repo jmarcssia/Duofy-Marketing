@@ -77,3 +77,7 @@ storage/documents/*
 !storage/.gitkeep
 !storage/documents/
 !storage/documents/.gitkeep
+# Uploaded/runtime media (FASE 9 — publicações)
+storage/media/*
+!storage/media/
+!storage/media/.gitkeep
