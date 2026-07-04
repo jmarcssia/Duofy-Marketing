@@ -96,7 +96,7 @@ async def seed_providers() -> None:
             "provider": "openrouter",
             "display_name": "OpenRouter",
             "base_url": "https://openrouter.ai/api/v1",
-            "default_model": "~anthropic/claude-sonnet-latest",
+            "default_model": "openai/gpt-4o-mini",
         },
         {
             "provider": "anthropic",

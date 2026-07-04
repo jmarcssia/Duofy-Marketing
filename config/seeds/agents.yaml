@@ -1,19 +1,19 @@
 agents:
   - name: Orquestrador
     slug: orchestrator
-    default_model: ~anthropic/claude-sonnet-latest
+    default_model: openai/gpt-4o-mini
   - name: Pesquisa de Mercado
     slug: research_agent
-    default_model: ~anthropic/claude-sonnet-latest
+    default_model: openai/gpt-4o-mini
   - name: Cocriação de Conteúdo
     slug: content_agent
-    default_model: ~anthropic/claude-sonnet-latest
+    default_model: openai/gpt-4o-mini
   - name: Assessoria de Imprensa
     slug: press_agent
-    default_model: ~anthropic/claude-sonnet-latest
+    default_model: openai/gpt-4o-mini
   - name: Guardião de Qualidade
     slug: quality_guardian
-    default_model: ~anthropic/claude-sonnet-latest
+    default_model: openai/gpt-4o-mini
 # Métricas Internas foi rebaixado de agente para módulo interno: alimenta
 # Admin > Custos/Relatórios via ModelCall e usa o prompt config/agents/metrics_agent.md.
 # Não é mais um agente conversacional do roster (consolidação para 5 agentes).
