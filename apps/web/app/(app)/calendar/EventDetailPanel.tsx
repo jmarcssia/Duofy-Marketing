@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react"
 
-import { Badge } from "@/components/ui"
+import { Badge, type Tone } from "@/components/ui"
 import {
   CloseIcon,
   ExternalLinkIcon,
+  LayersIcon,
   PencilIcon,
   RefreshIcon,
   SparklesIcon,
@@ -15,18 +16,26 @@ import {
   executeCalendarCocreation,
   executeCalendarResearch,
   getCalendarEventDetail,
+  listContentPieces,
   publishCalendarEvent,
   setCalendarEventPaused,
   type CalendarEvent,
   type CalendarEventDetail,
-  type CalendarStep
+  type CalendarStep,
+  type ContentPiece
 } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
 
 import { eventTypeLabel, statusMeta, STEP_STYLE } from "./status"
 
-const TABS = ["Visão geral", "Briefing", "Fluxo", "Resultados", "Automação", "Histórico"] as const
+const TABS = ["Visão geral", "Briefing", "Fluxo", "Pesquisa", "Peças", "Automação", "Histórico"] as const
 type Tab = (typeof TABS)[number]
+
+function pieceStatusMeta(s: string): { label: string; tone: Tone } {
+  if (s === "approved") return { label: "Aprovada", tone: "green" }
+  if (s === "rejected") return { label: "Rejeitada", tone: "red" }
+  return { label: "Pendente", tone: "amber" }
+}
 
 function fmtDateTime(iso: string | null): string {
   if (!iso) return "—"
@@ -65,6 +74,8 @@ export function EventDetailPanel({
   const [coFormat, setCoFormat] = useState("Carrossel")
   const [publishing, setPublishing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [pieces, setPieces] = useState<ContentPiece[]>([])
+  const [piecesLoading, setPiecesLoading] = useState(false)
 
   const load = useCallback(async () => {
     const token = getTokenFromCookie()
@@ -82,6 +93,18 @@ export function EventDetailPanel({
   useEffect(() => {
     load()
   }, [load])
+
+  // Peças/subpeças do conteúdo cocriado (carregadas ao abrir a aba "Peças").
+  useEffect(() => {
+    if (tab !== "Peças" || !detail?.content_output_id) return
+    const token = getTokenFromCookie()
+    if (!token) return
+    setPiecesLoading(true)
+    listContentPieces(detail.content_output_id, token)
+      .then(setPieces)
+      .catch(() => setPieces([]))
+      .finally(() => setPiecesLoading(false))
+  }, [tab, detail?.content_output_id])
 
   async function runResearch() {
     const token = getTokenFromCookie()
@@ -279,38 +302,78 @@ export function EventDetailPanel({
                 </div>
               )}
 
-              {tab === "Resultados" && (
+              {tab === "Pesquisa" && (
                 <div className="space-y-3 text-sm">
                   {detail.research_output_id ? (
                     <div className="rounded-xl border border-line p-3">
                       <p className="font-semibold text-ink">Pesquisa #{detail.research_output_id}</p>
                       <p className="mt-0.5 text-xs text-muted">
-                        Status da pesquisa: {detail.research_output_status ?? "—"}
+                        Status: {detail.research_output_status ?? "—"}
                         {detail.research_approved ? " • aprovada" : " • aguardando aprovação"}
                       </p>
-                      <a href="/operations" className="duofy-tap mt-2 inline-flex items-center gap-1.5 rounded-lg bg-purple px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-deep">
+                      <a href="/research" className="duofy-tap mt-2 inline-flex items-center gap-1.5 rounded-lg bg-purple px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-deep">
                         <ExternalLinkIcon className="h-3.5 w-3.5" /> Abrir no Agente de Pesquisa
                       </a>
                     </div>
                   ) : (
-                    <p className="text-muted">Nenhum resultado ainda. Execute a etapa de pesquisa.</p>
+                    <p className="text-muted">Nenhuma pesquisa executada ainda. Use a aba “Visão geral” para executar.</p>
                   )}
-                  {detail.content_output_id ? (
-                    <div className="rounded-xl border border-line p-3">
-                      <p className="font-semibold text-ink">Conteúdo #{detail.content_output_id}</p>
-                      <p className="mt-0.5 text-xs text-muted">
-                        Status do conteúdo: {detail.content_output_status ?? "—"}
-                        {detail.content_approved ? " • aprovado" : " • em revisão"}
-                      </p>
-                      <a href="/operations" className="duofy-tap mt-2 inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink hover:border-purple/40 hover:text-purple">
-                        <ExternalLinkIcon className="h-3.5 w-3.5" /> Abrir na Cocriação
-                      </a>
+                </div>
+              )}
+
+              {tab === "Peças" && (
+                <div className="space-y-3 text-sm">
+                  {!detail.content_output_id ? (
+                    <div className="rounded-xl border border-dashed border-line p-3 text-xs text-muted">
+                      As peças (carrossel, legendas, direção visual…) aparecem aqui após a cocriação —
+                      liberada depois da aprovação da pesquisa.
                     </div>
                   ) : (
-                    <div className="rounded-xl border border-dashed border-line p-3 text-xs text-muted">
-                      As peças de conteúdo (carrossel, legendas, direção visual) aparecem aqui após a
-                      cocriação — liberada depois da aprovação da pesquisa.
-                    </div>
+                    <>
+                      <div className="flex items-center justify-between">
+                        <p className="font-semibold text-ink">Conteúdo #{detail.content_output_id}</p>
+                        <Badge tone={detail.content_approved ? "green" : "amber"}>
+                          {detail.content_approved ? "aprovado" : "em revisão"}
+                        </Badge>
+                      </div>
+                      {piecesLoading ? (
+                        <p className="text-xs text-muted">Carregando peças…</p>
+                      ) : pieces.length === 0 ? (
+                        <p className="text-xs text-muted">Nenhuma peça registrada.</p>
+                      ) : (
+                        <ul className="space-y-2">
+                          {pieces.map((p) => {
+                            const ps = pieceStatusMeta(p.status)
+                            return (
+                              <li key={p.id} className="rounded-xl border border-line p-3">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-ink">
+                                      <LayersIcon className="h-3.5 w-3.5 shrink-0 text-purple" /> {p.label}
+                                    </p>
+                                    <p className="mt-0.5 text-[11px] text-muted">
+                                      {p.kind}{p.channel ? ` · ${p.channel}` : ""}{p.origin ? ` · ${p.origin}` : ""}
+                                    </p>
+                                  </div>
+                                  <div className="flex shrink-0 flex-col items-end gap-1">
+                                    <Badge tone={ps.tone}>{ps.label}</Badge>
+                                    <Badge tone={p.required ? "purple" : "slate"}>{p.required ? "obrigatória" : "opcional"}</Badge>
+                                  </div>
+                                </div>
+                              </li>
+                            )
+                          })}
+                        </ul>
+                      )}
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        <a href="/content" className="duofy-tap inline-flex items-center gap-1.5 rounded-lg bg-purple px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-deep">
+                          <SparklesIcon className="h-3.5 w-3.5" /> Abrir na Cocriação
+                        </a>
+                        <a href="/approvals" className="duofy-tap inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink hover:border-purple/40 hover:text-purple">
+                          <ExternalLinkIcon className="h-3.5 w-3.5" /> Abrir na Revisão
+                        </a>
+                      </div>
+                    </>
                   )}
                 </div>
               )}
@@ -391,7 +454,7 @@ function ResearchActions({
         <div className="space-y-2">
           <p className="text-sm font-semibold text-ink">Pesquisa concluída — aguardando aprovação</p>
           <p className="text-xs text-muted">Aprove a pesquisa na página do Agente de Pesquisa para liberar a cocriação.</p>
-          <a href="/operations" className="duofy-tap inline-flex items-center gap-1.5 rounded-lg bg-purple px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-deep">
+          <a href="/research" className="duofy-tap inline-flex items-center gap-1.5 rounded-lg bg-purple px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-deep">
             <ExternalLinkIcon className="h-3.5 w-3.5" /> Abrir no Agente de Pesquisa
           </a>
         </div>
