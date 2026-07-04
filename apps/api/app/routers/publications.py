@@ -45,7 +45,8 @@ META_NOT_READY = (
 def _channel_read(c: PublicationChannel) -> PublicationChannelRead:
     return PublicationChannelRead(
         id=c.id, brand_slug=c.brand_slug, platform=c.platform, display_name=c.display_name,
-        external_id=c.external_id, status=c.status, last_error=c.last_error, created_at=c.created_at,
+        external_id=c.external_id, status=c.status, last_error=c.last_error,
+        created_at=c.created_at,
     )
 
 
@@ -62,7 +63,9 @@ def _pub_read(p: Publication) -> PublicationRead:
 async def _get_pub_or_404(db: AsyncSession, pub_id: int, user: User) -> Publication:
     pub = await db.get(Publication, pub_id)
     if pub is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Publicação não encontrada.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Publicação não encontrada."
+        )
     assert_brand_access(user, pub.brand_slug)  # C1
     return pub
 
@@ -147,8 +150,9 @@ async def create_publication(
     pub = Publication(
         brand_slug=payload.brand_slug, channel_id=payload.channel_id, output_id=payload.output_id,
         title=payload.title, caption=payload.caption, first_comment=payload.first_comment,
-        hashtags=payload.hashtags, media_paths=list(payload.media_paths), post_type=payload.post_type,
-        status=initial, scheduled_at=payload.scheduled_at, created_by=current_user.id,
+        hashtags=payload.hashtags, media_paths=list(payload.media_paths),
+        post_type=payload.post_type, status=initial, scheduled_at=payload.scheduled_at,
+        created_by=current_user.id,
     )
     db.add(pub)
     await db.flush()
@@ -172,7 +176,9 @@ async def update_publication(
 ) -> PublicationRead:
     pub = await _get_pub_or_404(db, pub_id, current_user)
     if pub.status == "published":
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Publicação já publicada.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Publicação já publicada."
+        )
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(pub, field, value)
     await db.commit()
@@ -188,11 +194,15 @@ async def delete_publication(
 ) -> dict:
     pub = await _get_pub_or_404(db, pub_id, current_user)
     if pub.status == "published":
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Não é possível remover uma publicação já publicada.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Não é possível remover uma publicação já publicada.",
+        )
     await db.delete(pub)
     await record_audit_event(
         db, user=current_user, action="publication.deleted", entity_type="publication",
-        entity_id=pub_id, status="success", brand_slug=pub.brand_slug, summary="Publicação removida",
+        entity_id=pub_id, status="success", brand_slug=pub.brand_slug,
+        summary="Publicação removida",
     )
     await db.commit()
     return {"deleted": pub_id}
@@ -233,7 +243,9 @@ async def publish_publication(
 ) -> PublicationRead:
     pub = await _get_pub_or_404(db, pub_id, current_user)
     if pub.status == "published":
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Publicação já publicada.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Publicação já publicada."
+        )
 
     if target == "meta":
         # Stub honesto: NÃO marca como publicado, retorna 400 claro.
