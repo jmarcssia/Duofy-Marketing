@@ -206,7 +206,9 @@ function UserMenu({ user }: { user: User | null }) {
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  function logout() {
+  async function logout() {
+    // C5: o backend limpa o cookie HttpOnly; o cliente limpa a flag legível.
+    try { await apiFetch("/api/auth/logout", undefined, { method: "POST", body: "{}" }) } catch { /* ignore */ }
     clearTokenCookie()
     router.replace("/login")
   }

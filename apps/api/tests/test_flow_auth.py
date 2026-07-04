@@ -33,3 +33,19 @@ async def test_me_with_valid_token(client, auth_headers):
 
 async def test_me_without_token_is_401(client):
     assert client.get("/api/auth/me").status_code == 401
+
+
+async def test_login_sets_httponly_cookie_and_authenticates(client):
+    """C5: login define o cookie HttpOnly duofy_token; requests seguintes autenticam só por ele."""
+    resp = client.post("/api/auth/login",
+                       json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+    assert resp.status_code == 200
+    set_cookie = resp.headers.get("set-cookie", "")
+    assert "duofy_token=" in set_cookie and "HttpOnly" in set_cookie
+    assert "duofy_auth=" in set_cookie  # flag legível p/ o front (sem segredo)
+    # o TestClient guarda o cookie: /me autentica SEM header Authorization
+    me = client.get("/api/auth/me")
+    assert me.status_code == 200 and me.json()["email"] == ADMIN_EMAIL
+    # logout limpa o cookie -> volta a 401
+    assert client.post("/api/auth/logout").status_code == 200
+    assert client.get("/api/auth/me").status_code == 401

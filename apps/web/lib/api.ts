@@ -659,15 +659,18 @@ export function getResearchModels(token: string) {
   return apiFetch<ResearchModel[]>("/api/research-models", token)
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+// C5: por padrão as chamadas são relativas (mesmo-origem), proxied p/ a API via next.config
+// rewrites. A sessão viaja no cookie HttpOnly `duofy_token` (credentials: include) — o JS não
+// lê o token, então XSS não o rouba. O parâmetro `token` é mantido por compat e ignorado.
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ""
 
-export async function apiFetch<T>(path: string, token?: string, init?: RequestInit): Promise<T> {
+export async function apiFetch<T>(path: string, _token?: string, init?: RequestInit): Promise<T> {
   const isFormData = init?.body instanceof FormData
   const response = await fetch(`${API_URL}${path}`, {
     ...init,
+    credentials: "include",
     headers: {
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init?.headers
     }
   })

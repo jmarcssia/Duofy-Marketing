@@ -55,7 +55,7 @@ type MemoryEntry = {
   created_at: string
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ""  // C5: mesmo-origem (proxy /api)
 
 function fmtSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`

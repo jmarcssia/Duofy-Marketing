@@ -1,10 +1,11 @@
 export type ExportFormat = "pdf" | "docx" | "md" | "html"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+// C5: mesmo-origem (proxy /api) + cookie HttpOnly (credentials:include). `token` ignorado.
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ""
 
-export async function downloadFile(path: string, token: string, fallbackName: string) {
+export async function downloadFile(path: string, _token: string, fallbackName: string) {
   const response = await fetch(`${API_URL}${path}`, {
-    headers: { Authorization: `Bearer ${token}` }
+    credentials: "include"
   })
   if (!response.ok) {
     const message = await response.text()
