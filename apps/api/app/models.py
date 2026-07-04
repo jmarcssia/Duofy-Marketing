@@ -216,6 +216,32 @@ class OutputDecision(TimestampMixin, Base):
     )
 
 
+class ContentPiece(TimestampMixin, Base):
+    """F2b: peça aprovável de um Output de conteúdo (carrossel, legenda, e-mail, release...)."""
+
+    __tablename__ = "content_pieces"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    output_id: Mapped[int] = mapped_column(ForeignKey("outputs.id"), index=True, nullable=False)
+    brand_slug: Mapped[str] = mapped_column(String(120), index=True, nullable=False)
+    kind: Mapped[str] = mapped_column(String(60), nullable=False)
+    label: Mapped[str] = mapped_column(String(160), nullable=False)
+    channel: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    status: Mapped[str] = mapped_column(
+        String(20), index=True, nullable=False, default="pending", server_default="pending"
+    )
+    required: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
+    origin: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="derived", server_default="derived"
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    decided_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+
+
 class OutputComment(TimestampMixin, Base):
     __tablename__ = "output_comments"
 

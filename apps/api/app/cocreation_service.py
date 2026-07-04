@@ -565,6 +565,11 @@ async def generate_content_package(
         db, agent=agent, brand=brand, payload=payload, pkg=pkg, provider=provider,
         model=used_model, prompt=prompt, editor_note="Cocriacao — geracao inicial.", existing=None,
     )
+    # F2b: explode o pacote em peças aprovaveis individualmente.
+    from app.content_pieces_service import explode_package_into_pieces
+
+    await explode_package_into_pieces(db, output, pkg)
+    await db.commit()
     return output, version, pkg, warnings
 
 

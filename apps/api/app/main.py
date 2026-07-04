@@ -21,6 +21,7 @@ from app.routers import (
     chat,
     cocreation,
     content,
+    content_pieces,
     documents,
     memory,
     metrics,
@@ -82,6 +83,7 @@ app.include_router(agents.router)
 app.include_router(chat.router)
 app.include_router(cocreation.router)
 app.include_router(content.router)
+app.include_router(content_pieces.router)
 app.include_router(documents.router)
 app.include_router(memory.router)
 app.include_router(outputs.router)

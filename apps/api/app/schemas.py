@@ -894,6 +894,44 @@ class ContentPackageResponse(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
+# --- F2b: peças/subpeças aprovaveis por peça ---
+class ContentPieceRead(BaseModel):
+    id: int
+    output_id: int
+    brand_slug: str
+    kind: str
+    label: str
+    channel: str | None
+    content: str
+    status: str
+    required: bool
+    origin: str
+    position: int
+    notes: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ContentPieceCreate(BaseModel):
+    kind: str = Field(min_length=2, max_length=60)
+    label: str = Field(min_length=1, max_length=160)
+    channel: str | None = Field(default=None, max_length=80)
+    content: str = ""
+    required: bool = True
+
+
+class ContentPieceUpdate(BaseModel):
+    label: str | None = Field(default=None, min_length=1, max_length=160)
+    channel: str | None = Field(default=None, max_length=80)
+    content: str | None = None
+    required: bool | None = None
+
+
+class ContentPieceStatusRequest(BaseModel):
+    status: Literal["approved", "rejected", "pending"]
+    note: str | None = Field(default=None, max_length=2000)
+
+
 class CocreationRefineRequest(BaseModel):
     target: Literal["caption", "slide", "cta", "visual", "tone", "shorten", "persona"]
     channel: str | None = Field(default=None, max_length=80)

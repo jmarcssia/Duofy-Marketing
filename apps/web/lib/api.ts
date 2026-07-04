@@ -659,6 +659,55 @@ export function getResearchModels(token: string) {
   return apiFetch<ResearchModel[]>("/api/research-models", token)
 }
 
+// --- F2b: peças/subpeças aprovaveis por peça ---
+export type ContentPiece = {
+  id: number
+  output_id: number
+  brand_slug: string
+  kind: string
+  label: string
+  channel: string | null
+  content: string
+  status: string
+  required: boolean
+  origin: string
+  position: number
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export function listContentPieces(outputId: number, token: string) {
+  return apiFetch<ContentPiece[]>(`/api/outputs/${outputId}/pieces`, token)
+}
+
+export function createContentPiece(
+  outputId: number,
+  body: { kind: string; label: string; channel?: string | null; content?: string; required?: boolean },
+  token: string
+) {
+  return apiFetch<ContentPiece>(`/api/outputs/${outputId}/pieces`, token, {
+    method: "POST",
+    body: JSON.stringify(body)
+  })
+}
+
+export function setContentPieceStatus(
+  pieceId: number,
+  statusValue: "approved" | "rejected" | "pending",
+  note: string | null,
+  token: string
+) {
+  return apiFetch<ContentPiece>(`/api/pieces/${pieceId}/status`, token, {
+    method: "POST",
+    body: JSON.stringify({ status: statusValue, note })
+  })
+}
+
+export function deleteContentPiece(pieceId: number, token: string) {
+  return apiFetch(`/api/pieces/${pieceId}`, token, { method: "DELETE" })
+}
+
 // C5: por padrão as chamadas são relativas (mesmo-origem), proxied p/ a API via next.config
 // rewrites. A sessão viaja no cookie HttpOnly `duofy_token` (credentials: include) — o JS não
 // lê o token, então XSS não o rouba. O parâmetro `token` é mantido por compat e ignorado.

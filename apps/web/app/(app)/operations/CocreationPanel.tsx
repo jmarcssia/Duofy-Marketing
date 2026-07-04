@@ -22,6 +22,8 @@ import {
 import { getTokenFromCookie } from "@/lib/auth"
 import { useBrand } from "@/lib/brand-context"
 
+import { PiecesReview } from "./PiecesReview"
+
 const CHANNELS = ["Instagram", "LinkedIn", "Blog", "E-mail", "TikTok", "Facebook"]
 const FORMATS = ["Carrossel", "Reels", "Post LinkedIn", "Blog", "E-mail", "Stories"]
 const DEPTHS = [
@@ -204,6 +206,8 @@ export function CocreationPanel({ onClose }: { onClose: () => void }) {
 
       {result && pkg && (
         <div className="space-y-4">
+          <PiecesReview outputId={result.output_id} />
+
           {result.warnings.length > 0 && (
             <div className="rounded-xl border border-amber/40 bg-amber/10 p-3">
               <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-amber"><AlertTriangleIcon className="h-4 w-4" /> Avisos</p>
