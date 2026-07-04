@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import asyncio
+import ipaddress
 import re
+import socket
 from dataclasses import dataclass
 from datetime import date
 from urllib.parse import parse_qs, quote_plus, unquote, urlparse
@@ -236,18 +239,77 @@ def _evidence_excerpt(text: str, limit: int) -> str:
     return " ".join(_clean_text(text).split())[:limit]
 
 
+# C4 — anti-SSRF: coleta de URLs vindas de RSS/busca (nao confiaveis). Bloqueia destinos
+# nao publicos (loopback/privado/link-local/metadata-cloud) e limita o tamanho da resposta.
+MAX_RESPONSE_BYTES = 8 * 1024 * 1024
+_BLOCKED_HOSTNAMES = {"localhost", "ip6-localhost", "metadata.google.internal"}
+
+
+class UnsafeURLError(RuntimeError):
+    """URL aponta (ou redireciona) para destino nao publico — bloqueada (anti-SSRF)."""
+
+
+def _ip_is_public(ip_str: str) -> bool:
+    try:
+        addr = ipaddress.ip_address(ip_str)
+    except ValueError:
+        return False
+    return not (
+        addr.is_private
+        or addr.is_loopback
+        or addr.is_link_local
+        or addr.is_reserved
+        or addr.is_multicast
+        or addr.is_unspecified
+    )
+
+
+async def _ensure_public_url(url: str) -> None:
+    """Levanta UnsafeURLError se o host nao for http(s) publico (resolve DNS e checa os IPs)."""
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise UnsafeURLError(f"Esquema nao permitido: {parsed.scheme or '(vazio)'}")
+    host = parsed.hostname
+    if not host or host.lower() in _BLOCKED_HOSTNAMES:
+        raise UnsafeURLError(f"Host bloqueado: {host}")
+    try:
+        infos = await asyncio.to_thread(
+            socket.getaddrinfo, host, parsed.port or None, type=socket.SOCK_STREAM
+        )
+    except OSError as exc:
+        raise UnsafeURLError(f"Falha ao resolver host: {host}") from exc
+    for info in infos:
+        ip_str = info[4][0]
+        if not _ip_is_public(ip_str):
+            raise UnsafeURLError(f"IP nao publico bloqueado: {ip_str} ({host})")
+
+
 async def _fetch_url_text(url: str) -> str:
+    await _ensure_public_url(url)
     async with httpx.AsyncClient(
         timeout=REQUEST_TIMEOUT,
         follow_redirects=True,
+        max_redirects=5,
         headers={"User-Agent": USER_AGENT},
     ) as client:
-        response = await client.get(url)
-        response.raise_for_status()
-    return _plain_text_from_html(response.text)
+        async with client.stream("GET", url) as response:
+            response.raise_for_status()
+            # Anti-SSRF via redirect: valida cada hop (incl. destino final) antes de usar o corpo.
+            for hop in [*response.history, response]:
+                await _ensure_public_url(str(hop.url))
+            chunks: list[bytes] = []
+            total = 0
+            async for chunk in response.aiter_bytes():
+                total += len(chunk)
+                if total > MAX_RESPONSE_BYTES:
+                    raise UnsafeURLError("Resposta excede o limite de tamanho.")
+                chunks.append(chunk)
+            encoding = response.encoding or "utf-8"
+    return _plain_text_from_html(b"".join(chunks).decode(encoding, errors="replace"))
 
 
 async def _fetch_with_playwright(url: str) -> str:
+    await _ensure_public_url(url)
     try:
         from playwright.async_api import async_playwright
     except Exception as exc:
