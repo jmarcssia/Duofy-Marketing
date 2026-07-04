@@ -12,9 +12,12 @@ import {
   SparklesIcon
 } from "@/components/icons"
 import {
+  apiFetch,
   generateCocreation,
+  getCocreation,
   getResearchModels,
   refineCocreation,
+  type ContentOutput,
   type ContentPackage,
   type ContentPackageResponse,
   type ResearchModel
@@ -94,24 +97,50 @@ export function CocreationPanel({
     if (!token || !brand) { setError("Selecione uma marca."); return }
     if (!theme.trim()) { setError("Informe o tema."); return }
     setBusy(true); setError(null)
-    try {
-      const res = await generateCocreation(token, {
-        brand_slug: brand,
-        theme: theme.trim(),
-        channel,
-        format,
-        slides,
-        persona: persona.trim() || undefined,
-        cta: cta.trim() || undefined,
-        depth,
-        observacoes: observacoes.trim() || undefined,
-        model: model || undefined,
-        research_output_id: researchId ? Number(researchId) : undefined
-      })
-      setResult(res)
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Falha ao gerar conteúdo.")
+
+    const reqBody = {
+      brand_slug: brand,
+      theme: theme.trim(),
+      channel,
+      format,
+      slides,
+      persona: persona.trim() || undefined,
+      cta: cta.trim() || undefined,
+      depth,
+      observacoes: observacoes.trim() || undefined,
+      model: model || undefined,
+      research_output_id: researchId ? Number(researchId) : undefined
     }
+
+    // Resiliência ao timeout do proxy (~30s): a cocriação pode demorar e o backend cria o output
+    // mesmo se a requisição estourar. Então: dispara o POST E faz polling do output novo.
+    const bq = `?limit=40&brand_slug=${encodeURIComponent(brand)}`
+    let known = new Set<number>()
+    try {
+      const cur = await apiFetch<ContentOutput[]>(`/api/content/outputs${bq}`, token)
+      known = new Set(cur.map((o) => o.id))
+    } catch { /* usa vazio */ }
+
+    let done = false
+    let postError: string | null = null
+    const post = generateCocreation(token, reqBody)
+      .then((res) => { if (!done) { done = true; setResult(res) } })
+      .catch((e: unknown) => { postError = e instanceof Error ? e.message : "Falha ao gerar conteúdo." })
+
+    const start = Date.now()
+    while (!done && Date.now() - start < 150_000) {
+      await new Promise((r) => setTimeout(r, 4000))
+      if (done) break
+      try {
+        const latest = await apiFetch<ContentOutput[]>(`/api/content/outputs${bq}`, token)
+        const fresh = latest.find((o) => !known.has(o.id))
+        if (fresh) {
+          try { const pkg = await getCocreation(token, fresh.id); done = true; setResult(pkg); break } catch { /* ainda não pronto */ }
+        }
+      } catch { /* segue */ }
+    }
+    await post.catch(() => {})
+    if (!done) setError(postError ?? "A geração está demorando; tente novamente ou veja na lista de conteúdos.")
     setBusy(false)
   }
 
