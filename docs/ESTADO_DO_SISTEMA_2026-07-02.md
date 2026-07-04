@@ -123,7 +123,15 @@ auto-indexada no RAG ao aprovar o output.
 
 ## 5. Vulnerabilidades (priorizadas)
 
-Auditoria de segurança dedicada: **5 críticas, 7 altas, 10 médias, 4 baixas**. As críticas:
+Auditoria de segurança dedicada: **5 críticas, 7 altas, 10 médias, 4 baixas**.
+
+> **Atualização 2026-07-03 — os 5 críticos foram mitigados** (sprint de hardening):
+> C1 IDOR → `brand_scope` por usuário + enforcement (dormente até atribuir escopos);
+> C2 Fernet↔JWT → `FERNET_SECRET_KEY` dedicado com fallback; C3 segredos → guarda de startup
+> (JWT/admin/DB default barrados em produção); C4 SSRF → bloqueio de IP não-público + teto de
+> resposta; C5 JWT → cookie **HttpOnly** (token imune a XSS) + proxy mesma-origem. Todos com testes.
+
+As críticas (descrição original + mitigação aplicada):
 
 ### 🔴 C1 — IDOR: endpoints de detalhe/deleção sem verificação de propriedade
 `routers/outputs.py`, `routers/documents.py` (GET/DELETE/download/export por ID) não filtram por
