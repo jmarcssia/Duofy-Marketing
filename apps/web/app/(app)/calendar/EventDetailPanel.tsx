@@ -111,15 +111,25 @@ export function EventDetailPanel({
     if (!token || !brandSlug) return
     setRunning(true)
     setError(null)
-    try {
-      const d = await executeCalendarResearch(eventId, brandSlug, token)
-      setDetail(d)
-      onChanged()
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Falha ao executar a pesquisa.")
-      await load() // reflete o status 'failed' + last_error persistidos
-      onChanged()
+    // A pesquisa leva 1–2 min e o proxy estoura ~30s (500), mas o backend conclui. Então:
+    // dispara o POST E faz polling do detalhe do evento até vincular a pesquisa (ou falhar).
+    const before = detail?.research_output_id ?? null
+    let done = false
+    const post = executeCalendarResearch(eventId, brandSlug, token)
+      .then((d) => { if (!done) { done = true; setDetail(d); onChanged() } })
+      .catch(() => { /* provável timeout do proxy — o polling recupera */ })
+    const start = Date.now()
+    while (!done && Date.now() - start < 210_000) {
+      await new Promise((r) => setTimeout(r, 5000))
+      if (done) break
+      try {
+        const d = await getCalendarEventDetail(eventId, brandSlug, token)
+        if (d.status === "failed") { done = true; setDetail(d); setError(d.last_error || "Falha ao executar a pesquisa."); onChanged(); break }
+        if (d.research_output_id && d.research_output_id !== before) { done = true; setDetail(d); onChanged(); break }
+      } catch { /* segue tentando */ }
     }
+    await post.catch(() => {})
+    if (!done) { await load(); onChanged() }
     setRunning(false)
   }
 
@@ -128,15 +138,24 @@ export function EventDetailPanel({
     if (!token || !brandSlug) return
     setCocreating(true)
     setError(null)
-    try {
-      const d = await executeCalendarCocreation(eventId, brandSlug, coChannel, coFormat, token)
-      setDetail(d)
-      onChanged()
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Falha ao executar a cocriação.")
-      await load()
-      onChanged()
+    // Mesma resiliência ao timeout: POST + polling até o conteúdo ser vinculado (ou falhar).
+    const before = detail?.content_output_id ?? null
+    let done = false
+    const post = executeCalendarCocreation(eventId, brandSlug, coChannel, coFormat, token)
+      .then((d) => { if (!done) { done = true; setDetail(d); onChanged() } })
+      .catch(() => { /* provável timeout do proxy — o polling recupera */ })
+    const start = Date.now()
+    while (!done && Date.now() - start < 210_000) {
+      await new Promise((r) => setTimeout(r, 5000))
+      if (done) break
+      try {
+        const d = await getCalendarEventDetail(eventId, brandSlug, token)
+        if (d.status === "failed") { done = true; setDetail(d); setError(d.last_error || "Falha ao executar a cocriação."); onChanged(); break }
+        if (d.content_output_id && d.content_output_id !== before) { done = true; setDetail(d); onChanged(); break }
+      } catch { /* segue tentando */ }
     }
+    await post.catch(() => {})
+    if (!done) { await load(); onChanged() }
     setCocreating(false)
   }
 
