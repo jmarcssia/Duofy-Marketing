@@ -114,6 +114,19 @@ async def _run_and_approve_research(client, headers, db, event_id):
     await db.commit()
 
 
+async def _run_to_approved_content(client, headers, db, event_id):
+    """Pesquisa aprovada -> cocriação -> conteúdo aprovado (pronto para publicar)."""
+    await _run_and_approve_research(client, headers, db, event_id)
+    client.post(f"/api/calendar/{event_id}/execute-cocreation",
+                params={"brand_slug": "duofy"}, headers=headers)
+    event = (
+        await db.execute(select(CalendarEvent).where(CalendarEvent.id == event_id))
+    ).scalar_one()
+    output = await db.get(Output, event.content_output_id)
+    output.status = "approved"
+    await db.commit()
+
+
 def _create_event(client, headers, **over):
     resp = client.post("/api/calendar", json=_research_event_payload(**over), headers=headers)
     assert resp.status_code == 200, resp.text
@@ -399,3 +412,58 @@ async def test_auto_cocreation_gates(db, monkeypatch):
 
     assert approved_active in calls
     assert len(calls) == 1  # só o aprovado e não pausado
+
+
+# ---------------------------------------------------------------------------
+# F4 — publicação: arquitetura Meta (stub) + caminho manual, gated pela aprovação do conteúdo
+# ---------------------------------------------------------------------------
+
+
+async def test_publish_blocked_before_content_approved(
+    client, auth_headers, db, stub_research, stub_cocreation
+):
+    body = _create_event(client, auth_headers)
+    await _run_and_approve_research(client, auth_headers, db, body["id"])
+    client.post(f"/api/calendar/{body['id']}/execute-cocreation",
+                params={"brand_slug": "duofy"}, headers=auth_headers)  # conteúdo em revisão
+    resp = client.post(f"/api/calendar/{body['id']}/publish",
+                       params={"brand_slug": "duofy", "target": "manual"}, headers=auth_headers)
+    assert resp.status_code == 400
+    assert "aprovado" in resp.json()["detail"].lower()
+
+
+async def test_publish_meta_not_configured(
+    client, auth_headers, db, stub_research, stub_cocreation
+):
+    body = _create_event(client, auth_headers)
+    await _run_to_approved_content(client, auth_headers, db, body["id"])
+    resp = client.post(f"/api/calendar/{body['id']}/publish",
+                       params={"brand_slug": "duofy", "target": "meta"}, headers=auth_headers)
+    assert resp.status_code == 400  # stub honesto: não finge sucesso
+    assert "meta" in resp.json()["detail"].lower()
+    detail = client.get(f"/api/calendar/{body['id']}", params={"brand_slug": "duofy"},
+                        headers=auth_headers).json()
+    assert detail["publish_status"] == "not_published"
+
+
+async def test_publish_manual_marks_published_and_completes_pipeline(
+    client, auth_headers, db, stub_research, stub_cocreation
+):
+    body = _create_event(client, auth_headers)
+    await _run_to_approved_content(client, auth_headers, db, body["id"])
+    resp = client.post(f"/api/calendar/{body['id']}/publish",
+                       params={"brand_slug": "duofy", "target": "manual"}, headers=auth_headers)
+    assert resp.status_code == 200, resp.text
+    d = resp.json()
+    assert d["publish_status"] == "published"
+    assert d["publish_target"] == "manual"
+    assert d["published_at"] is not None
+    steps = {s["key"]: s["status"] for s in d["steps"]}
+    assert steps["publish"] == "done"
+
+
+async def test_publish_cross_brand_denied(client, auth_headers):
+    body = _create_event(client, auth_headers)
+    resp = client.post(f"/api/calendar/{body['id']}/publish",
+                       params={"brand_slug": "postos", "target": "manual"}, headers=auth_headers)
+    assert resp.status_code == 404

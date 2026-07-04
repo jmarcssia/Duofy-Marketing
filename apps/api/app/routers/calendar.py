@@ -14,12 +14,18 @@ from app.calendar_service import (
     execute_calendar_event,
     generate_calendar_events,
 )
-from app.calendar_workflow import event_detail, execute_cocreation, execute_research
+from app.calendar_workflow import (
+    event_detail,
+    execute_cocreation,
+    execute_publish,
+    execute_research,
+)
 from app.db import get_db
 from app.dependencies import get_current_user
 from app.errors import InsufficientSourcesError
 from app.llm import LLMConfigurationError
 from app.models import CalendarEvent, User
+from app.publishers import PublisherError, PublisherNotConfigured
 from app.schemas import (
     CalendarEventCreate,
     CalendarEventDetail,
@@ -299,6 +305,35 @@ async def execute_cocreation_endpoint(
         agent_slug="content_agent",
         summary=f"Cocriação executada pelo calendário: {event.title}",
         metadata={"output_id": event.content_output_id, "agent_task_id": event.agent_task_id},
+    )
+    await db.commit()
+    return await event_detail(db, event)
+
+
+@router.post("/{event_id}/publish", response_model=CalendarEventDetail)
+async def publish_event(
+    event_id: int,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    brand_slug: Annotated[str, Query(min_length=2)],
+    target: Annotated[str, Query(pattern="^(meta|manual)$")] = "meta",
+) -> CalendarEventDetail:
+    """Publica a peça aprovada. `meta` ainda não integrada (retorna 400 claro); `manual`
+    registra publicação externa. `brand_slug` obrigatório e verificado."""
+    event = await _get_event_or_404(db, event_id, brand_slug)
+    try:
+        event = await execute_publish(db, event, current_user, target)
+    except PublisherNotConfigured as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except LLMConfigurationError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except PublisherError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+    await record_audit_event(
+        db, user=current_user, action="calendar.event_published",
+        entity_type="calendar_event", entity_id=event.id, status=event.status,
+        brand_slug=event.brand_slug, summary=f"Publicado ({event.publish_target}): {event.title}",
+        metadata={"target": event.publish_target, "ref": event.publish_ref},
     )
     await db.commit()
     return await event_detail(db, event)

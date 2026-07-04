@@ -15,6 +15,7 @@ import {
   executeCalendarCocreation,
   executeCalendarResearch,
   getCalendarEventDetail,
+  publishCalendarEvent,
   setCalendarEventPaused,
   type CalendarEvent,
   type CalendarEventDetail,
@@ -62,6 +63,7 @@ export function EventDetailPanel({
   const [cocreating, setCocreating] = useState(false)
   const [coChannel, setCoChannel] = useState("Instagram")
   const [coFormat, setCoFormat] = useState("Carrossel")
+  const [publishing, setPublishing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -115,6 +117,22 @@ export function EventDetailPanel({
     setCocreating(false)
   }
 
+  async function runPublish(target: "meta" | "manual") {
+    const token = getTokenFromCookie()
+    if (!token || !brandSlug) return
+    setPublishing(true)
+    setError(null)
+    try {
+      const d = await publishCalendarEvent(eventId, brandSlug, target, token)
+      setDetail(d)
+      onChanged()
+    } catch (e: unknown) {
+      // Meta ainda não integrada: a mensagem clara do backend aparece aqui (não finge sucesso).
+      setError(e instanceof Error ? e.message : "Falha ao publicar.")
+    }
+    setPublishing(false)
+  }
+
   async function togglePause() {
     const token = getTokenFromCookie()
     if (!token || !brandSlug || !detail) return
@@ -135,6 +153,9 @@ export function EventDetailPanel({
   // Cocriação: liberada quando a pesquisa está aprovada (ou gate desligado) e ainda não há conteúdo.
   const showCocreation =
     detail !== null && detail.cocreation_unlocked && detail.content_output_id === null
+  // Publicação: liberada quando o conteúdo está aprovado e ainda não foi publicado.
+  const published = detail?.publish_status === "published"
+  const showPublish = detail !== null && detail.content_approved && !published
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -147,6 +168,7 @@ export function EventDetailPanel({
               {detail && <Badge tone="slate">{eventTypeLabel(detail.event_type)}</Badge>}
               {st && <Badge tone={st.tone}>{st.label}</Badge>}
               {detail?.is_paused && <Badge tone="amber">Pausado</Badge>}
+              {detail?.publish_status === "published" && <Badge tone="green">Publicado</Badge>}
             </div>
             <p className="mt-1 truncate text-base font-bold text-ink">{detail?.title ?? "Carregando…"}</p>
           </div>
@@ -221,6 +243,16 @@ export function EventDetailPanel({
                       setFormat={setCoFormat}
                       onRun={runCocreation}
                     />
+                  )}
+                  {showPublish && <PublishActions publishing={publishing} onPublish={runPublish} />}
+                  {published && (
+                    <div className="mt-2 rounded-xl border border-green-200 bg-green-50 p-3">
+                      <p className="text-sm font-semibold text-green-800">Publicado</p>
+                      <p className="mt-0.5 text-xs text-green-700">
+                        Via {detail.publish_target === "manual" ? "publicação manual" : detail.publish_target} · {fmtDateTime(detail.published_at)}
+                        {detail.publish_ref && detail.publish_ref !== "manual" ? ` · ref ${detail.publish_ref}` : ""}
+                      </p>
+                    </div>
                   )}
                 </div>
               )}
@@ -378,6 +410,46 @@ function ResearchActions({
         >
           <ZapIcon className="h-4 w-4" /> {detail.status === "failed" ? "Tentar novamente" : "Executar pesquisa"}
         </button>
+      )}
+    </div>
+  )
+}
+
+function PublishActions({
+  publishing,
+  onPublish
+}: {
+  publishing: boolean
+  onPublish: (target: "meta" | "manual") => void
+}) {
+  return (
+    <div className="mt-2 rounded-xl border border-line bg-panel/40 p-3">
+      <p className="text-sm font-semibold text-ink">Conteúdo aprovado — pronto para publicar</p>
+      <p className="mt-0.5 text-xs text-muted">A integração com a Meta entra na próxima fase. Você pode registrar uma publicação manual.</p>
+      {publishing ? (
+        <div className="mt-2 flex items-center gap-2 text-sm text-purple">
+          <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+          </svg>
+          Publicando…
+        </div>
+      ) : (
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <button
+            onClick={() => onPublish("meta")}
+            className="duofy-tap flex items-center justify-center gap-1.5 rounded-lg border border-line py-2.5 text-xs font-semibold text-muted hover:border-purple/40 hover:text-purple"
+            title="Integração Meta na próxima fase"
+          >
+            Publicar na Meta
+            <span className="rounded bg-panel px-1 py-0.5 text-[9px] font-bold text-muted">em breve</span>
+          </button>
+          <button
+            onClick={() => onPublish("manual")}
+            className="duofy-tap flex items-center justify-center rounded-lg bg-purple py-2.5 text-xs font-semibold text-white hover:bg-purple-deep"
+          >
+            Marcar como publicado
+          </button>
+        </div>
       )}
     </div>
   )

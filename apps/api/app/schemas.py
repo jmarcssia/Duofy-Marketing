@@ -581,6 +581,10 @@ class CalendarEventRead(BaseModel):
     agent_task_id: int | None = None
     created_by: int | None = None
     is_paused: bool = False
+    publish_status: str = "not_published"
+    published_at: datetime | None = None
+    publish_target: str | None = None
+    publish_ref: str | None = None
 
 
 class CalendarStep(BaseModel):

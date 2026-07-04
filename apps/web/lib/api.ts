@@ -283,6 +283,10 @@ export type CalendarEvent = {
   agent_task_id: number | null
   created_by: number | null
   is_paused: boolean
+  publish_status: string
+  published_at: string | null
+  publish_target: string | null
+  publish_ref: string | null
 }
 
 export type CalendarStep = {
@@ -347,6 +351,15 @@ export function setCalendarEventPaused(id: number, brandSlug: string, paused: bo
   const action = paused ? "pause" : "resume"
   return apiFetch<CalendarEventDetail>(
     `/api/calendar/${id}/${action}?brand_slug=${encodeURIComponent(brandSlug)}`,
+    token,
+    { method: "POST", body: "{}" }
+  )
+}
+
+export function publishCalendarEvent(id: number, brandSlug: string, target: "meta" | "manual", token: string) {
+  const qs = new URLSearchParams({ brand_slug: brandSlug, target }).toString()
+  return apiFetch<CalendarEventDetail>(
+    `/api/calendar/${id}/publish?${qs}`,
     token,
     { method: "POST", body: "{}" }
   )

@@ -12,6 +12,7 @@ de aprovação: os gates leem o status dos Outputs vinculados.
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.cocreation_service import generate_content_package
 from app.llm import LLMConfigurationError
 from app.models import AgentTask, CalendarEvent, Output, User
+from app.publishers import PublisherError, PublisherNotConfigured, get_publisher
 from app.research_service import run_market_research
 from app.schemas import (
     CalendarAttempt,
@@ -134,10 +136,18 @@ def build_steps(
                     detail="Revise e aprove o conteúdo na página de Cocriação.",
                 )
             return CalendarStep(key=key, label=label, status="pending")
-        # publish: preparado, integração (Meta) fica para a próxima fase.
-        return CalendarStep(
-            key=key, label=label, status="locked", detail="Próxima fase."
-        )
+        # publish
+        if event.publish_status == "published":
+            return CalendarStep(
+                key=key, label=label, status="done",
+                detail=f"Publicado ({event.publish_target or '—'})",
+            )
+        if content_approved:
+            return CalendarStep(
+                key=key, label=label, status="current",
+                detail="Pronto para publicar (Meta em breve; ou registre manual).",
+            )
+        return CalendarStep(key=key, label=label, status="pending")
 
     return [step(key, label) for key, label in PIPELINE]
 
@@ -390,3 +400,43 @@ async def execute_cocreation(
     await db.commit()
     await db.refresh(fresh)
     return fresh
+
+
+async def execute_publish(
+    db: AsyncSession, event: CalendarEvent, user: User, target: str = "meta"
+) -> CalendarEvent:
+    """Publica a peça aprovada pelo alvo escolhido.
+
+    Gate: só publica conteúdo APROVADO. `meta` é stub (levanta PublisherNotConfigured — não
+    finge sucesso); `manual` registra que o gestor publicou por fora. Não faz chamada externa
+    real nesta fase.
+    """
+    if event.content_output_id is None:
+        raise LLMConfigurationError("Não há conteúdo para publicar. Faça a cocriação primeiro.")
+    content_status = await _output_status(db, event.content_output_id)
+    if content_status != APPROVED_STATUS:
+        raise LLMConfigurationError(
+            "Publique apenas conteúdo aprovado. Aprove o conteúdo na página de Cocriação."
+        )
+    if event.publish_status == "published":
+        raise LLMConfigurationError("Este evento já foi publicado.")
+
+    publisher = get_publisher(target)  # alvo inválido -> PublisherError
+    try:
+        result = await publisher.publish(event)
+    except PublisherNotConfigured:
+        raise  # não é falha: é integração ausente -> o router traduz para 400 claro
+    except PublisherError:
+        event.publish_status = "failed"
+        await db.commit()
+        await db.refresh(event)
+        raise
+
+    event.publish_status = "published"
+    event.publish_target = result.target
+    event.publish_ref = result.ref
+    event.published_at = datetime.now(UTC)
+    event.current_step = "publish"
+    await db.commit()
+    await db.refresh(event)
+    return event

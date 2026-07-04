@@ -386,6 +386,15 @@ class CalendarEvent(TimestampMixin, Base):
     is_paused: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
+    # F4: publicacao (arquitetura Meta preparada; integracao real fica p/ proxima fase).
+    publish_status: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="not_published", server_default="not_published"
+    )
+    published_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    publish_target: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    publish_ref: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
 class Source(TimestampMixin, Base):
