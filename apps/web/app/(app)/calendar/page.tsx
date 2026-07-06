@@ -38,6 +38,9 @@ import {
   type EventTemplate,
   FORMATOS,
   labelOf,
+  normalizeChannels,
+  normalizeDepth,
+  normalizePieces,
   PECAS,
   PERIODOS,
   PERSONAS,
@@ -423,19 +426,19 @@ export default function CalendarPage() {
     const recurrenceRule = form.recurrence === "none" ? null : form.recurrence
 
     const hasResearch = form.tipo === "research" || form.tipo === "research_content"
-    const prof = PROFUNDIDADES.find((p) => p.id === form.profundidade)
     const briefing = buildBriefing(form)
     const mainChannel = form.canais.find((c) => SOCIAL_CHANNELS.includes(c)) ?? null
     const mainFormat = form.formatos.includes("Carrossel") ? "Carrossel" : form.formatos[0] ?? null
 
     const executionPayload: Record<string, unknown> = {}
-    if (hasResearch && prof) executionPayload.depth = prof.depth
+    // Normalização UI→API única: envia enums canônicos no payload do evento.
+    if (hasResearch && form.profundidade) executionPayload.depth = normalizeDepth(form.profundidade)
     if (hasResearch && form.periodo) executionPayload.period = form.periodo
     if (mainChannel) executionPayload.channel = mainChannel
     if (mainFormat) executionPayload.format = mainFormat
-    if (form.canais.length > 0) executionPayload.channels = form.canais
+    if (form.canais.length > 0) executionPayload.channels = normalizeChannels(form.canais)
     if (form.formatos.length > 0) executionPayload.formats = form.formatos
-    if (form.pecas.length > 0) executionPayload.pieces = form.pecas
+    if (form.pecas.length > 0) executionPayload.pieces = normalizePieces(form.pecas)
     if (form.tipo === "research_content") executionPayload.pipeline = "research_content"
     if (briefing) executionPayload.briefing = briefing
 

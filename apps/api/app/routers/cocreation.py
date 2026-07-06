@@ -44,6 +44,24 @@ async def generate(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ContentPackageResponse:
     assert_brand_access(current_user, payload.brand_slug)  # C1
+    # Cocriação a partir de pesquisa: só pesquisa DA MESMA MARCA e APROVADA pode virar contexto.
+    if payload.research_output_id is not None:
+        research = await db.get(Output, payload.research_output_id)
+        if research is None or research.brand_slug != payload.brand_slug:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Pesquisa não encontrada para esta marca.",
+            )
+        if research.channel != "Pesquisa":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="O item selecionado não é um relatório de pesquisa.",
+            )
+        if research.status != "approved":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A pesquisa selecionada ainda não foi aprovada. Aprove-a antes de cocriar.",
+            )
     try:
         output, version, package, warnings = await generate_content_package(db, payload)
     except LLMConfigurationError as exc:

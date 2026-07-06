@@ -32,6 +32,9 @@ import {
   FORMATOS,
   labelOf,
   labelsOf,
+  normalizeChannels,
+  normalizeCocreationDepth,
+  normalizePieces,
   type Option,
   PECAS,
   PECAS_EXTRAS_IDS,
@@ -57,6 +60,7 @@ import {
   type ResearchReport
 } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
+import { friendlyError } from "@/lib/friendly-error"
 import { useBrand } from "@/lib/brand-context"
 
 import { PiecesReview } from "./PiecesReview"
@@ -346,15 +350,19 @@ export function CocreationPanel({
       persona: personaText || undefined,
       cta: ctaValue,
       tone: tom ? labelOf(TONS, tom) : undefined,
-      depth,
+      // Normalização UI→API: envia o enum canônico (nunca o rótulo/id em pt).
+      depth: normalizeCocreationDepth(depth),
       observacoes: observacoes.trim() || undefined,
       model: model || undefined,
       research_output_id:
         startFrom === "pesquisa" && researchId ? Number(researchId) : undefined,
-      channels: canais,
-      pieces: pecas.filter((p) => (PECAS_EXTRAS_IDS as readonly string[]).includes(p)),
+      channels: normalizeChannels(canais),
+      pieces: normalizePieces(pecas.filter((p) => (PECAS_EXTRAS_IDS as readonly string[]).includes(p))),
       briefing_filters: cleanBriefing(briefingDraft) as Record<string, unknown> | undefined
     }
+
+    // Em desenvolvimento, registra o payload enviado para depuração (não vaza em produção).
+    if (process.env.NODE_ENV !== "production") console.debug("[cocriação] payload →", reqBody)
 
     // Resiliência ao timeout do proxy (~30s): a cocriação pode demorar e o backend cria o output
     // mesmo se a requisição estourar. Então: dispara o POST E faz polling do output novo.
@@ -369,7 +377,9 @@ export function CocreationPanel({
     let postError: string | null = null
     const post = generateCocreation(token, reqBody)
       .then((res) => { if (!done) { done = true; setResult(res) } })
-      .catch((e: unknown) => { postError = e instanceof Error ? e.message : "Falha ao gerar conteúdo." })
+      .catch((e: unknown) => {
+        postError = friendlyError(e, "Não foi possível gerar o conteúdo. Revise os filtros e tente novamente.")
+      })
 
     const start = Date.now()
     while (!done && Date.now() - start < 150_000) {
@@ -402,7 +412,7 @@ export function CocreationPanel({
       setResult(res)
       setShowToneInput(false); setShowPersonaInput(false); setToneInstr(""); setPersonaInstr("")
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Falha ao ajustar conteúdo.")
+      setError(friendlyError(e, "Falha ao ajustar conteúdo."))
     }
     setRefineBusy(null)
   }

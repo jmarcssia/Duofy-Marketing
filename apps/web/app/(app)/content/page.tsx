@@ -25,6 +25,7 @@ import {
   type ResearchReport
 } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
+import { friendlyError } from "@/lib/friendly-error"
 import { useBrand } from "@/lib/brand-context"
 import { downloadFile, exportPath } from "@/lib/download"
 
@@ -145,7 +146,7 @@ function CocreationInner() {
     let postError: string | null = null
     const post = apiFetch<ContentOutput>("/api/content/generate", token, { method: "POST", body })
       .then((out) => { if (!done) { done = true; setNote(""); void loadData(); openFocus(out.id) } })
-      .catch((e: unknown) => { postError = e instanceof Error ? e.message : "Falha ao gerar conteúdo." })
+      .catch((e: unknown) => { postError = friendlyError(e, "Não foi possível gerar o conteúdo. Revise os filtros e tente novamente.") })
     const start = Date.now()
     while (!done && Date.now() - start < 150_000) {
       await sleep(4000)

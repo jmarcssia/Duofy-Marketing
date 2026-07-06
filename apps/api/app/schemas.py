@@ -3,7 +3,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+from app.enum_normalize import normalize_depth
 
 
 class ServiceHealth(BaseModel):
@@ -473,6 +475,12 @@ class ResearchRunRequest(BaseModel):
     provider: Literal["openrouter", "anthropic", "openai"] | None = None
     model: str | None = None
     source_urls: list[str] = Field(default_factory=list, max_length=8)
+
+    @field_validator("depth", mode="before")
+    @classmethod
+    def _coerce_depth(cls, v: object) -> str:
+        # Aceita rótulos pt-BR da UI ("Rápida"/"Padrão"/"Profunda") sem quebrar.
+        return normalize_depth(v, allow_standard=True, default="standard")
     use_apify: bool = False
     # Briefing estruturado (filtros clicáveis da taxonomia compartilhada); opcional.
     briefing_filters: dict | None = None
@@ -877,6 +885,13 @@ class CreationRequest(BaseModel):
     pieces: list[str] = Field(default_factory=list, max_length=20)
     # Briefing estruturado (filtros clicáveis da taxonomia compartilhada); opcional.
     briefing_filters: dict | None = None
+
+    @field_validator("depth", mode="before")
+    @classmethod
+    def _coerce_depth(cls, v: object) -> str:
+        # Aceita rótulos pt-BR ("Rápida"/"Profunda"). Cocriação só tem quick|deep:
+        # "Padrão" (standard) é colapsado para deep (conteúdo mais robusto).
+        return normalize_depth(v, allow_standard=False, default="quick")
 
 
 class VisualDirection(BaseModel):

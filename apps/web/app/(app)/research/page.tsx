@@ -47,6 +47,7 @@ import {
   type ResearchTheme
 } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
+import { friendlyError } from "@/lib/friendly-error"
 import { useBrand } from "@/lib/brand-context"
 import { downloadFile, type ExportFormat, exportPath } from "@/lib/download"
 import {
@@ -60,6 +61,7 @@ import {
   JORNADAS_MARKETING,
   jornadasPara,
   labelOf,
+  normalizeDepth,
   OBJETIVOS,
   PERIODOS,
   PERSONAS,
@@ -320,7 +322,7 @@ export default function ResearchPage() {
       brand_slug: brand,
       theme: pergunta.trim().slice(0, 255),
       period: periodValue || "ultimos 30 dias",
-      depth: PROFUNDIDADES.find((p) => p.id === profundidade)?.depth ?? "standard",
+      depth: normalizeDepth(profundidade),
       model: model || undefined,
       source_urls: sourceUrls
         .split(/\n+/)
@@ -346,7 +348,7 @@ export default function ResearchPage() {
       .then((rep) => {
         if (!done) { done = true; setSelected(rep); setActionMsg(null); void loadReports() }
       })
-      .catch((e: unknown) => { postError = e instanceof Error ? e.message : "Falha ao executar a pesquisa." })
+      .catch((e: unknown) => { postError = friendlyError(e, "Não foi possível executar a pesquisa. Revise os filtros e tente novamente.") })
 
     const start = Date.now()
     while (!done && Date.now() - start < 210_000) {

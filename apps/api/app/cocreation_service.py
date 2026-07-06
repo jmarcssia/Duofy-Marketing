@@ -544,6 +544,8 @@ async def _resolve(
 
 
 async def _research_context(db: AsyncSession, research_output_id: int | None) -> str:
+    """Contexto da pesquisa aprovada para a cocriação: usa o briefing estruturado da pesquisa
+    (quando houver) + o relatório. Se o briefing_json for insuficiente, usa o conteúdo do output."""
     if research_output_id is None:
         return ""
     output = await db.get(Output, research_output_id)
@@ -553,7 +555,15 @@ async def _research_context(db: AsyncSession, research_output_id: int | None) ->
     if output.current_version_id is not None:
         version = await db.get(OutputVersion, output.current_version_id)
     content = (version.content if version else "") or ""
-    return f"Pesquisa #{output.id} — {output.title}\n{content[:9000]}"
+    parts = [f"Pesquisa #{output.id} — {output.title}"]
+    briefing = getattr(output, "briefing_json", None)
+    if isinstance(briefing, dict) and briefing:
+        bf = briefing_filters_to_prompt(briefing)
+        if bf:
+            parts.append("Briefing da pesquisa (filtros escolhidos):\n" + bf)
+    fallback = "(relatório de pesquisa sem texto disponível)"
+    parts.append(content[:9000] if content.strip() else fallback)
+    return "\n\n".join(parts)
 
 
 def _to_package(data: dict, brand: Brand) -> ContentPackage:

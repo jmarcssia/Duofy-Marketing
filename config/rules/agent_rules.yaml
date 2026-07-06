@@ -13,6 +13,15 @@ research_agent:
     - "ausência total de fontes"
     - "vácuo de informação"
     - "hipotético"
+    # Anti-placeholder: concorrentes/exemplos fictícios são proibidos.
+    - "Empresa A"
+    - "Empresa B"
+    - "Empresa C"
+    - "Player 1"
+    - "Player 2"
+    - "Concorrente X"
+    - "Concorrente Y"
+    - "Fornecedor genérico"
 content_agent:
   required_sections:
     default:
