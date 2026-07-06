@@ -146,6 +146,11 @@ def _parse_datetime(value: Any, fallback: datetime) -> datetime:
     return fallback
 
 
+# Tipos de evento que têm etapa de pesquisa (e, portanto, podem gatear a cocriação
+# pela aprovação). Mantido alinhado a calendar_workflow.RESEARCH_EVENT_TYPES.
+_RESEARCH_EVENT_TYPES = {"research", "pesquisa"}
+
+
 def _event_create_to_model(payload: CalendarEventCreate) -> CalendarEvent:
     return CalendarEvent(**payload.model_dump())
 
@@ -157,6 +162,10 @@ async def create_calendar_event(
     if payload.assigned_agent_slug and payload.assigned_agent_slug not in AGENT_SLUGS:
         raise LLMConfigurationError("Agente atribuido nao suportado pelo calendario.")
     event = _event_create_to_model(payload)
+    # Sem etapa de pesquisa não há aprovação a exigir: o gate só se aplica a eventos
+    # de pesquisa. Evita que um evento de conteúdo nasça travado (beco sem saída).
+    if event.event_type not in _RESEARCH_EVENT_TYPES:
+        event.requires_research_approval = False
     event.created_by = created_by
     db.add(event)
     await db.commit()

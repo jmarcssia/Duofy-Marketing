@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent_config import brand_voice_section, read_agent_prompt, read_config_text
 from app.agent_limits import get_token_budget
+from app.briefing_filters import briefing_filters_to_prompt, normalize_briefing_filters
 from app.llm import LLMConfigurationError, call_llm, provider_for_model
 from app.models import (
     Agent,
@@ -112,8 +113,97 @@ _PACKAGE_SHAPE = """{
                "image_prompt": str, "alt_text": str } ],
   "visual_direction": { "conceito": str, "estilo": str, "cenario": str, "enquadramento": str,
     "composicao": str, "iluminacao": str, "paleta": str, "tipografia": str, "restricoes": str },
+  "extra_pieces": [ { "kind": str, "label": str, "channel": str, "content": str } ],
   "factualidade": [str], "checklist": [str]
 }"""
+
+# Canais sociais cujas legendas entram em `captions` (chave minúscula no pacote).
+_CAPTION_CHANNELS = {"instagram", "linkedin", "facebook", "tiktok"}
+
+# Peças extras que o briefing pode pedir → instrução de geração por kind.
+_EXTRA_PIECE_SPECS: dict[str, tuple[str, str]] = {
+    "whatsapp": (
+        "Mensagem WhatsApp",
+        "mensagem CURTA de WhatsApp (2-5 linhas, tom direto e pessoal, sem hashtag), "
+        "pronta para nutrição de leads; inclua uma variação alternativa após a linha "
+        "'--- Alternativa ---'",
+    ),
+    "whatsapp_image_prompt": (
+        "Prompt de imagem WhatsApp",
+        "prompt visual COMPLETO e independente para uma imagem opcional de apoio à mensagem "
+        "de WhatsApp (sem logo/@/#/marca)",
+    ),
+    "email": (
+        "E-mail",
+        "e-mail de nutrição com as linhas 'Assunto:', 'Preheader:', 'Corpo:' (2-4 parágrafos "
+        "curtos) e 'CTA:' — nesta ordem",
+    ),
+    "blog": (
+        "Blog post",
+        "artigo de blog com estrutura (## subtítulos), introdução, desenvolvimento, conclusão "
+        "e uma linha final 'SEO: palavra-chave foco + meta descrição'",
+    ),
+    "release": (
+        "Release para imprensa",
+        "release jornalístico (título, subtítulo, lide com o essencial, 2-3 parágrafos de "
+        "desenvolvimento com aspas de porta-voz genérico, boilerplate da marca)",
+    ),
+    "pitch": (
+        "Pitch para jornalista",
+        "pitch curto e direto para jornalista (por que a pauta importa agora, ângulo "
+        "editorial, o que a marca pode oferecer)",
+    ),
+    "landing_page": (
+        "Landing page",
+        "estrutura de landing page (headline, subheadline, blocos de benefício, prova social "
+        "sem inventar números, CTA)",
+    ),
+}
+
+
+# Canal selecionado no briefing → kind de peça extra correspondente.
+_CHANNEL_TO_KIND = {
+    "whatsapp": "whatsapp",
+    "e-mail": "email",
+    "email": "email",
+    "blog": "blog",
+    "release": "release",
+    "pitch": "pitch",
+    "landing page": "landing_page",
+    "landing_page": "landing_page",
+}
+
+
+def requested_caption_channels(payload: CreationRequest) -> list[str]:
+    """Canais sociais (minúsculos) que devem ter legenda própria no pacote.
+
+    Sem multicanal explícito (`channels` vazio), mantém o comportamento clássico:
+    Instagram e LinkedIn sempre presentes e diferentes entre si.
+    """
+    seen: list[str] = []
+    for item in (payload.channel, *payload.channels):
+        key = (item or "").strip().lower()
+        if key in _CAPTION_CHANNELS and key not in seen:
+            seen.append(key)
+    if not payload.channels:
+        for default in ("instagram", "linkedin"):
+            if default not in seen:
+                seen.append(default)
+    return seen
+
+
+def requested_extra_kinds(payload: CreationRequest) -> list[str]:
+    """Kinds de peças extras pedidos no briefing (via `pieces` e/ou canais não-sociais)."""
+    seen: list[str] = []
+    for piece in payload.pieces:
+        key = (piece or "").strip().lower()
+        if key in _EXTRA_PIECE_SPECS and key not in seen:
+            seen.append(key)
+    for item in (payload.channel, *payload.channels):
+        kind = _CHANNEL_TO_KIND.get((item or "").strip().lower())
+        if kind and kind not in seen:
+            seen.append(kind)
+    return seen
 
 
 def _system_prompt(agent_prompt: str, brand_slug: str) -> str:
@@ -143,6 +233,28 @@ def _user_prompt(
     rag_context: str,
     research_context: str,
 ) -> str:
+    caption_channels = requested_caption_channels(payload)
+    extra_kinds = requested_extra_kinds(payload)
+    caption_rule = (
+        "- captions: as legendas de canais DIFERENTES devem ser DIFERENTES entre si."
+        " Instagram = proximo, leitura rapida, paragrafos curtos, CTA de interacao/salvamento."
+        " LinkedIn = executivo, tese, analise, implicacao de negocio, CTA profissional."
+        f" Inclua EXATAMENTE estas chaves em captions: {', '.join(caption_channels)}."
+        if caption_channels
+        else "- captions: deixe o objeto vazio ({}) — nenhum canal social foi selecionado."
+    )
+    extra_rules: list[str] = []
+    if extra_kinds:
+        extra_rules.append(
+            "- extra_pieces: gere UMA peça por item abaixo (campo 'kind' EXATAMENTE como"
+            " indicado, 'label' amigavel, 'channel' do canal correspondente, 'content' com o"
+            " texto completo da peça):"
+        )
+        for kind in extra_kinds:
+            label, spec = _EXTRA_PIECE_SPECS[kind]
+            extra_rules.append(f"  - kind '{kind}' ({label}): {spec}.")
+    else:
+        extra_rules.append("- extra_pieces: deixe a lista vazia ([]).")
     lines = [
         "Gere UM pacote de conteudo profissional e retorne SOMENTE um objeto JSON valido "
         "(sem texto ao redor, sem ```), exatamente neste formato:",
@@ -153,13 +265,13 @@ def _user_prompt(
         "tipograficas (« ») em vez de aspas retas.",
         "",
         "Regras de saida:",
-        "- captions: as legendas de canais DIFERENTES devem ser DIFERENTES entre si. Instagram ="
-        " proximo, leitura rapida, paragrafos curtos, CTA de interacao/salvamento. LinkedIn ="
-        " executivo, tese, analise, implicacao de negocio, CTA profissional. Sempre inclua"
-        " 'instagram' e 'linkedin'.",
+        caption_rule,
+        *extra_rules,
         "- Se o formato for carrossel: 'slides' com um objeto por slide, cada um com FUNCAO"
         " narrativa (o conteudo evolui de um slide para o proximo), 'texto' exato do slide,"
-        " 'texto_arte' curto e legivel, e um 'image_prompt' COMPLETO e INDEPENDENTE.",
+        " 'texto_arte' curto e legivel, e um 'image_prompt' COMPLETO e INDEPENDENTE."
+        " O MESMO carrossel serve para todos os canais sociais selecionados — o que muda"
+        " por canal e a legenda.",
         "- CADA image_prompt e autossuficiente (proporcao, cenario, enquadramento, composicao,"
         " luz, profundidade, paleta, hierarquia, texto exato da imagem, espaco de seguranca)."
         " NUNCA escreva 'mantenha o estilo do slide anterior'.",
@@ -193,7 +305,12 @@ def _user_prompt(
         "",
         "Briefing do usuario:",
         f"- Tema: {payload.theme}",
-        f"- Canal: {payload.channel} | Formato: {payload.format}",
+        f"- Canal principal: {payload.channel} | Formato: {payload.format}",
+        *(
+            [f"- Canais selecionados: {', '.join(payload.channels)}"]
+            if payload.channels
+            else []
+        ),
         f"- Persona: {payload.persona or '(inferir)'}",
         f"- Objetivo: {payload.objetivo or '(inferir)'}",
         f"- CTA: {payload.cta or '(inferir)'}",
@@ -201,6 +318,9 @@ def _user_prompt(
         f"- Profundidade: {payload.depth} | Tom: {payload.tone or '(voz da marca)'}",
         f"- Observacoes: {payload.observacoes or '-'}",
     ]
+    filters_text = briefing_filters_to_prompt(payload.briefing_filters)
+    if filters_text:
+        lines += ["", "Briefing estruturado (filtros escolhidos — respeite-os):", filters_text]
     if payload.previous_content:
         lines += ["", "Conteudo anterior para reaproveitar/reconstruir (nao apenas recortar):",
                   payload.previous_content[:6000]]
@@ -266,18 +386,29 @@ def _extract_json(raw: str) -> dict:
     return json.loads(candidate)
 
 
-def validate_package(pkg: ContentPackage) -> list[str]:
+def validate_package(
+    pkg: ContentPackage, payload: CreationRequest | None = None
+) -> list[str]:
     warnings: list[str] = []
     caps = {k.lower(): v for k, v in pkg.captions.items()}
-    if "instagram" not in caps or not caps["instagram"].strip():
-        warnings.append("Legenda de Instagram ausente.")
-    if "linkedin" not in caps or not caps["linkedin"].strip():
-        warnings.append("Legenda de LinkedIn ausente.")
-    if (
-        caps.get("instagram", "").strip()
-        and caps.get("instagram", "").strip() == caps.get("linkedin", "").strip()
-    ):
-        warnings.append("Instagram e LinkedIn com a mesma legenda (devem diferir).")
+    expected_captions = (
+        requested_caption_channels(payload) if payload else ["instagram", "linkedin"]
+    )
+    for channel in expected_captions:
+        if not caps.get(channel, "").strip():
+            warnings.append(f"Legenda de {channel.capitalize()} ausente.")
+    seen_caps: dict[str, str] = {}
+    for channel in expected_captions:
+        text = caps.get(channel, "").strip()
+        if not text:
+            continue
+        for other, other_text in seen_caps.items():
+            if text == other_text:
+                warnings.append(
+                    f"{other.capitalize()} e {channel.capitalize()} com a mesma legenda "
+                    "(devem diferir)."
+                )
+        seen_caps[channel] = text
     is_carousel = "carrossel" in pkg.format.lower() or "carousel" in pkg.format.lower()
     if is_carousel and not pkg.slides:
         warnings.append("Carrossel sem slides.")
@@ -287,6 +418,19 @@ def validate_package(pkg: ContentPackage) -> list[str]:
         elif has_forbidden_prompt(slide.image_prompt):
             warnings.append(
                 f"Slide {slide.numero}: image_prompt contem termo proibido (logo/@/#/marca)."
+            )
+    if payload is not None:
+        generated_kinds = {piece.kind.strip().lower() for piece in pkg.extra_pieces}
+        for kind in requested_extra_kinds(payload):
+            if kind not in generated_kinds:
+                label = _EXTRA_PIECE_SPECS[kind][0]
+                warnings.append(f"Peça solicitada não gerada: {label} ({kind}).")
+    for piece in pkg.extra_pieces:
+        if piece.kind.strip().lower() == "whatsapp_image_prompt" and has_forbidden_prompt(
+            piece.content
+        ):
+            warnings.append(
+                "Prompt de imagem do WhatsApp contem termo proibido (logo/@/#/marca)."
             )
     return warnings
 
@@ -315,6 +459,16 @@ def _md_slides(pkg: ContentPackage) -> list[str]:
     return out
 
 
+def _md_extra_pieces(pkg: ContentPackage) -> list[str]:
+    if not pkg.extra_pieces:
+        return []
+    out: list[str] = ["## Peças extras"]
+    for piece in pkg.extra_pieces:
+        suffix = f" ({piece.channel})" if piece.channel else ""
+        out += [f"### {piece.label or piece.kind}{suffix}", piece.content.strip() or "—", ""]
+    return out
+
+
 def package_to_markdown(pkg: ContentPackage) -> str:
     vd = pkg.visual_direction
     fact = [f"- {item}" for item in pkg.factualidade] or ["—"]
@@ -338,6 +492,7 @@ def package_to_markdown(pkg: ContentPackage) -> str:
         "",
         *_md_slides(pkg),
         *_md_captions(pkg),
+        *_md_extra_pieces(pkg),
         "## Direcao visual",
         f"- **Conceito:** {vd.conceito or '—'}",
         f"- **Estilo:** {vd.estilo or '—'}",
@@ -500,6 +655,7 @@ async def _persist_version(
             brand_slug=brand.slug, category=payload.category, channel=payload.channel,
             format=payload.format, title=title,
             briefing=payload.theme, status=payload.status, provider=provider, model=model,
+            briefing_json=normalize_briefing_filters(payload.briefing_filters),
             agent_run_id=run.id,
         )
         db.add(output)
@@ -560,7 +716,7 @@ async def generate_content_package(
     pkg.brand_slug = brand.slug
     pkg.channel = payload.channel
     pkg.format = payload.format
-    warnings = validate_package(pkg)
+    warnings = validate_package(pkg, payload)
     output, version = await _persist_version(
         db, agent=agent, brand=brand, payload=payload, pkg=pkg, provider=provider,
         model=used_model, prompt=prompt, editor_note="Cocriacao — geracao inicial.", existing=None,

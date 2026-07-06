@@ -225,9 +225,12 @@ async def execute_research(
     theme = _research_theme(event)
     depth = "quick"
     period = "últimos 30 dias"
+    briefing_filters: dict | None = None
     if isinstance(event.execution_payload, dict):
         depth = str(event.execution_payload.get("depth") or depth)
         period = str(event.execution_payload.get("period") or period)
+        raw_filters = event.execution_payload.get("briefing")
+        briefing_filters = raw_filters if isinstance(raw_filters, dict) else None
     if depth not in ("quick", "standard", "deep"):
         depth = "quick"
 
@@ -258,6 +261,7 @@ async def execute_research(
                 theme=theme,
                 period=period,
                 depth=depth,  # type: ignore[arg-type]
+                briefing_filters=briefing_filters,
             ),
         )
     except Exception as exc:  # noqa: BLE001 - registra falha no evento e no task, sem mascarar
@@ -304,8 +308,8 @@ async def execute_cocreation(
     db: AsyncSession,
     event: CalendarEvent,
     user: User,
-    channel: str = "Instagram",
-    content_format: str = "Carrossel",
+    channel: str | None = None,
+    content_format: str | None = None,
     trigger: str = "manual",
 ) -> CalendarEvent:
     """Dispara a cocriação pelo evento reusando o Agente de Cocriação.
@@ -313,9 +317,36 @@ async def execute_cocreation(
     Só roda se a pesquisa estiver aprovada (ou o gate desligado). Consome a pesquisa aprovada
     (research_output_id) como contexto — não refaz pesquisa. Cria um AgentTask, vincula o Output
     de conteúdo e avança o pipeline para 'review'. Idempotente: não roda se já estiver em execução.
+
+    Canal/formato: argumento explícito > briefing do evento (execution_payload) > campos do
+    evento > defaults (Instagram/Carrossel). O briefing estruturado, os canais extras e as
+    peças esperadas gravados no evento seguem para o Agente de Cocriação.
     """
     if event.status in ("running", "in_progress"):
         raise LLMConfigurationError("Este evento já tem uma execução em andamento.")
+
+    payload_dict = event.execution_payload if isinstance(event.execution_payload, dict) else {}
+    channel = channel or str(payload_dict.get("channel") or "") or event.channel or "Instagram"
+    content_format = (
+        content_format
+        or str(payload_dict.get("format") or "")
+        or event.format
+        or "Carrossel"
+    )
+    raw_channels = payload_dict.get("channels")
+    channels = (
+        [str(item) for item in raw_channels if str(item).strip()]
+        if isinstance(raw_channels, list)
+        else []
+    )
+    raw_pieces = payload_dict.get("pieces")
+    pieces = (
+        [str(item) for item in raw_pieces if str(item).strip()]
+        if isinstance(raw_pieces, list)
+        else []
+    )
+    raw_filters = payload_dict.get("briefing")
+    briefing_filters = raw_filters if isinstance(raw_filters, dict) else None
     research_status = await _output_status(db, event.research_output_id)
     gate = research_status == APPROVED_STATUS or not event.requires_research_approval
     if not gate:
@@ -361,6 +392,9 @@ async def execute_cocreation(
                 observacoes=(event.description or None),
                 research_output_id=event.research_output_id,
                 status="review",
+                channels=channels,
+                pieces=pieces,
+                briefing_filters=briefing_filters,
             ),
         )
     except Exception as exc:  # noqa: BLE001 - registra falha sem mascarar

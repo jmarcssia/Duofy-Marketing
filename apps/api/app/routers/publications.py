@@ -21,7 +21,7 @@ from app.access import accessible_brands, assert_brand_access
 from app.audit_service import record_audit_event
 from app.db import get_db
 from app.dependencies import get_current_user
-from app.models import Publication, PublicationChannel, User
+from app.models import Output, Publication, PublicationChannel, User
 from app.schemas import (
     PublicationChannelCreate,
     PublicationChannelRead,
@@ -68,6 +68,68 @@ async def _get_pub_or_404(db: AsyncSession, pub_id: int, user: User) -> Publicat
         )
     assert_brand_access(user, pub.brand_slug)  # C1
     return pub
+
+
+def _sniff_media_ok(content: bytes) -> bool:
+    """Confere magic bytes contra os formatos suportados (imagem/vídeo). Best-effort anti-spoof."""
+    if len(content) < 12:
+        return False
+    if content[:3] == b"\xff\xd8\xff":  # JPEG
+        return True
+    if content[:8] == b"\x89PNG\r\n\x1a\n":  # PNG
+        return True
+    if content[:6] in (b"GIF87a", b"GIF89a"):  # GIF
+        return True
+    if content[:4] == b"RIFF" and content[8:12] == b"WEBP":  # WEBP
+        return True
+    if content[4:8] == b"ftyp":  # MP4/MOV (ISO base media)
+        return True
+    return False
+
+
+def _media_path_ok(raw: str) -> bool:
+    """Só aceita caminhos sob storage/media (evita referência arbitrária a arquivos do servidor)."""
+    try:
+        return Path(raw).resolve().is_relative_to(MEDIA_DIR.resolve())
+    except (ValueError, OSError):
+        return False
+
+
+async def _validate_refs(
+    db: AsyncSession,
+    *,
+    brand_slug: str,
+    channel_id: int | None,
+    output_id: int | None,
+    media_paths: list[str] | None,
+) -> None:
+    """C1 + governança: canal/output têm de ser da MESMA marca; output tem de estar aprovado;
+    media_paths têm de apontar para storage/media (não a caminhos arbitrários do servidor)."""
+    if channel_id is not None:
+        channel = await db.get(PublicationChannel, channel_id)
+        if channel is None or channel.brand_slug != brand_slug:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Canal não encontrado para esta marca.",
+            )
+    if output_id is not None:
+        output = await db.get(Output, output_id)
+        if output is None or output.brand_slug != brand_slug:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Conteúdo não encontrado para esta marca.",
+            )
+        if output.status != "approved":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Só é possível publicar conteúdo aprovado.",
+            )
+    for mp in media_paths or []:
+        if not _media_path_ok(mp):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Caminho de mídia inválido (fora de storage/media).",
+            )
 
 
 # ------------------------------------------------------------------ Canais
@@ -146,6 +208,10 @@ async def create_publication(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> PublicationRead:
     assert_brand_access(current_user, payload.brand_slug)  # C1
+    await _validate_refs(
+        db, brand_slug=payload.brand_slug, channel_id=payload.channel_id,
+        output_id=payload.output_id, media_paths=payload.media_paths,
+    )
     initial = "scheduled" if payload.scheduled_at else "draft"
     pub = Publication(
         brand_slug=payload.brand_slug, channel_id=payload.channel_id, output_id=payload.output_id,
@@ -179,7 +245,13 @@ async def update_publication(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Publicação já publicada."
         )
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    changed = payload.model_dump(exclude_unset=True)
+    await _validate_refs(
+        db, brand_slug=pub.brand_slug,
+        channel_id=changed.get("channel_id"), output_id=changed.get("output_id"),
+        media_paths=changed.get("media_paths"),
+    )
+    for field, value in changed.items():
         setattr(pub, field, value)
     await db.commit()
     await db.refresh(pub)
@@ -226,6 +298,12 @@ async def upload_media(
     content = await file.read()
     if len(content) > MAX_MEDIA_BYTES:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Arquivo excede 25MB.")
+    if not _sniff_media_ok(content):
+        # Assinatura (magic bytes) não confere com imagem/vídeo — bloqueia arquivo renomeado.
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="O conteúdo do arquivo não corresponde a uma imagem/vídeo suportado.",
+        )
     MEDIA_DIR.mkdir(parents=True, exist_ok=True)
     stored = MEDIA_DIR / f"{uuid4().hex}{suffix}"
     await run_in_threadpool(stored.write_bytes, content)

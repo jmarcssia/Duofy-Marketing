@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.access import accessible_brands, assert_brand_access
 from app.audit_service import record_audit_event
+from app.content_pieces_service import list_pieces
 from app.db import get_db
 from app.dependencies import get_current_user
 from app.document_formatting import (
@@ -235,7 +236,22 @@ async def _output_read(db: AsyncSession, output: Output) -> ContentOutputRead:
     )
 
 
-def _output_export_document(output: Output, version: OutputVersion) -> ExportDocument:
+def _pieces_diverged(pieces: list, version: OutputVersion) -> bool:
+    """True se alguma peça foi refinada/editada após o snapshot da versão do pacote.
+
+    O refino por peça atualiza só a peça (não o structured_json/content da versão). Quando isso
+    acontece, o texto do pacote fica defasado em relação às peças — o export precisa deixar claro.
+    """
+    ref = version.created_at
+    return any(getattr(p, "updated_at", None) and p.updated_at > ref for p in pieces)
+
+
+def _output_export_document(
+    output: Output,
+    version: OutputVersion,
+    pieces: list | None = None,
+    diverged: bool = False,
+) -> ExportDocument:
     channel = repair_text(output.channel)
     content_format = repair_text(output.format)
     category = repair_text(output.category)
@@ -243,6 +259,24 @@ def _output_export_document(output: Output, version: OutputVersion) -> ExportDoc
     content = repair_text(version.content)
     sections = document_sections(content)
     notes = quality_notes_for_content(content, profile)
+    # Quando o output tem peças (cocriação), o texto atual é o das PEÇAS — o pacote pode estar
+    # defasado por refino individual. Anexamos as peças atuais (fonte de verdade) ao export e,
+    # se houver divergência, um aviso claro no topo, em vez de exportar texto antigo sem avisar.
+    if pieces:
+        parts = [content, "", "---", "", "## Peças (conteúdo atual)"]
+        if diverged:
+            parts.insert(
+                0,
+                "> ⚠️ Este pacote tem peças refinadas individualmente após a geração. "
+                "O bloco inicial reflete o pacote original; as **Peças (conteúdo atual)** "
+                "abaixo são a versão vigente e aprovável.\n",
+            )
+        for p in pieces:
+            label = repair_text(getattr(p, "label", None) or getattr(p, "kind", "Peça"))
+            status = getattr(p, "status", "")
+            parts.append(f"\n### {label} ({status})\n")
+            parts.append(repair_text(getattr(p, "content", "") or ""))
+        content = "\n".join(parts)
     return ExportDocument(
         title=repair_text(output.title),
         subtitle="Output Duofy exportado para revisao",
@@ -597,7 +631,9 @@ async def export_output(
 ) -> Response:
     output = await _get_output_or_404(db, output_id, current_user)
     current_version = await _current_version_or_404(db, output)
-    export_data = _output_export_document(output, current_version)
+    pieces = await list_pieces(db, output.id)
+    diverged = _pieces_diverged(pieces, current_version)
+    export_data = _output_export_document(output, current_version, pieces, diverged)
     exported = await run_in_threadpool(export_document, export_data, format)
     return _export_response(exported)
 

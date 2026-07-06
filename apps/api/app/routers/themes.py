@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.access import accessible_brands, assert_brand_access
 from app.audit_service import record_audit_event
 from app.db import get_db
 from app.dependencies import get_current_user
@@ -35,8 +36,12 @@ async def list_themes(
     limit: int = Query(default=500, ge=1, le=1000),
 ) -> list[ContentThemeRead]:
     stmt = select(ContentTheme).order_by(ContentTheme.title)
+    allowed = accessible_brands(current_user)
     if brand_slug:
+        assert_brand_access(current_user, brand_slug)
         stmt = stmt.where(ContentTheme.brand_slug == brand_slug)
+    elif allowed is not None:
+        stmt = stmt.where(ContentTheme.brand_slug.in_(allowed))
     rows = (await db.execute(stmt.limit(limit))).scalars().all()
     return [_theme_read(t) for t in rows]
 
@@ -47,6 +52,8 @@ async def create_theme(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ContentThemeRead:
+    if payload.brand_slug:
+        assert_brand_access(current_user, payload.brand_slug)
     theme = ContentTheme(
         title=payload.title.strip(),
         theme=payload.theme or "",
@@ -77,6 +84,7 @@ async def delete_theme(
     theme = await db.get(ContentTheme, theme_id)
     if theme is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tema não encontrado.")
+    assert_brand_access(current_user, theme.brand_slug)
     title = theme.title
     brand = theme.brand_slug
     await db.delete(theme)

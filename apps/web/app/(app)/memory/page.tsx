@@ -34,7 +34,15 @@ async function downloadDoc(id: number, name: string) {
   if (!token) return
   try {
     await downloadFile(`/api/documents/${id}/download`, token, name)
-  } catch { /* erro silencioso */ }
+  } catch (e: unknown) {
+    // O arquivo original pode não estar no disco (ex.: reindexado/seed). Dá feedback e sugere o PDF.
+    window.alert(
+      (e instanceof Error && e.message
+        ? e.message
+        : "Não foi possível baixar o arquivo original.") +
+        "\nSe o original não estiver disponível, use “Exportar PDF” para gerar do conteúdo indexado."
+    )
+  }
 }
 
 async function exportDoc(id: number, name: string) {
@@ -42,7 +50,9 @@ async function exportDoc(id: number, name: string) {
   if (!token) return
   try {
     await downloadFile(exportPath(`/api/documents/${id}`, "pdf"), token, `${name}.pdf`)
-  } catch { /* erro silencioso */ }
+  } catch (e: unknown) {
+    window.alert(e instanceof Error && e.message ? e.message : "Falha ao exportar o documento.")
+  }
 }
 
 type MemoryEntry = {

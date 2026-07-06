@@ -1,4 +1,4 @@
-# Cocriação — TOTVS Postos de Combustíveis by Duofy
+# Cocriação — TOTVS Varejo Postos de Combustíveis
 
 > Extensão do perfil de marca (`config/brands/postos_combustiveis.md`) para uso do agente de
 > Cocriação. Em conflito sobre produto, a documentação interna recuperada (RAG) prevalece. Nunca

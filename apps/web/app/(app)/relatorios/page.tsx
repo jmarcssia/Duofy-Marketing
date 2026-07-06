@@ -42,7 +42,9 @@ const num = (v: number) => v.toLocaleString("pt-BR")
 const DONUT_COLORS = ["#6d35ee", "#8b5cf6", "#2563eb", "#0d9488", "#f97316", "#db2777"]
 
 export default function RelatoriosPage() {
-  const { selected: brand } = useBrand()
+  const { selected: brand, brands } = useBrand()
+  const brandName = (slug: string | null | undefined) =>
+    slug ? brands.find((b) => b.slug === slug)?.name ?? slug : null
   const [summary, setSummary] = useState<MetricsSummary | null>(null)
   const [calls, setCalls] = useState<ModelCall[]>([])
   const [reports, setReports] = useState<InternalReport[]>([])
@@ -81,7 +83,9 @@ export default function RelatoriosPage() {
     if (!token) return
     try {
       await downloadFile(exportPath(`/api/reports/${id}`, format), token, `duofy-relatorio-${id}.${format}`)
-    } catch { /* erro silencioso */ }
+    } catch (e: unknown) {
+      window.alert(e instanceof Error && e.message ? e.message : "Falha ao exportar o relatório.")
+    }
   }
 
   // série de custo por dia (a partir dos model-calls reais)
@@ -144,7 +148,7 @@ export default function RelatoriosPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-[30px] font-extrabold tracking-[-0.04em] text-ink">Relatórios</h1>
-          <p className="mt-1 text-sm text-muted">Custos e uso de IA reais — dados do OpenRouter via model_calls.{brand ? ` Marca: ${brand}.` : " Todas as marcas."}</p>
+          <p className="mt-1 text-sm text-muted">Custos e uso de IA reais — dados do OpenRouter via model_calls.{brand ? ` Marca: ${brandName(brand)}.` : " Todas as marcas."}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Segmented options={PERIOD_OPTIONS} value={period} onChange={setPeriod} />
@@ -291,7 +295,7 @@ export default function RelatoriosPage() {
                       </div>
                     </div>
                     <p className="mt-3 line-clamp-1 text-sm font-bold text-ink">{r.title}</p>
-                    <p className="mt-0.5 text-xs text-muted">{r.report_type} · {r.brand_slug ?? "—"}</p>
+                    <p className="mt-0.5 text-xs text-muted">{r.report_type} · {brandName(r.brand_slug) ?? "—"}</p>
                     <div className="mt-2 max-h-40 overflow-hidden text-xs text-muted [mask-image:linear-gradient(to_bottom,#000_70%,transparent)]">
                       <Markdown content={r.content} className="text-xs text-muted" />
                     </div>

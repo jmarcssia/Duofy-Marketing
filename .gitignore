@@ -81,3 +81,10 @@ storage/documents/*
 storage/media/*
 !storage/media/
 !storage/media/.gitkeep
+
+# Lixo gerado por ferramentas MCP (Playwright snapshots/exports)
+.playwright-mcp/
+
+# Artefatos gerados de apresentacao/output e locks do Office
+outputs/
+~$*

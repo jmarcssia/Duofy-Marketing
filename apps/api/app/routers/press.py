@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.access import assert_brand_access
 from app.audit_service import record_audit_event
 from app.calendar_service import generate_press_output
 from app.db import get_db
@@ -60,6 +61,7 @@ async def generate_press(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ContentOutputRead:
+    assert_brand_access(current_user, payload.brand_slug)
     try:
         output = await generate_press_output(db, payload)
     except LLMConfigurationError as exc:

@@ -82,6 +82,10 @@ export default function AcessosPage() {
   useEffect(() => { void loadAudit() }, [loadAudit])
 
   const selectedUser = useMemo(() => users.find((u) => String(u.id) === userId) ?? null, [users, userId])
+  const brandName = useCallback(
+    (slug: string) => brands.find((b) => b.slug === slug)?.name ?? slug,
+    [brands]
+  )
 
   function pickUser(id: string) {
     setUserId(id)
@@ -112,7 +116,7 @@ export default function AcessosPage() {
       await apiFetch(`/api/admin/users/${selectedUser.id}/brand-scope`, token, {
         method: "PUT", body: JSON.stringify({ brand_scope })
       })
-      setMsg(allBrands ? "Escopo salvo: acesso a todas as marcas." : `Escopo salvo: ${brand_scope!.join(", ")}.`)
+      setMsg(allBrands ? "Escopo salvo: acesso a todas as marcas." : `Escopo salvo: ${brand_scope!.map(brandName).join(", ")}.`)
       await loadBase()
       await loadAudit()
     } catch (e: unknown) {
@@ -233,7 +237,7 @@ export default function AcessosPage() {
                     <td className="whitespace-nowrap py-2 pr-3 text-xs text-muted"><span className="inline-flex items-center gap-1"><ClockIcon className="h-3.5 w-3.5" />{fmt(e.created_at)}</span></td>
                     <td className="py-2 pr-3"><span className="inline-flex items-center gap-1.5"><span className={`h-1.5 w-1.5 rounded-full`} style={{ background: tone === "green" ? "#16a34a" : tone === "red" ? "#ef4444" : "#94a3b8" }} /><code className="text-xs text-ink">{e.action}</code></span></td>
                     <td className="py-2 pr-3 text-xs text-ink">{e.user_email ?? "—"}</td>
-                    <td className="py-2 pr-3">{e.brand_slug ? <Badge tone="slate">{e.brand_slug}</Badge> : <span className="text-xs text-muted">—</span>}</td>
+                    <td className="py-2 pr-3">{e.brand_slug ? <Badge tone="slate">{brandName(e.brand_slug)}</Badge> : <span className="text-xs text-muted">—</span>}</td>
                     <td className="py-2 text-xs text-ink/90">{e.summary}</td>
                   </tr>
                 )

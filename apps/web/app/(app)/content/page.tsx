@@ -16,7 +16,7 @@ import {
   SettingsIcon,
   SparklesIcon
 } from "@/components/icons"
-import { Badge, PageHeader, Segmented, Spinner, type Tone } from "@/components/ui"
+import { Badge, GhostButton, PageHeader, Segmented, Spinner, type Tone } from "@/components/ui"
 import {
   apiFetch,
   type ContentOutput,
@@ -59,7 +59,7 @@ function CocreationInner() {
   const research = params.get("research") ?? undefined
   const { selected: brand } = useBrand()
 
-  const [mode, setMode] = useState<Mode>(research ? "estruturado" : "lista")
+  const [mode, setMode] = useState<Mode>("estruturado")
   const [content, setContent] = useState<ContentOutput[]>([])
   const [reports, setReports] = useState<ResearchReport[]>([])
   const [themes, setThemes] = useState<ContentTheme[]>([])
@@ -134,7 +134,7 @@ function CocreationInner() {
     const briefing = `${base}${note ? ` Observação: ${note}` : ""}`.slice(0, 4000)
     const body = JSON.stringify({ brand_slug: brand, category: "content", channel, format, briefing, status: "draft" })
 
-    setGenBusy(true); setGenMsg("Gerando conteúdo com o agente… pode levar até ~1 min.")
+    setGenBusy(true); setGenMsg("Gerando conteúdo com o agente — costuma levar 1 a 2 min. Você pode continuar; o conteúdo aparece na lista ao concluir.")
     // Resiliência ao timeout do proxy: dispara o POST e faz polling do output novo.
     let known = new Set(content.map((c) => c.id))
     try {
@@ -157,7 +157,7 @@ function CocreationInner() {
       } catch { /* segue */ }
     }
     await post.catch(() => {})
-    if (!done) setGenMsg(postError ?? "A geração está demorando; o conteúdo aparecerá na lista ao concluir.")
+    if (!done) setGenMsg(postError ?? "A geração está demorando (1 a 2 min é normal). Você pode continuar; o conteúdo aparece aqui na lista de \"Conteúdos\" ao concluir.")
     setGenBusy(false)
   }
 
@@ -210,11 +210,70 @@ function CocreationInner() {
     setBusy(false)
   }
 
+  // Roda o Guardião (submit-review) e atualiza a tela. Devolve o detail resultante (status 'review' | 'needs_adjustment').
+  async function runReview(token: string): Promise<ContentOutputDetail> {
+    const d = await apiFetch<ContentOutputDetail>(`/api/content/outputs/${focusId}/submit-review`, token, { method: "POST", body: "{}" })
+    setDetail(d); setEf({ title: d.title, content: d.current_content ?? "", status: d.status })
+    return d
+  }
+
+  // Botão discreto: só envia para revisão e mostra o resultado/score do Guardião.
+  async function submitReview() {
+    if (!focusId) return
+    const token = getTokenFromCookie()
+    if (!token) return
+    setBusy(true); setMsg(null)
+    try {
+      const d = await runReview(token)
+      const note = d.quality_notes?.[0]
+      if (d.status === "needs_adjustment") {
+        setMsg(`Guardião pediu ajuste antes de aprovar.${note ? ` ${note}` : ""}`)
+      } else if (d.status === "review") {
+        setMsg("Enviado para revisão pelo Guardião — pronto para aprovar.")
+      } else {
+        setMsg("Enviado para revisão.")
+      }
+      await loadData()
+    } catch (e: unknown) { setMsg(e instanceof Error ? e.message : "Falha ao enviar para revisão.") }
+    setBusy(false)
+  }
+
+  // Aprovar sem atrito: se ainda está em draft/needs_adjustment, roda o Guardião primeiro.
+  async function approveOutput() {
+    if (!focusId || !detail) return
+    const token = getTokenFromCookie()
+    if (!token) return
+    setBusy(true); setMsg(null)
+    try {
+      let status = detail.status
+      if (status === "draft" || status === "needs_adjustment") {
+        const d = await runReview(token)
+        status = d.status
+        if (status !== "review") {
+          const note = d.quality_notes?.[0]
+          setMsg(`Guardião pediu ajuste — não aprovado.${note ? ` ${note}` : ""}`)
+          await loadData()
+          setBusy(false)
+          return
+        }
+      }
+      await apiFetch(`/api/outputs/${focusId}/approve`, token, { method: "POST", body: "{}" })
+      setMsg("Aprovado.")
+      await openFocus(focusId)
+      await loadData()
+    } catch (e: unknown) { setMsg(e instanceof Error ? e.message : "Falha ao aprovar.") }
+    setBusy(false)
+  }
+
   async function exportPdf() {
     if (!focusId) return
     const token = getTokenFromCookie()
     if (!token) return
-    try { await downloadFile(exportPath(`/api/outputs/${focusId}`, "pdf"), token, `duofy-${focusId}.pdf`) } catch { /* ignore */ }
+    try {
+      await downloadFile(exportPath(`/api/outputs/${focusId}`, "pdf"), token, `duofy-${focusId}.pdf`)
+    } catch (e: unknown) {
+      setMsg(e instanceof Error ? e.message : "Falha ao exportar o PDF.")
+    }
   }
 
   // ---- Foco (editar um conteúdo) ----
@@ -253,7 +312,10 @@ function CocreationInner() {
               {msg && <p className="text-xs font-medium text-purple-deep">{msg}</p>}
               <div className="flex flex-wrap gap-2 border-t border-line pt-4">
                 <button onClick={saveEdit} disabled={busy} className="duofy-tap inline-flex items-center gap-1.5 rounded-lg bg-purple px-4 py-2 text-sm font-semibold text-white hover:bg-purple-deep disabled:opacity-50"><CheckCircleIcon className="h-4 w-4" /> Salvar</button>
-                <button onClick={() => action("approve", "Aprovado.")} disabled={busy} className="duofy-tap rounded-lg border border-line px-3 py-2 text-sm font-medium text-green hover:border-green/40 disabled:opacity-50">Aprovar</button>
+                {(detail.status === "draft" || detail.status === "needs_adjustment") && (
+                  <GhostButton onClick={submitReview} disabled={busy}>Enviar para revisão</GhostButton>
+                )}
+                <button onClick={approveOutput} disabled={busy} className="duofy-tap rounded-lg border border-line px-3 py-2 text-sm font-medium text-green hover:border-green/40 disabled:opacity-50">Aprovar</button>
                 <button onClick={() => action("request-adjustment", "Ajuste solicitado.")} disabled={busy} className="duofy-tap inline-flex items-center gap-1 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink hover:border-purple/40 hover:text-purple disabled:opacity-50"><SettingsIcon className="h-4 w-4" /> Ajuste</button>
                 <button onClick={exportPdf} className="duofy-tap inline-flex items-center gap-1 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink hover:border-purple/40 hover:text-purple"><DownloadIcon className="h-4 w-4" /> PDF</button>
                 <button onClick={() => navigator.clipboard?.writeText(ef.content)} className="duofy-tap inline-flex items-center gap-1 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink hover:border-purple/40 hover:text-purple"><CopyIcon className="h-4 w-4" /> Copiar</button>
@@ -297,8 +359,8 @@ function CocreationInner() {
       <div className="flex items-start gap-3 rounded-2xl border border-purple/20 bg-purple-soft/40 p-4">
         <SparklesIcon className="mt-0.5 h-5 w-5 shrink-0 text-purple" />
         <div className="text-sm text-ink">
-          <p className="font-semibold">A cocriação pode começar de duas formas.</p>
-          <p className="mt-0.5 text-muted">Por <strong>briefing manual</strong> (sem pesquisa) ou por uma <strong>pesquisa aprovada</strong> vinculada. Gera roteiro, legendas e <strong>prompts visuais</strong> — não gera a imagem final.{research ? ` Pesquisa #${research} pré-vinculada.` : ""}</p>
+          <p className="font-semibold">A cocriação pode começar de três formas.</p>
+          <p className="mt-0.5 text-muted">Por <strong>briefing manual</strong>, por uma <strong>pesquisa aprovada</strong> vinculada ou por um <strong>template</strong> pronto. Gera roteiro, legendas e <strong>prompts visuais</strong> — não gera a imagem final.{research ? ` Pesquisa #${research} pré-vinculada.` : ""}</p>
         </div>
       </div>
 

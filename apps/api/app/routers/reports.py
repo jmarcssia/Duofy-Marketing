@@ -7,6 +7,7 @@ from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.access import accessible_brands, assert_brand_access
 from app.db import get_db
 from app.dependencies import get_current_user
 from app.export_service import ExportDocument, ExportResult, export_document
@@ -32,7 +33,7 @@ def _report_read(report: Report) -> ReportRead:
     )
 
 
-async def _get_report_or_404(db: AsyncSession, report_id: int) -> Report:
+async def _get_report_or_404(db: AsyncSession, report_id: int, user: User) -> Report:
     result = await db.execute(select(Report).where(Report.id == report_id))
     report = result.scalar_one_or_none()
     if report is None:
@@ -40,6 +41,7 @@ async def _get_report_or_404(db: AsyncSession, report_id: int) -> Report:
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Relatorio nao encontrado.",
         )
+    assert_brand_access(user, report.brand_slug)
     return report
 
 
@@ -67,7 +69,7 @@ def _report_export_document(report: Report) -> ExportDocument:
 
 @router.get("", response_model=list[ReportRead])
 async def list_reports(
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     report_type: str | None = None,
     brand_slug: str | None = None,
@@ -75,8 +77,12 @@ async def list_reports(
     statement = select(Report)
     if report_type:
         statement = statement.where(Report.report_type == report_type)
+    allowed = accessible_brands(current_user)
     if brand_slug:
+        assert_brand_access(current_user, brand_slug)
         statement = statement.where(Report.brand_slug == brand_slug)
+    elif allowed is not None:
+        statement = statement.where(Report.brand_slug.in_(allowed))
     statement = statement.order_by(Report.created_at.desc()).limit(100)
     result = await db.execute(statement)
     return [_report_read(report) for report in result.scalars().all()]
@@ -85,9 +91,10 @@ async def list_reports(
 @router.post("/generate", response_model=ReportRead)
 async def generate_report_endpoint(
     payload: ReportGenerateRequest,
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ReportRead:
+    assert_brand_access(current_user, payload.brand_slug)
     report = await generate_report(db, payload)
     return _report_read(report)
 
@@ -95,28 +102,28 @@ async def generate_report_endpoint(
 @router.get("/{report_id}", response_model=ReportRead)
 async def get_report(
     report_id: int,
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ReportRead:
-    return _report_read(await _get_report_or_404(db, report_id))
+    return _report_read(await _get_report_or_404(db, report_id, current_user))
 
 
 @router.get("/{report_id}/pdf")
 async def export_report_pdf(
     report_id: int,
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Response:
-    return await export_report(report_id, _current_user, db, "pdf")
+    return await export_report(report_id, current_user, db, "pdf")
 
 
 @router.get("/{report_id}/export")
 async def export_report(
     report_id: int,
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     format: Annotated[str, Query(pattern="^(pdf|docx|md|html)$")] = "pdf",
 ) -> Response:
-    report = await _get_report_or_404(db, report_id)
+    report = await _get_report_or_404(db, report_id, current_user)
     exported = await run_in_threadpool(export_document, _report_export_document(report), format)
     return _export_response(exported)

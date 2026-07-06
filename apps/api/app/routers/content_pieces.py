@@ -14,14 +14,17 @@ from app.content_pieces_service import (
     add_manual_piece,
     get_piece,
     list_pieces,
+    refine_content_piece,
     set_piece_status,
 )
 from app.db import get_db
 from app.dependencies import get_current_user
+from app.llm import LLMConfigurationError
 from app.models import ContentPiece, Output, User
 from app.schemas import (
     ContentPieceCreate,
     ContentPieceRead,
+    ContentPieceRefineRequest,
     ContentPieceStatusRequest,
     ContentPieceUpdate,
 )
@@ -98,6 +101,38 @@ async def update_piece(
     piece = await _piece_scoped(db, piece_id, current_user)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(piece, field, value)
+    await db.commit()
+    await db.refresh(piece)
+    return _read(piece)
+
+
+@router.post("/pieces/{piece_id}/refine", response_model=ContentPieceRead)
+async def refine_piece(
+    piece_id: int,
+    payload: ContentPieceRefineRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ContentPieceRead:
+    """Regenera SÓ esta peça via agente, conforme a instrução, e volta ao status 'pending'."""
+    piece = await _piece_scoped(db, piece_id, current_user)
+    try:
+        piece = await refine_content_piece(
+            db, piece, payload.instruction, current_user,
+            model=payload.model, provider=payload.provider,
+        )
+    except LLMConfigurationError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001 - erro do provedor vira mensagem legível
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Falha ao refinar a peça: {str(exc)[:300]}",
+        ) from exc
+    await record_audit_event(
+        db, user=current_user, action="piece.refined", entity_type="content_piece",
+        entity_id=piece.id, status=piece.status, brand_slug=piece.brand_slug,
+        summary=f"Peça refinada pelo agente: {piece.label}",
+        metadata={"kind": piece.kind, "instruction": payload.instruction[:180]},
+    )
     await db.commit()
     await db.refresh(piece)
     return _read(piece)

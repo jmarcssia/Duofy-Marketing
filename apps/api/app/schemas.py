@@ -328,6 +328,7 @@ class ContentOutputRead(BaseModel):
     format: str
     title: str
     briefing: str
+    briefing_json: dict | None = None
     status: str
     provider: str
     model: str
@@ -473,6 +474,8 @@ class ResearchRunRequest(BaseModel):
     model: str | None = None
     source_urls: list[str] = Field(default_factory=list, max_length=8)
     use_apify: bool = False
+    # Briefing estruturado (filtros clicáveis da taxonomia compartilhada); opcional.
+    briefing_filters: dict | None = None
 
 
 class ResearchSourceRead(BaseModel):
@@ -544,6 +547,13 @@ class CalendarEventCreate(BaseModel):
     auto_execute_at: datetime | None = None
     requires_research_approval: bool = True
     briefing_id: int | None = None
+    # Datas avançadas do ciclo editorial (5d)
+    delivery_at: datetime | None = None
+    review_at: datetime | None = None
+    approval_at: datetime | None = None
+    due_at: datetime | None = None
+    reminder_at: datetime | None = None
+    recurrence_rule: str | None = Field(default=None, max_length=40)
 
 
 class CalendarEventUpdate(BaseModel):
@@ -564,6 +574,13 @@ class CalendarEventUpdate(BaseModel):
     execution_mode: CalendarExecutionMode | None = None
     auto_execute_at: datetime | None = None
     requires_research_approval: bool | None = None
+    # Datas avançadas do ciclo editorial (5d)
+    delivery_at: datetime | None = None
+    review_at: datetime | None = None
+    approval_at: datetime | None = None
+    due_at: datetime | None = None
+    reminder_at: datetime | None = None
+    recurrence_rule: str | None = Field(default=None, max_length=40)
 
 
 class CalendarEventRead(BaseModel):
@@ -601,6 +618,13 @@ class CalendarEventRead(BaseModel):
     published_at: datetime | None = None
     publish_target: str | None = None
     publish_ref: str | None = None
+    # Datas avançadas do ciclo editorial (5d)
+    delivery_at: datetime | None = None
+    review_at: datetime | None = None
+    approval_at: datetime | None = None
+    due_at: datetime | None = None
+    reminder_at: datetime | None = None
+    recurrence_rule: str | None = None
 
 
 class CalendarStep(BaseModel):
@@ -846,6 +870,13 @@ class CreationRequest(BaseModel):
     status: str = Field(default="draft", max_length=40)
     model: str | None = Field(default=None, max_length=120)
     provider: str | None = Field(default=None, max_length=40)
+    # Multicanal: canais adicionais além do principal (`channel` segue sendo o primário).
+    channels: list[str] = Field(default_factory=list, max_length=10)
+    # Peças extras desejadas (kinds: whatsapp, whatsapp_image_prompt, email, blog,
+    # release, pitch...). Vazio = comportamento clássico (carrossel + legendas IG/LinkedIn).
+    pieces: list[str] = Field(default_factory=list, max_length=20)
+    # Briefing estruturado (filtros clicáveis da taxonomia compartilhada); opcional.
+    briefing_filters: dict | None = None
 
 
 class VisualDirection(BaseModel):
@@ -869,6 +900,16 @@ class ContentSlide(BaseModel):
     alt_text: str = ""
 
 
+class ExtraPiece(BaseModel):
+    """Peça extra do pacote (WhatsApp, e-mail, blog, release, pitch…) — vira ContentPiece."""
+
+    kind: str = "custom"
+    label: str = ""
+    channel: str | None = None
+    content: str = ""
+    required: bool = False
+
+
 class ContentPackage(BaseModel):
     brand_slug: str
     channel: str
@@ -883,6 +924,8 @@ class ContentPackage(BaseModel):
     captions: dict[str, str] = Field(default_factory=dict)  # por canal; instagram != linkedin
     slides: list[ContentSlide] = Field(default_factory=list)
     visual_direction: VisualDirection = Field(default_factory=VisualDirection)
+    # Peças extras solicitadas no briefing (WhatsApp/e-mail/blog/release/pitch…).
+    extra_pieces: list[ExtraPiece] = Field(default_factory=list)
     factualidade: list[str] = Field(default_factory=list)
     checklist: list[str] = Field(default_factory=list)
 
@@ -932,6 +975,12 @@ class ContentPieceUpdate(BaseModel):
 class ContentPieceStatusRequest(BaseModel):
     status: Literal["approved", "rejected", "pending"]
     note: str | None = Field(default=None, max_length=2000)
+
+
+class ContentPieceRefineRequest(BaseModel):
+    instruction: str = Field(min_length=3, max_length=2000)
+    model: str | None = Field(default=None, max_length=120)
+    provider: str | None = Field(default=None, max_length=40)
 
 
 class CocreationRefineRequest(BaseModel):

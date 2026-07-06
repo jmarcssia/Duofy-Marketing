@@ -81,11 +81,11 @@ const AGENT_ICONS: Record<string, string> = {
   quality_guardian:  "◉",
 }
 
+// Papéis reais da plataforma nesta versão (o modelo de dados tem apenas admin e manager).
+// Papéis granulares (Editor/Revisor/Visualizador) são roadmap — não aplicados no backend ainda.
 const ROLE_TABLE = [
-  { role: "Administrador", desc: "Acesso total",             access: "Total",    agents: "Total",    skills: "Total",    models: "Total",    auto: "Total",    int: "Total",    users: "Total" },
-  { role: "Editor",        desc: "Cria e gerencia conteúdos", access: "Completo", agents: "Completo", skills: "Completo", models: "Visualizar",auto: "Completo", int: "Visualizar",users: "Visualizar"},
-  { role: "Revisor",       desc: "Revisa e aprova conteúdos", access: "Limitado", agents: "Executar", skills: "Executar", models: "Visualizar",auto: "Executar", int: "Visualizar",users: "—"         },
-  { role: "Visualizador",  desc: "Somente leitura",           access: "Limitado", agents: "Visualizar",skills:"Visualizar",models:"Visualizar",auto:"Visualizar",int:"Visualizar",users:"—"           },
+  { role: "Administrador", desc: "Acesso total a todas as marcas", access: "Total",    agents: "Total",     skills: "Total",     models: "Total",     auto: "Total",     int: "Total",      users: "Total" },
+  { role: "Gerente de marca", desc: "Restrito às marcas atribuídas (escopo C1)", access: "Limitado", agents: "Executar", skills: "Executar", models: "Visualizar", auto: "Executar", int: "Visualizar", users: "—" },
 ]
 
 const FLUXOS = [
@@ -940,7 +940,7 @@ export default function AdminPage() {
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h2 className="text-base font-bold text-ink">Permissões e Papéis</h2>
-                <p className="text-sm text-muted">Modelo de acesso da plataforma (somente leitura nesta versão).</p>
+                <p className="text-sm text-muted">Papéis ativos nesta versão. O escopo por marca é atribuído em <a href="/admin/acessos" className="text-purple underline">Acessos</a>. Papéis granulares (Editor/Revisor/Visualizador) são roadmap.</p>
               </div>
               <button disabled title="Em breve" className="flex cursor-not-allowed items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm font-medium text-muted opacity-60">
                 <PlusIcon className="w-3.5 h-3.5" /> Novo papel

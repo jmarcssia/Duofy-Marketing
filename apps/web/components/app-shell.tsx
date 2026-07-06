@@ -16,7 +16,6 @@ import {
   CloseIcon,
   FileIcon,
   GridIcon,
-  HelpIcon,
   BookIcon,
   SearchIcon,
   SendIcon,
@@ -41,8 +40,7 @@ const navItems = [
 
 // Itens secundários (rodapé da sidebar) — acessíveis, fora da barra principal.
 const secondaryItems = [
-  { href: "/memory", label: "Memória", icon: BookIcon },
-  { href: "/admin", label: "Ajuda e suporte", icon: HelpIcon }
+  { href: "/memory", label: "Memória", icon: BookIcon }
 ]
 
 type SearchResults = {
@@ -139,7 +137,7 @@ function BellPopover() {
   const [open, setOpen] = useState(false)
   const [events, setEvents] = useState<AuditEvent[]>([])
   const [loaded, setLoaded] = useState(false)
-  const [count, setCount] = useState(8)
+  const [count, setCount] = useState(0)
   const wrapperRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -150,21 +148,28 @@ function BellPopover() {
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  async function handleOpen() {
-    setOpen((prev) => !prev)
-    if (!loaded) {
-      const token = getTokenFromCookie()
-      if (!token) return
-      try {
-        const data = await apiFetch<AuditEvent[]>("/api/operations/audit-events?limit=10", token)
+  // Contagem real dos eventos recentes (sem número fictício antes do fetch).
+  useEffect(() => {
+    const token = getTokenFromCookie()
+    if (!token) return
+    let active = true
+    apiFetch<AuditEvent[]>("/api/operations/audit-events?limit=10", token)
+      .then((data) => {
+        if (!active) return
         setEvents(data)
-        if (data.length > 0) setCount(data.length)
-      } catch {
-        setEvents([])
-      } finally {
+        setCount(data.length)
         setLoaded(true)
-      }
+      })
+      .catch(() => {
+        if (active) setLoaded(true)
+      })
+    return () => {
+      active = false
     }
+  }, [])
+
+  function handleOpen() {
+    setOpen((prev) => !prev)
   }
 
   return (

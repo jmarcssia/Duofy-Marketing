@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.access import accessible_brands, assert_brand_access
 from app.db import get_db
 from app.dependencies import get_current_user
 from app.models import MemoryEntry, User
@@ -17,7 +18,7 @@ router = APIRouter(prefix="/api/memory", tags=["memory"])
 
 @router.get("", response_model=list[MemoryEntryRead])
 async def list_memory_entries(
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     brand_slug: str | None = None,
     category: str | None = None,
@@ -26,8 +27,12 @@ async def list_memory_entries(
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[MemoryEntryRead]:
     statement = select(MemoryEntry)
+    allowed = accessible_brands(current_user)
     if brand_slug:
+        assert_brand_access(current_user, brand_slug)
         statement = statement.where(MemoryEntry.brand_slug == brand_slug)
+    elif allowed is not None:
+        statement = statement.where(MemoryEntry.brand_slug.in_(allowed))
     if category:
         statement = statement.where(MemoryEntry.category == category)
     if source_type:
@@ -51,9 +56,11 @@ async def list_memory_entries(
 @router.post("/search", response_model=list[MemorySearchResult])
 async def search_memory_entries(
     payload: MemorySearchRequest,
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[MemorySearchResult]:
+    if payload.brand_slug:
+        assert_brand_access(current_user, payload.brand_slug)
     hits = await search_memory(
         db=db,
         query=payload.query,
@@ -61,6 +68,7 @@ async def search_memory_entries(
         category=payload.category,
         source_type=payload.source_type,
         limit=payload.limit,
+        allowed_brands=accessible_brands(current_user),
     )
     return [
         MemorySearchResult(

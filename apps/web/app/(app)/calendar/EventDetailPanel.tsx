@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 import { Badge, type Tone } from "@/components/ui"
 import {
@@ -25,6 +25,8 @@ import {
   type ContentPiece
 } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
+import { useBrand } from "@/lib/brand-context"
+import { briefingSummaryRows, labelOf, PECAS, type StructuredBriefing } from "@/lib/briefing"
 
 import { eventTypeLabel, statusMeta, STEP_STYLE } from "./status"
 
@@ -52,6 +54,19 @@ function isResearch(e: CalendarEvent): boolean {
   return e.event_type === "research" || e.assigned_agent_slug === "research_agent"
 }
 
+/** Rótulo pt-BR da recorrência do evento (5d); "—" quando nulo. */
+const RECURRENCE_LABELS: Record<string, string> = {
+  none: "Sem recorrência",
+  daily: "Diária",
+  weekly: "Semanal",
+  biweekly: "Quinzenal",
+  monthly: "Mensal"
+}
+function recurrenceLabel(rule: string | null): string {
+  if (!rule) return "—"
+  return RECURRENCE_LABELS[rule] ?? rule
+}
+
 export function EventDetailPanel({
   eventId,
   brandSlug,
@@ -65,17 +80,23 @@ export function EventDetailPanel({
   onChanged: () => void
   onEdit: (e: CalendarEvent) => void
 }) {
+  const { brands } = useBrand()
   const [detail, setDetail] = useState<CalendarEventDetail | null>(null)
   const [tab, setTab] = useState<Tab>("Visão geral")
   const [loading, setLoading] = useState(true)
   const [running, setRunning] = useState(false)
   const [cocreating, setCocreating] = useState(false)
-  const [coChannel, setCoChannel] = useState("Instagram")
-  const [coFormat, setCoFormat] = useState("Carrossel")
+  // "" = usar o canal/formato do briefing do evento (backend decide).
+  const [coChannel, setCoChannel] = useState("")
+  const [coFormat, setCoFormat] = useState("")
   const [publishing, setPublishing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pieces, setPieces] = useState<ContentPiece[]>([])
   const [piecesLoading, setPiecesLoading] = useState(false)
+  // Semeia o canal/formato da cocriação com o que o briefing do evento definiu (uma vez).
+  const seeded = useRef(false)
+
+  const brandName = brands.find((b) => b.slug === brandSlug)?.name ?? brandSlug
 
   const load = useCallback(async () => {
     const token = getTokenFromCookie()
@@ -93,6 +114,15 @@ export function EventDetailPanel({
   useEffect(() => {
     load()
   }, [load])
+
+  // Ao carregar o evento, pré-seleciona o canal/formato definidos no briefing (uma vez).
+  useEffect(() => {
+    if (seeded.current || !detail) return
+    seeded.current = true
+    const payload = (detail.execution_payload ?? {}) as Record<string, unknown>
+    if (typeof payload.channel === "string" && payload.channel) setCoChannel(payload.channel)
+    if (typeof payload.format === "string" && payload.format) setCoFormat(payload.format)
+  }, [detail])
 
   // Peças/subpeças do conteúdo cocriado (carregadas ao abrir a aba "Peças").
   useEffect(() => {
@@ -115,10 +145,18 @@ export function EventDetailPanel({
     // dispara o POST E faz polling do detalhe do evento até vincular a pesquisa (ou falhar).
     const before = detail?.research_output_id ?? null
     let done = false
+    const start = Date.now()
     const post = executeCalendarResearch(eventId, brandSlug, token)
       .then((d) => { if (!done) { done = true; setDetail(d); onChanged() } })
-      .catch(() => { /* provável timeout do proxy — o polling recupera */ })
-    const start = Date.now()
+      .catch((e) => {
+        // Rejeição rápida (antes do teto do proxy ~30s) = erro real do backend (ex.: gate,
+        // fontes insuficientes) → mostra a mensagem e para o polling, sem spinner de 210s.
+        if (!done && Date.now() - start < 25_000) {
+          done = true
+          setError(e instanceof Error ? e.message : "Falha ao executar a pesquisa.")
+        }
+        // Caso contrário: provável timeout do proxy — o polling recupera.
+      })
     while (!done && Date.now() - start < 210_000) {
       await new Promise((r) => setTimeout(r, 5000))
       if (done) break
@@ -141,10 +179,18 @@ export function EventDetailPanel({
     // Mesma resiliência ao timeout: POST + polling até o conteúdo ser vinculado (ou falhar).
     const before = detail?.content_output_id ?? null
     let done = false
-    const post = executeCalendarCocreation(eventId, brandSlug, coChannel, coFormat, token)
-      .then((d) => { if (!done) { done = true; setDetail(d); onChanged() } })
-      .catch(() => { /* provável timeout do proxy — o polling recupera */ })
     const start = Date.now()
+    // "" → null: usa o canal/formato do briefing do evento.
+    const post = executeCalendarCocreation(eventId, brandSlug, coChannel || null, coFormat || null, token)
+      .then((d) => { if (!done) { done = true; setDetail(d); onChanged() } })
+      .catch((e) => {
+        // Rejeição rápida = erro real do backend (ex.: cocriação bloqueada até aprovação da
+        // pesquisa) → mostra a mensagem e para, em vez de girar 210s.
+        if (!done && Date.now() - start < 25_000) {
+          done = true
+          setError(e instanceof Error ? e.message : "Falha ao executar a cocriação.")
+        }
+      })
     while (!done && Date.now() - start < 210_000) {
       await new Promise((r) => setTimeout(r, 5000))
       if (done) break
@@ -259,7 +305,7 @@ export function EventDetailPanel({
 
               {tab === "Visão geral" && (
                 <div className="space-y-3 text-sm">
-                  <Row label="Marca" value={detail.brand_slug} />
+                  <Row label="Marca" value={brandName} />
                   <Row label="Tipo" value={eventTypeLabel(detail.event_type)} />
                   {research && <Row label="Tema" value={detail.title} />}
                   {detail.objective && <Row label="Objetivo" value={detail.objective} />}
@@ -268,6 +314,10 @@ export function EventDetailPanel({
                   <Row label="Execução" value={detail.execution_mode === "auto" ? "Automática" : "Manual"} />
                   {detail.channel && <Row label="Canal" value={detail.channel} />}
                   {detail.format && <Row label="Formato" value={detail.format} />}
+                  {detail.delivery_at && <Row label="Entrega" value={fmtDateTime(detail.delivery_at)} />}
+                  {detail.review_at && <Row label="Revisão" value={fmtDateTime(detail.review_at)} />}
+                  {detail.approval_at && <Row label="Aprovação" value={fmtDateTime(detail.approval_at)} />}
+                  {detail.due_at && <Row label="Prazo final" value={fmtDateTime(detail.due_at)} />}
                   {detail.last_error && (
                     <div className="rounded-lg border border-red-200 bg-red-50 p-2.5 text-xs text-red-700">
                       <span className="font-semibold">Erro na execução:</span> {detail.last_error}
@@ -304,6 +354,7 @@ export function EventDetailPanel({
                   <Block label="Tema / título" value={detail.title} />
                   <Block label="Objetivo" value={detail.objective || "—"} />
                   <Block label="Briefing / descrição" value={detail.description || "—"} />
+                  <StructuredBriefingBlock payload={detail.execution_payload} />
                 </div>
               )}
 
@@ -401,6 +452,8 @@ export function EventDetailPanel({
                 <div className="space-y-3 text-sm">
                   <Row label="Modo" value={detail.execution_mode === "auto" ? "Automática" : "Manual"} />
                   <Row label="Execução automática em" value={fmtDateTime(detail.auto_execute_at)} />
+                  <Row label="Lembrete" value={fmtDateTime(detail.reminder_at)} />
+                  <Row label="Recorrência" value={recurrenceLabel(detail.recurrence_rule)} />
                   <Row label="Exige aprovação da pesquisa" value={detail.requires_research_approval ? "Sim" : "Não"} />
                   <Row label="Estado" value={detail.is_paused ? "Pausado" : "Ativo"} />
                   {detail.execution_mode === "auto" && (
@@ -537,8 +590,13 @@ function PublishActions({
   )
 }
 
-const COCREATION_CHANNELS = ["Instagram", "LinkedIn", "Blog", "Email", "WhatsApp"]
+const COCREATION_CHANNELS = ["Instagram", "LinkedIn", "Blog", "Email", "WhatsApp", "Facebook"]
 const COCREATION_FORMATS = ["Carrossel", "Post único", "Reels", "Stories", "Artigo", "Newsletter"]
+
+/** Opções do select incluindo o valor atual (caso venha do briefing e não esteja na lista fixa). */
+function withCurrent(options: string[], current: string): string[] {
+  return current && !options.includes(current) ? [current, ...options] : options
+}
 
 function CocreationActions({
   cocreating,
@@ -572,21 +630,78 @@ function CocreationActions({
             <label className="block">
               <span className="mb-1 block text-[11px] font-semibold text-muted">Canal</span>
               <select value={channel} onChange={(e) => setChannel(e.target.value)} className="w-full rounded-lg border border-line px-2.5 py-2 text-sm text-ink focus:border-purple focus:outline-none">
-                {COCREATION_CHANNELS.map((c) => <option key={c} value={c}>{c}</option>)}
+                <option value="">Padrão do briefing</option>
+                {withCurrent(COCREATION_CHANNELS, channel).map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </label>
             <label className="block">
               <span className="mb-1 block text-[11px] font-semibold text-muted">Formato</span>
               <select value={format} onChange={(e) => setFormat(e.target.value)} className="w-full rounded-lg border border-line px-2.5 py-2 text-sm text-ink focus:border-purple focus:outline-none">
-                {COCREATION_FORMATS.map((f) => <option key={f} value={f}>{f}</option>)}
+                <option value="">Padrão do briefing</option>
+                {withCurrent(COCREATION_FORMATS, format).map((f) => <option key={f} value={f}>{f}</option>)}
               </select>
             </label>
           </div>
+          <p className="mt-1.5 text-[11px] text-muted">
+            “Padrão do briefing” usa os canais e peças definidos no evento — inclusive multicanal.
+          </p>
           <button onClick={onRun} className="duofy-tap mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-purple py-2.5 text-sm font-semibold text-white hover:bg-purple-deep">
             <SparklesIcon className="h-4 w-4" /> Cocriar conteúdo
           </button>
         </>
       )}
+    </div>
+  )
+}
+
+/** Briefing estruturado do evento (chips). Metadados de execução (pipeline/depth/período) como
+ * badges; o restante do briefing via briefingSummaryRows — sem duplicar canais/peças. */
+function StructuredBriefingBlock({ payload }: { payload: Record<string, unknown> | null }) {
+  const data = (payload ?? {}) as Record<string, unknown>
+  const briefing = (
+    typeof data.briefing === "object" && data.briefing !== null ? data.briefing : {}
+  ) as StructuredBriefing
+  // Peças no briefing chegam como ids (carousel, caption_instagram…) — traduz para rótulos.
+  const rows = briefingSummaryRows(briefing).map((row) =>
+    row.label === "Peças"
+      ? { ...row, values: row.values.map((v) => labelOf(PECAS, v)) }
+      : row
+  )
+  const depth = typeof data.depth === "string" ? data.depth : ""
+  const period = typeof data.period === "string" ? data.period : ""
+  const pipeline = data.pipeline === "research_content"
+
+  if (rows.length === 0 && !depth && !period && !pipeline) {
+    return (
+      <div>
+        <p className="mb-1 text-xs font-semibold text-muted">Briefing estruturado</p>
+        <p className="rounded-lg border border-dashed border-line p-2.5 text-xs text-muted">
+          Este evento foi criado sem filtros estruturados. Edite-o para adicionar o briefing.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <p className="mb-1.5 text-xs font-semibold text-muted">Briefing estruturado</p>
+      <div className="space-y-2 rounded-lg border border-line bg-panel/40 p-3">
+        {(pipeline || depth || period) && (
+          <div className="flex flex-wrap gap-1">
+            {pipeline && <Badge tone="purple">Pesquisa + Conteúdo</Badge>}
+            {depth && <Badge tone="blue">Profundidade: {depth}</Badge>}
+            {period && <Badge tone="blue">Período: {period}</Badge>}
+          </div>
+        )}
+        {rows.map((row) => (
+          <div key={row.label}>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">{row.label}</p>
+            <div className="mt-0.5 flex flex-wrap gap-1">
+              {row.values.map((v, i) => <Badge key={`${row.label}-${i}`} tone="slate">{v}</Badge>)}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

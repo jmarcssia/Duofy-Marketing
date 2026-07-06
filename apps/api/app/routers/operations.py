@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.access import accessible_brands, assert_brand_access
 from app.db import get_db
 from app.dependencies import get_current_user
-from app.models import AuditEvent, QualityReview, User
+from app.models import AuditEvent, Output, QualityReview, User
 from app.operations_service import agent_health, apply_audit_filters, operations_summary
 from app.schemas import (
     AgentHealthRead,
@@ -69,30 +69,42 @@ async def get_operations_summary(
 ) -> OperationsSummary:
     if brand_slug:  # C1: não permite consultar marca fora do escopo
         assert_brand_access(current_user, brand_slug)
+    allowed = accessible_brands(current_user)  # C1: agregado restrito ao escopo (multi-marca)
     return OperationsSummary(
-        **await operations_summary(db, start=start, end=end, brand_slug=brand_slug)
+        **await operations_summary(
+            db, start=start, end=end, brand_slug=brand_slug, allowed_brands=allowed
+        )
     )
 
 
 @router.get("/agent-health", response_model=list[AgentHealthRead])
 async def get_agent_health(
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     start: datetime | None = None,
     end: datetime | None = None,
 ) -> list[AgentHealthRead]:
-    return [AgentHealthRead(**item) for item in await agent_health(db, start=start, end=end)]
+    allowed = accessible_brands(current_user)  # C1
+    return [
+        AgentHealthRead(**item)
+        for item in await agent_health(db, start=start, end=end, allowed_brands=allowed)
+    ]
 
 
 @router.get("/quality-reviews", response_model=list[QualityReviewListItem])
 async def list_quality_reviews(
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     passed: bool | None = None,
     status_filter: Annotated[str | None, Query(alias="status")] = None,
     limit: Annotated[int, Query(ge=1, le=300)] = 100,
 ) -> list[QualityReviewListItem]:
     statement = select(QualityReview)
+    allowed = accessible_brands(current_user)  # C1: escopo via marca do Output revisado
+    if allowed is not None:
+        statement = statement.join(Output, Output.id == QualityReview.output_id).where(
+            Output.brand_slug.in_(allowed)
+        )
     if passed is not None:
         statement = statement.where(QualityReview.passed == passed)
     if status_filter:

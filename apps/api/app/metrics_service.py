@@ -31,6 +31,7 @@ def apply_model_call_filters(
     provider: str | None = None,
     model: str | None = None,
     status: str | None = None,
+    allowed_brands: list[str] | None = None,
 ) -> Select[tuple[ModelCall]]:
     if start:
         statement = statement.where(ModelCall.created_at >= start)
@@ -38,6 +39,9 @@ def apply_model_call_filters(
         statement = statement.where(ModelCall.created_at <= end)
     if brand_slug:
         statement = statement.where(ModelCall.brand_slug == brand_slug)
+    if allowed_brands is not None:
+        # C1 — usuário restrito só enxerga custo/uso das marcas do seu escopo.
+        statement = statement.where(ModelCall.brand_slug.in_(allowed_brands))
     if agent_slug:
         statement = statement.where(ModelCall.agent_slug == agent_slug)
     if provider:
@@ -55,12 +59,14 @@ async def metrics_summary(
     start: datetime | None = None,
     end: datetime | None = None,
     brand_slug: str | None = None,
+    allowed_brands: list[str] | None = None,
 ) -> dict[str, Any]:
     base = apply_model_call_filters(
         select(ModelCall),
         start=start,
         end=end,
         brand_slug=brand_slug,
+        allowed_brands=allowed_brands,
     ).subquery()
 
     totals_result = await db.execute(

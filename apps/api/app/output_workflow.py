@@ -304,7 +304,12 @@ async def _record_decision(
 async def approve_output(db: AsyncSession, output: Output, user: User) -> Output:
     if output.status == "approved":
         return output
-    if not _status_rule(output.status).get("can_approve", False):
+    # Relatórios de pesquisa não passam por um estado "review" (a página do Agente de Pesquisa
+    # só oferece Aprovar/Solicitar ajustes): aprova direto do rascunho. O Guardião de Qualidade
+    # segue sendo o portão (ensure_quality_passed abaixo). Conteúdo mantém o fluxo via review.
+    is_research = output.channel == "Pesquisa" and output.format == "research_report"
+    research_ok = is_research and output.status in ("draft", "needs_adjustment")
+    if not research_ok and not _status_rule(output.status).get("can_approve", False):
         raise OutputWorkflowError(f"Output em status {output.status} nao pode ser aprovado.")
 
     version = await current_version(db, output)

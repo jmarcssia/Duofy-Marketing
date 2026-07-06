@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.access import accessible_brands, assert_brand_access
 from app.audit_service import record_audit_event
 from app.db import get_db
 from app.dependencies import get_current_user
@@ -62,8 +63,12 @@ async def list_research_themes(
     limit: int = Query(default=500, ge=1, le=1000),
 ) -> list[ResearchThemeRead]:
     stmt = select(ResearchTheme).order_by(ResearchTheme.title)
+    allowed = accessible_brands(current_user)
     if brand_slug:
+        assert_brand_access(current_user, brand_slug)
         stmt = stmt.where(ResearchTheme.brand_slug == brand_slug)
+    elif allowed is not None:
+        stmt = stmt.where(ResearchTheme.brand_slug.in_(allowed))
     if q:
         like = f"%{q}%"
         stmt = stmt.where(ResearchTheme.title.ilike(like) | ResearchTheme.notes.ilike(like))
@@ -77,6 +82,8 @@ async def create_research_theme(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ResearchThemeRead:
+    if payload.brand_slug:
+        assert_brand_access(current_user, payload.brand_slug)
     theme = ResearchTheme(
         title=payload.title.strip(),
         notes=(payload.notes or None),
@@ -105,6 +112,7 @@ async def delete_research_theme(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Tema de pesquisa nao encontrado."
         )
+    assert_brand_access(current_user, theme.brand_slug)
     title, brand = theme.title, theme.brand_slug
     await db.delete(theme)
     await db.commit()
@@ -123,6 +131,8 @@ async def import_research_themes_csv(
     db: Annotated[AsyncSession, Depends(get_db)],
     brand_slug: str | None = Query(default=None),
 ) -> ThemeImportResult:
+    if brand_slug:
+        assert_brand_access(current_user, brand_slug)
     raw = await request.body()
     if not raw:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="CSV vazio.")

@@ -31,6 +31,7 @@ async def search_memory(
     category: str | None = None,
     source_type: str | None = None,
     limit: int = 8,
+    allowed_brands: list[str] | None = None,
 ) -> list[MemoryHit]:
     embedding = vector_to_sql(await embed_text(db, query))
     chunk_filters = ["dc.embedding IS NOT NULL"]
@@ -48,6 +49,12 @@ async def search_memory(
         memory_filters.append("(me.brand_slug = :brand_slug OR me.brand_slug = :institutional)")
         params["brand_slug"] = brand_slug
         params["institutional"] = INSTITUTIONAL_BRAND
+    if allowed_brands is not None:
+        # C1 — usuário restrito: limita a busca semântica às marcas permitidas (a lista já
+        # inclui a sentinela institucional). Evita vazamento de memória/RAG entre marcas.
+        chunk_filters.append("dc.brand_slug = ANY(:allowed_brands)")
+        memory_filters.append("me.brand_slug = ANY(:allowed_brands)")
+        params["allowed_brands"] = allowed_brands
     if category:
         chunk_filters.append("dc.category = :category")
         memory_filters.append("me.category = :category")

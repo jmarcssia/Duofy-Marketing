@@ -18,8 +18,17 @@ from app.schemas import ContentPackage
 PIECE_STATUSES = ("pending", "approved", "rejected")
 # Tipos manuais suportados (alem dos derivados do pacote).
 MANUAL_KINDS = (
-    "whatsapp", "whatsapp_image_prompt", "email", "blog", "release", "pitch", "custom",
+    "whatsapp", "whatsapp_image_prompt", "email", "blog", "release", "pitch",
+    "landing_page", "custom",
 )
+
+# Nome de exibição dos canais sociais nas peças de legenda.
+_CHANNEL_LABELS = {
+    "instagram": "Instagram",
+    "linkedin": "LinkedIn",
+    "facebook": "Facebook",
+    "tiktok": "TikTok",
+}
 
 
 def _slides_to_text(pkg: ContentPackage) -> str:
@@ -49,14 +58,22 @@ def _derive_specs(pkg: ContentPackage) -> list[dict]:
     if pkg.slides:
         specs.append({"kind": "carousel", "label": "Carrossel", "channel": pkg.channel,
                       "content": _slides_to_text(pkg), "required": True})
-    ig = pkg.captions.get("instagram") or pkg.captions.get("Instagram")
-    if ig:
-        specs.append({"kind": "caption_instagram", "label": "Legenda Instagram",
-                      "channel": "Instagram", "content": ig, "required": True})
-    li = pkg.captions.get("linkedin") or pkg.captions.get("LinkedIn")
-    if li:
-        specs.append({"kind": "caption_linkedin", "label": "Legenda LinkedIn",
-                      "channel": "LinkedIn", "content": li, "required": True})
+    for channel_key, caption in pkg.captions.items():
+        if not (caption or "").strip():
+            continue
+        key = channel_key.strip().lower()
+        label = _CHANNEL_LABELS.get(key, channel_key.strip())
+        specs.append({"kind": f"caption_{key}", "label": f"Legenda {label}",
+                      "channel": label, "content": caption, "required": True})
+    for piece in pkg.extra_pieces:
+        if not (piece.content or "").strip():
+            continue
+        kind = (piece.kind or "custom").strip().lower()
+        if kind not in MANUAL_KINDS and not kind.startswith("caption_"):
+            kind = "custom"
+        specs.append({"kind": kind, "label": piece.label or kind,
+                      "channel": piece.channel, "content": piece.content,
+                      "required": bool(piece.required)})
     visual = _visual_to_text(pkg)
     if visual:
         specs.append({"kind": "visual_direction", "label": "Direção visual", "channel": None,
@@ -144,6 +161,86 @@ async def _sync_output_status(db: AsyncSession, output: Output, user: User) -> N
         output.status = "review"
         db.add(OutputDecision(output_id=output.id, user_id=user.id, action="revised",
                               feedback="Peça obrigatória deixou de estar aprovada."))
+
+
+# Orientação de refino por tipo de peça (5b) — mantém o formato correto da peça.
+_PIECE_REFINE_GUIDE: dict[str, str] = {
+    "carousel": "roteiro de carrossel: um bloco por slide (função + texto + texto de arte),"
+    " mantendo o arco narrativo e SEM pedir logo/@/# nas descrições visuais",
+    "caption_instagram": "legenda de Instagram: próxima, leitura rápida, parágrafos curtos, CTA de"
+    " interação/salvamento",
+    "caption_linkedin": "legenda de LinkedIn: executiva, tese, análise, implicação de negócio, CTA"
+    " profissional",
+    "caption_facebook": "legenda de Facebook, tom próximo e direto",
+    "caption_tiktok": "legenda curta de TikTok, informal e com gancho",
+    "whatsapp": "mensagem CURTA de WhatsApp (2-5 linhas, direta e pessoal, sem hashtag); inclua uma"
+    " variação após a linha '--- Alternativa ---'",
+    "whatsapp_image_prompt": "prompt visual COMPLETO e independente para imagem de apoio"
+    " (proporção, cenário, luz, composição), SEM logo, @, hashtag ou marca d'água",
+    "email": "e-mail com as linhas 'Assunto:', 'Preheader:', 'Corpo:' e 'CTA:', nesta ordem",
+    "blog": "artigo de blog com ## subtítulos, introdução, desenvolvimento e conclusão",
+    "release": "release jornalístico (título, lide, desenvolvimento com aspas de porta-voz"
+    " genérico, boilerplate)",
+    "pitch": "pitch curto para jornalista (por que a pauta importa agora, ângulo, oferta)",
+    "landing_page": "estrutura de landing page (headline, subheadline, blocos de benefício, CTA)",
+    "visual_direction": "direção visual (conceito, estilo, cenário, enquadramento, composição, luz,"
+    " paleta, tipografia, restrições), sem pedir logo/@/#",
+}
+
+
+async def refine_content_piece(
+    db: AsyncSession, piece: ContentPiece, instruction: str, user: User,
+    *, model: str | None = None, provider: str | None = None,
+) -> ContentPiece:
+    """Regenera SÓ o texto desta peça via LLM, conforme a instrução, e volta ao status 'pending'
+    (força re-aprovação; se era obrigatória, o Output reverte a 'review'). Não toca no pacote."""
+    from app.agent_config import brand_voice_section, read_agent_prompt
+    from app.cocreation_service import _resolve, has_forbidden_prompt
+    from app.llm import call_llm
+
+    agent, brand, credential, resolved_model = await _resolve(
+        db, piece.brand_slug, model, provider
+    )
+    guide = _PIECE_REFINE_GUIDE.get(piece.kind, "peça de conteúdo, mantendo o formato original")
+    system_prompt = "\n".join([
+        read_agent_prompt("content_agent"),
+        "Você refina UMA peça de conteúdo já existente. Reescreva apenas esta peça conforme a"
+        " instrução, preservando o formato dela. Não invente produto/número/case sem fonte."
+        " Nunca peça logo, @, hashtag ou marca d'água em prompts de imagem.",
+        brand_voice_section(brand.slug),
+    ])
+    user_prompt = "\n".join([
+        f"Tipo da peça: {piece.kind} — {guide}.",
+        f"Canal: {piece.channel or '—'}.",
+        "",
+        "Conteúdo atual da peça:",
+        piece.content or "(vazio)",
+        "",
+        f"Instrução de refino: {instruction.strip()}",
+        "",
+        "Retorne SOMENTE o novo texto da peça, sem comentários, sem ``` e sem título extra.",
+    ])
+    result = await call_llm(
+        credential=credential, model=resolved_model,
+        system_prompt=system_prompt, user_prompt=user_prompt,
+        task_type="piece_refine", agent_slug=agent.slug, brand_slug=brand.slug,
+    )
+    new_content = (result.output or "").strip()
+    if piece.kind in ("whatsapp_image_prompt", "visual_direction") and has_forbidden_prompt(
+        new_content
+    ):
+        # segurança: não deixa entrar logo/@/# num prompt visual
+        new_content += "\n(Restrições: sem logo, @, hashtag ou marca d'água.)"
+    if new_content:
+        piece.content = new_content
+    piece.status = "pending"
+    piece.decided_by = user.id
+    output = await db.get(Output, piece.output_id)
+    if output is not None:
+        await _sync_output_status(db, output, user)
+    await db.commit()
+    await db.refresh(piece)
+    return piece
 
 
 async def set_piece_status(

@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.access import accessible_brands, assert_brand_access
 from app.db import get_db
 from app.dependencies import get_current_user
 from app.metrics_service import apply_model_call_filters, metrics_summary
@@ -38,19 +39,24 @@ def _model_call_read(call: ModelCall) -> ModelCallRead:
 
 @router.get("/summary", response_model=MetricsSummary)
 async def get_summary(
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     start: datetime | None = None,
     end: datetime | None = None,
     brand_slug: str | None = None,
 ) -> MetricsSummary:
-    summary = await metrics_summary(db, start=start, end=end, brand_slug=brand_slug)
+    if brand_slug:
+        assert_brand_access(current_user, brand_slug)
+    summary = await metrics_summary(
+        db, start=start, end=end, brand_slug=brand_slug,
+        allowed_brands=accessible_brands(current_user),
+    )
     return MetricsSummary(**summary)
 
 
 @router.get("/model-calls", response_model=list[ModelCallRead])
 async def list_model_calls(
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     start: datetime | None = None,
     end: datetime | None = None,
@@ -61,6 +67,8 @@ async def list_model_calls(
     status: str | None = None,
     limit: Annotated[int, Query(ge=1, le=300)] = 100,
 ) -> list[ModelCallRead]:
+    if brand_slug:
+        assert_brand_access(current_user, brand_slug)
     statement = apply_model_call_filters(
         select(ModelCall),
         start=start,
@@ -70,6 +78,7 @@ async def list_model_calls(
         provider=provider,
         model=model,
         status=status,
+        allowed_brands=accessible_brands(current_user),
     )
     statement = statement.order_by(ModelCall.created_at.desc()).limit(limit)
     result = await db.execute(statement)

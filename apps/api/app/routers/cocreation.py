@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.access import assert_brand_access
 from app.cocreation_service import (
     generate_content_package,
     refine_content_package,
@@ -39,9 +40,10 @@ def _response(
 @router.post("/generate", response_model=ContentPackageResponse)
 async def generate(
     payload: CreationRequest,
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ContentPackageResponse:
+    assert_brand_access(current_user, payload.brand_slug)  # C1
     try:
         output, version, package, warnings = await generate_content_package(db, payload)
     except LLMConfigurationError as exc:
@@ -60,9 +62,15 @@ async def generate(
 async def refine(
     output_id: int,
     payload: CocreationRefineRequest,
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ContentPackageResponse:
+    existing = await db.get(Output, output_id)
+    if existing is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Conteudo nao encontrado."
+        )
+    assert_brand_access(current_user, existing.brand_slug)  # C1
     try:
         output, version, package, warnings = await refine_content_package(db, output_id, payload)
     except LLMConfigurationError as exc:
@@ -80,7 +88,7 @@ async def refine(
 @router.get("/{output_id}", response_model=ContentPackageResponse)
 async def get_package(
     output_id: int,
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ContentPackageResponse:
     import json
@@ -90,6 +98,7 @@ async def get_package(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Conteudo nao encontrado."
         )
+    assert_brand_access(current_user, output.brand_slug)  # C1
     version = (
         await db.get(OutputVersion, output.current_version_id)
         if output.current_version_id else None

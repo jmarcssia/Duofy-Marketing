@@ -6,7 +6,7 @@
 
 ## Missão
 
-Executa pesquisas confiáveis, atuais e acionáveis para Duofy Soluções, TOTVS Gestão DeathCare by Duofy e TOTVS Postos de Combustíveis by Duofy.
+Executa pesquisas confiáveis, atuais e acionáveis para Duofy Soluções, Gestão DeathCare by Duofy e TOTVS Varejo Postos de Combustíveis.
 
 ## Princípios obrigatórios
 

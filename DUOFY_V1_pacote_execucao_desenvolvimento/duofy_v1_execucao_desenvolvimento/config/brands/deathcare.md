@@ -1,4 +1,4 @@
-# Frente — TOTVS Gestão DeathCare by Duofy
+# Frente — Gestão DeathCare by Duofy
 
 ## Segmento
 

@@ -6,7 +6,7 @@ from typing import Any
 from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import AgentRun, AuditEvent, ModelCall, OutputDecision, QualityReview
+from app.models import AgentRun, AuditEvent, ModelCall, Output, OutputDecision, QualityReview
 
 
 def apply_audit_filters(
@@ -40,10 +40,17 @@ async def operations_summary(
     start: datetime | None = None,
     end: datetime | None = None,
     brand_slug: str | None = None,
+    allowed_brands: list[str] | None = None,
 ) -> dict[str, Any]:
+    """Agregado de operações. `allowed_brands` (C1) restringe o resumo às marcas do usuário
+    mesmo sem `brand_slug` — usuário restrito multi-marca recebe o agregado SÓ do seu escopo."""
     model_calls = select(ModelCall)
+    # QualityReview/OutputDecision não têm brand_slug; a marca vem do Output (join por output_id).
     quality_reviews = select(QualityReview)
     audit_events = select(AuditEvent)
+    scope_reviews = allowed_brands is not None or brand_slug is not None
+    if scope_reviews:
+        quality_reviews = quality_reviews.join(Output, QualityReview.output_id == Output.id)
     if start:
         model_calls = model_calls.where(ModelCall.created_at >= start)
         quality_reviews = quality_reviews.where(QualityReview.created_at >= start)
@@ -52,9 +59,14 @@ async def operations_summary(
         model_calls = model_calls.where(ModelCall.created_at <= end)
         quality_reviews = quality_reviews.where(QualityReview.created_at <= end)
         audit_events = audit_events.where(AuditEvent.created_at <= end)
+    if allowed_brands is not None:
+        model_calls = model_calls.where(ModelCall.brand_slug.in_(allowed_brands))
+        audit_events = audit_events.where(AuditEvent.brand_slug.in_(allowed_brands))
+        quality_reviews = quality_reviews.where(Output.brand_slug.in_(allowed_brands))
     if brand_slug:
         model_calls = model_calls.where(ModelCall.brand_slug == brand_slug)
         audit_events = audit_events.where(AuditEvent.brand_slug == brand_slug)
+        quality_reviews = quality_reviews.where(Output.brand_slug == brand_slug)
 
     model_base = model_calls.subquery()
     quality_base = quality_reviews.subquery()
@@ -70,6 +82,8 @@ async def operations_summary(
             )
         )
     ).one()
+    # AgentRun não tem coluna de marca — este total permanece global por design (débito
+    # rastreado: exigiria migração para escopar por marca). É apenas um contador, sem conteúdo.
     run_statement = select(AgentRun)
     if start:
         run_statement = run_statement.where(AgentRun.created_at >= start)
@@ -93,7 +107,16 @@ async def operations_summary(
             )
         )
     ).one()
-    decision_totals = (await db.execute(select(func.count(OutputDecision.id)))).scalar_one()
+    decision_stmt = select(func.count(OutputDecision.id))
+    if scope_reviews:
+        decision_stmt = decision_stmt.select_from(OutputDecision).join(
+            Output, OutputDecision.output_id == Output.id
+        )
+        if allowed_brands is not None:
+            decision_stmt = decision_stmt.where(Output.brand_slug.in_(allowed_brands))
+        if brand_slug:
+            decision_stmt = decision_stmt.where(Output.brand_slug == brand_slug)
+    decision_totals = (await db.execute(decision_stmt)).scalar_one()
     audit_total = (await db.execute(select(func.count(audit_base.c.id)))).scalar_one()
 
     by_agent = await _group_model_calls(db, model_base, "agent_slug")
@@ -107,11 +130,19 @@ async def operations_summary(
         .order_by(func.count(audit_base.c.id).desc())
         .limit(12)
     )
+    # Erros recentes respeitam os MESMOS filtros do resumo (marca/escopo/período) —
+    # antes vazavam chamadas falhas de todas as marcas.
+    recent_errors_stmt = select(ModelCall).where(ModelCall.status == "failed")
+    if start:
+        recent_errors_stmt = recent_errors_stmt.where(ModelCall.created_at >= start)
+    if end:
+        recent_errors_stmt = recent_errors_stmt.where(ModelCall.created_at <= end)
+    if allowed_brands is not None:
+        recent_errors_stmt = recent_errors_stmt.where(ModelCall.brand_slug.in_(allowed_brands))
+    if brand_slug:
+        recent_errors_stmt = recent_errors_stmt.where(ModelCall.brand_slug == brand_slug)
     recent_error_result = await db.execute(
-        select(ModelCall)
-        .where(ModelCall.status == "failed")
-        .order_by(ModelCall.created_at.desc())
-        .limit(8)
+        recent_errors_stmt.order_by(ModelCall.created_at.desc()).limit(8)
     )
     return {
         "total_model_calls": int(model_totals[0] or 0),
@@ -150,12 +181,15 @@ async def agent_health(
     *,
     start: datetime | None = None,
     end: datetime | None = None,
+    allowed_brands: list[str] | None = None,
 ) -> list[dict[str, Any]]:
     model_calls = select(ModelCall)
     if start:
         model_calls = model_calls.where(ModelCall.created_at >= start)
     if end:
         model_calls = model_calls.where(ModelCall.created_at <= end)
+    if allowed_brands is not None:  # C1
+        model_calls = model_calls.where(ModelCall.brand_slug.in_(allowed_brands))
     base = model_calls.subquery()
     result = await db.execute(
         select(

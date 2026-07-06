@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.access import assert_brand_access
 from app.briefing_service import (
     approve_briefing,
     create_blank_research_briefing,
@@ -56,6 +57,7 @@ async def plan(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> BriefingRead:
+    assert_brand_access(current_user, payload.brand_slug)
     try:
         briefing = await create_briefing(
             db, user=current_user, prompt=payload.prompt, brand_slug=payload.brand_slug
@@ -71,6 +73,7 @@ async def plan_from_theme(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> BriefingRead:
+    assert_brand_access(current_user, payload.brand_slug)
     theme = await db.get(ResearchTheme, payload.research_theme_id)
     if theme is None:
         raise HTTPException(
@@ -89,6 +92,7 @@ async def plan_research(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> BriefingRead:
     """Entrada 'Nova pesquisa': abre um briefing de pesquisa em branco (sem LLM)."""
+    assert_brand_access(current_user, payload.brand_slug)
     briefing = await create_blank_research_briefing(
         db, user=current_user, brand_slug=payload.brand_slug, theme=payload.theme
     )
@@ -98,7 +102,7 @@ async def plan_research(
 @router.get("/briefings/{briefing_id}", response_model=BriefingRead)
 async def get_briefing(
     briefing_id: int,
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> BriefingRead:
     b = await db.get(Briefing, briefing_id)
@@ -106,6 +110,7 @@ async def get_briefing(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Briefing nao encontrado."
         )
+    assert_brand_access(current_user, b.brand_slug)
     return _briefing_read(b)
 
 
@@ -113,7 +118,7 @@ async def get_briefing(
 async def approve(
     briefing_id: int,
     payload: BriefingApproveRequest,
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> BriefingApproveResponse:
     b = await db.get(Briefing, briefing_id)
@@ -121,6 +126,7 @@ async def approve(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Briefing nao encontrado."
         )
+    assert_brand_access(current_user, b.brand_slug)
     if b.status not in ("pending", "failed"):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

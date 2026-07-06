@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.access import accessible_brands, assert_brand_access
 from app.audit_service import record_audit_event
 from app.content_generation import (
     edit_content_output,
@@ -98,6 +99,7 @@ async def _output_read(db: AsyncSession, output: Output) -> ContentOutputRead:
         format=output.format,
         title=output.title,
         briefing=output.briefing,
+        briefing_json=output.briefing_json,
         status=output.status,
         provider=output.provider,
         model=output.model,
@@ -132,7 +134,9 @@ async def _output_detail(db: AsyncSession, output: Output) -> ContentOutputDetai
     )
 
 
-async def _get_output_or_404(db: AsyncSession, output_id: int) -> Output:
+async def _get_output_or_404(
+    db: AsyncSession, output_id: int, user: User | None = None
+) -> Output:
     result = await db.execute(select(Output).where(Output.id == output_id))
     output = result.scalar_one_or_none()
     if output is None:
@@ -140,6 +144,8 @@ async def _get_output_or_404(db: AsyncSession, output_id: int) -> Output:
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Output nao encontrado.",
         )
+    if user is not None:  # C1: isolamento por marca
+        assert_brand_access(user, output.brand_slug)
     return output
 
 
@@ -149,6 +155,7 @@ async def generate_content(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ContentOutputRead:
+    assert_brand_access(current_user, payload.brand_slug)  # C1
     try:
         output = await generate_content_output(db, payload)
     except LLMConfigurationError as exc:
@@ -182,7 +189,7 @@ async def refine_output(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ContentOutputDetail:
-    output = await _get_output_or_404(db, output_id)
+    output = await _get_output_or_404(db, output_id, current_user)
     try:
         output = await refine_content_output(db, output, payload.instruction)
     except LLMConfigurationError as exc:
@@ -211,7 +218,7 @@ async def refine_output(
 
 @router.get("/outputs", response_model=list[ContentOutputRead])
 async def list_outputs(
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     brand_slug: str | None = None,
     category: str | None = None,
@@ -221,6 +228,9 @@ async def list_outputs(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> list[ContentOutputRead]:
     statement = select(Output)
+    allowed = accessible_brands(current_user)  # C1: só as marcas do usuário
+    if allowed is not None:
+        statement = statement.where(Output.brand_slug.in_(allowed))
     if brand_slug:
         statement = statement.where(Output.brand_slug == brand_slug)
     if category:
@@ -242,10 +252,10 @@ async def list_outputs(
 @router.get("/outputs/{output_id}", response_model=ContentOutputDetail)
 async def get_output(
     output_id: int,
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ContentOutputDetail:
-    output = await _get_output_or_404(db, output_id)
+    output = await _get_output_or_404(db, output_id, current_user)
     return await _output_detail(db, output)
 
 
@@ -256,7 +266,7 @@ async def update_output(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ContentOutputDetail:
-    output = await _get_output_or_404(db, output_id)
+    output = await _get_output_or_404(db, output_id, current_user)
     output = await edit_content_output(db, output, payload)
     await record_audit_event(
         db,
@@ -283,7 +293,7 @@ async def submit_output_review(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ContentOutputDetail:
-    output = await _get_output_or_404(db, output_id)
+    output = await _get_output_or_404(db, output_id, current_user)
     try:
         review = await review_output_quality(db, output, force=True)
         output.status = "review" if review.passed else "needs_adjustment"

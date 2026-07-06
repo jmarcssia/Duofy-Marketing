@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Literal
 from unicodedata import combining, normalize
 
@@ -536,6 +536,35 @@ async def latest_quality_review(
     return result.scalars().first()
 
 
+def _relax_research_gate(output: Output, assessment: QualityAssessment) -> QualityAssessment:
+    """Relatórios de pesquisa: a NOTA (>= MINIMUM_SCORE) governa a aprovação.
+
+    Um relatório de pesquisa é revisado e aprovado por um humano; o score já agrega todas as
+    penalidades (fontes ausentes, citação [n] faltando, sensibilidade DeathCare, mojibake…).
+    Um 'critical' isolado do LLM (ex.: uma afirmação específica sem fonte) não deve BLOQUEAR
+    de forma dura uma pesquisa que pontuou >= 80 — vira 'ajuste recomendado' para o revisor.
+    Pesquisa fraca ainda reprova pela nota (as penalidades derrubam o score abaixo de 80).
+    Conteúdo comum mantém o gate estrito (critical bloqueia).
+    """
+    is_research = output.channel == "Pesquisa" and output.format == "research_report"
+    if not is_research:
+        return assessment
+    passed = assessment.score >= MINIMUM_SCORE
+    required = _unique(assessment.required_fixes + assessment.critical_failures)
+    return replace(
+        assessment,
+        passed=passed,
+        status="approved" if passed else "needs_adjustment",
+        critical_failures=[],
+        required_fixes=required,
+        summary=(
+            f"Revisão de pesquisa aprovada pelo Guardião (nota {assessment.score}/100)."
+            if passed
+            else assessment.summary
+        ),
+    )
+
+
 async def review_output_quality(
     db: AsyncSession,
     output: Output,
@@ -553,6 +582,7 @@ async def review_output_quality(
             return existing
 
     assessment = await assess_output_quality_hybrid(db, output, version, mode_override=mode)
+    assessment = _relax_research_gate(output, assessment)
     agent_run_id: int | None = None
     agent = await _quality_agent(db)
     if agent is not None:

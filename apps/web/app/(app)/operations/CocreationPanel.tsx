@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 
-import { Badge, GhostButton } from "@/components/ui"
+import { Badge, FieldSelect, GhostButton } from "@/components/ui"
 import {
   AlertTriangleIcon,
   CheckCircleIcon,
@@ -12,26 +12,155 @@ import {
   SparklesIcon
 } from "@/components/icons"
 import {
+  BriefingCompleteness,
+  BriefingSummary,
+  ChoiceChips,
+  CollapsibleSection,
+  FieldGroup,
+  MultiSelectChips,
+  TemplatePicker,
+  TextAreaField,
+  TextField
+} from "@/components/briefing"
+import {
+  briefingSummaryRows,
+  CANAIS,
+  cleanBriefing,
+  computeCompleteness,
+  CTAS,
+  FINALIDADES,
+  FORMATOS,
+  labelOf,
+  labelsOf,
+  type Option,
+  PECAS,
+  PECAS_EXTRAS_IDS,
+  PERSONAS,
+  RESTRICOES,
+  RESTRICOES_DEFAULT,
+  SEGMENTO_POR_MARCA,
+  type StructuredBriefing,
+  TOM_POR_SEGMENTO,
+  TONS
+} from "@/lib/briefing"
+import {
   apiFetch,
   generateCocreation,
   getCocreation,
   getResearchModels,
   refineCocreation,
+  type CocreationGenerateRequest,
   type ContentOutput,
   type ContentPackage,
   type ContentPackageResponse,
-  type ResearchModel
+  type ResearchModel,
+  type ResearchReport
 } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
 import { useBrand } from "@/lib/brand-context"
 
 import { PiecesReview } from "./PiecesReview"
 
-const CHANNELS = ["Instagram", "LinkedIn", "Blog", "E-mail", "TikTok", "Facebook"]
-const FORMATS = ["Carrossel", "Reels", "Post LinkedIn", "Blog", "E-mail", "Stories"]
-const DEPTHS = [
+const START_OPTIONS: Option[] = [
+  { id: "manual", label: "Briefing manual" },
+  { id: "pesquisa", label: "Pesquisa aprovada" },
+  { id: "template", label: "Template" }
+]
+
+const DEPTHS: Option[] = [
   { id: "rapida", label: "Rápida" },
   { id: "profunda", label: "Profunda" }
+]
+
+const SOCIAL_CHANNELS = ["Instagram", "LinkedIn", "Facebook"]
+
+/** Peças pré-selecionadas quando o canal entra na seleção (FASE 6.6). */
+const PIECES_BY_CHANNEL: Record<string, string[]> = {
+  Instagram: ["carousel", "caption_instagram", "visual_direction"],
+  LinkedIn: ["carousel", "caption_linkedin", "visual_direction"],
+  WhatsApp: ["whatsapp"],
+  "E-mail": ["email"],
+  Blog: ["blog"],
+  Release: ["release"],
+  Pitch: ["pitch"],
+  "Landing page": ["landing_page"]
+}
+
+/** Peças visíveis/coerentes com os canais selecionados. */
+function allowedPiecesFor(channels: string[]): Set<string> {
+  const set = new Set<string>()
+  if (channels.includes("Instagram") || channels.includes("LinkedIn")) {
+    for (const p of ["carousel", "caption_instagram", "caption_linkedin", "visual_direction"]) set.add(p)
+  }
+  if (channels.includes("WhatsApp")) {
+    set.add("whatsapp")
+    set.add("whatsapp_image_prompt")
+  }
+  if (channels.includes("E-mail")) set.add("email")
+  if (channels.includes("Blog")) set.add("blog")
+  if (channels.includes("Release")) set.add("release")
+  if (channels.includes("Pitch")) set.add("pitch")
+  if (channels.includes("Landing page")) set.add("landing_page")
+  return set
+}
+
+type CocreationTemplate = {
+  id: string
+  label: string
+  hint: string
+  channels: string[]
+  formats: string[]
+  pieces: string[]
+  finalidade: string
+}
+
+/** Templates locais de cocriação, construídos da taxonomia (FASE 6). */
+const COCREATION_TEMPLATES: CocreationTemplate[] = [
+  {
+    id: "carrossel_ig_li",
+    label: "Carrossel Instagram + LinkedIn",
+    hint: "mesmo carrossel, legendas diferentes",
+    channels: ["Instagram", "LinkedIn"],
+    formats: ["Carrossel"],
+    pieces: ["carousel", "caption_instagram", "caption_linkedin", "visual_direction"],
+    finalidade: "redes_sociais"
+  },
+  {
+    id: "nutricao_wa_email",
+    label: "Nutrição WhatsApp + E-mail",
+    hint: "mensagens curtas + e-mail",
+    channels: ["WhatsApp", "E-mail"],
+    formats: ["Mensagem curta WhatsApp", "E-mail marketing"],
+    pieces: ["whatsapp", "whatsapp_image_prompt", "email"],
+    finalidade: "nutricao_leads"
+  },
+  {
+    id: "release_pitch",
+    label: "Release + Pitch imprensa",
+    hint: "release + pitch para jornalistas",
+    channels: ["Release", "Pitch"],
+    formats: ["Release", "Pitch"],
+    pieces: ["release", "pitch"],
+    finalidade: "imprensa"
+  },
+  {
+    id: "conteudo_multicanal",
+    label: "Conteúdo multicanal",
+    hint: "IG + LinkedIn + WhatsApp + E-mail",
+    channels: ["Instagram", "LinkedIn", "WhatsApp", "E-mail"],
+    formats: ["Carrossel"],
+    pieces: ["carousel", "caption_instagram", "caption_linkedin", "whatsapp", "email", "visual_direction"],
+    finalidade: "campanha"
+  },
+  {
+    id: "blog_educativo",
+    label: "Blog educativo",
+    hint: "artigo aprofundado para o blog",
+    channels: ["Blog"],
+    formats: ["Blog post"],
+    pieces: ["blog"],
+    finalidade: "institucional"
+  }
 ]
 
 function CopyButton({ text, label = "Copiar" }: { text: string; label?: string }) {
@@ -62,20 +191,34 @@ export function CocreationPanel({
   onClose?: () => void
   initialResearchId?: string
 }) {
-  const { selected: brand } = useBrand()
+  const { brands, selected: brand } = useBrand()
+  const brandName = brands.find((b) => b.slug === brand)?.name ?? brand
   const [models, setModels] = useState<ResearchModel[]>([])
 
-  // form
-  const [theme, setTheme] = useState("")
-  const [channel, setChannel] = useState(CHANNELS[0])
-  const [format, setFormat] = useState(FORMATS[0])
-  const [slides, setSlides] = useState(6)
-  const [persona, setPersona] = useState("")
-  const [cta, setCta] = useState("")
-  const [depth, setDepth] = useState("rapida")
-  const [observacoes, setObservacoes] = useState("")
-  const [model, setModel] = useState("")
+  // form — começar de
+  const [startFrom, setStartFrom] = useState<string>(initialResearchId ? "pesquisa" : "manual")
+  const [approved, setApproved] = useState<{ id: number; title: string }[]>([])
   const [researchId, setResearchId] = useState<string>(initialResearchId ?? "")
+  const [templateId, setTemplateId] = useState<string | null>(null)
+
+  // form — briefing
+  const [theme, setTheme] = useState("")
+  const [canais, setCanais] = useState<string[]>([])
+  const [formatos, setFormatos] = useState<string[]>([])
+  const [finalidade, setFinalidade] = useState("")
+  const [pecas, setPecas] = useState<string[]>([])
+
+  // form — direção
+  const [personaSel, setPersonaSel] = useState<string[]>([])
+  const [personaOther, setPersonaOther] = useState("")
+  const [tom, setTom] = useState("")
+  const [ctaId, setCtaId] = useState("")
+  const [ctaCustom, setCtaCustom] = useState("")
+  const [restricoes, setRestricoes] = useState<string[]>(RESTRICOES_DEFAULT)
+  const [slides, setSlides] = useState(6)
+  const [depth, setDepth] = useState("rapida")
+  const [model, setModel] = useState("")
+  const [observacoes, setObservacoes] = useState("")
 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -92,24 +235,125 @@ export function CocreationPanel({
     getResearchModels(token).then(setModels).catch(() => setModels([]))
   }, [])
 
+  // Tom default pelo segmento da marca (DeathCare → sensível; Postos → objetivo).
+  useEffect(() => {
+    const seg = SEGMENTO_POR_MARCA[brand]
+    setTom(seg ? TOM_POR_SEGMENTO[seg] ?? "" : "")
+  }, [brand])
+
+  // Pesquisas aprovadas da marca (modo "pesquisa").
+  useEffect(() => {
+    if (startFrom !== "pesquisa" || !brand) return
+    const token = getTokenFromCookie()
+    if (!token) return
+    apiFetch<ResearchReport[]>(
+      `/api/research/reports?brand_slug=${encodeURIComponent(brand)}&status=approved&limit=40`,
+      token
+    )
+      .then((list) => setApproved(list.map((r) => ({ id: r.id, title: r.title }))))
+      .catch(() => setApproved([]))
+  }, [brand, startFrom])
+
+  const allowedPieces = allowedPiecesFor(canais)
+  const pieceOptions = PECAS.filter((p) => allowedPieces.has(p.id))
+  const isCarousel = formatos.includes("Carrossel")
+
+  function onChannelsChange(next: string[]) {
+    const added = next.filter((c) => !canais.includes(c))
+    const allowed = allowedPiecesFor(next)
+    setPecas((prev) => {
+      const kept = prev.filter((p) => allowed.has(p))
+      const defaults = added.flatMap((c) => PIECES_BY_CHANNEL[c] ?? []).filter((p) => allowed.has(p))
+      return Array.from(new Set([...kept, ...defaults]))
+    })
+    setCanais(next)
+  }
+
+  function applyTemplate(t: CocreationTemplate) {
+    setTemplateId(t.id)
+    setCanais(t.channels)
+    setFormatos(t.formats)
+    setPecas(t.pieces)
+    setFinalidade(t.finalidade)
+  }
+
+  // Resumo + completude (obrigatórios: marca, tema, canais, formato).
+  const briefingDraft: StructuredBriefing = {
+    segmento: SEGMENTO_POR_MARCA[brand],
+    finalidade: finalidade || undefined,
+    canais,
+    formatos,
+    pecas,
+    personas: [...personaSel, ...(personaOther.trim() ? [personaOther.trim()] : [])],
+    tom: tom || undefined,
+    cta: ctaId === "personalizado" ? ctaCustom.trim() || undefined : ctaId || undefined,
+    restricoes,
+    observacoes: observacoes.trim() || undefined
+  }
+  const summaryRows = [
+    ...(brand ? [{ label: "Marca", values: [brandName] }] : []),
+    ...(theme.trim() ? [{ label: "Tema", values: [theme.trim()] }] : []),
+    ...briefingSummaryRows(briefingDraft)
+  ]
+  const completeness = computeCompleteness([
+    { key: "marca", label: "Marca", required: true, filled: Boolean(brand) },
+    { key: "tema", label: "Tema", required: true, filled: theme.trim().length > 0 },
+    { key: "canais", label: "Canais", required: true, filled: canais.length > 0 },
+    { key: "formato", label: "Formato", required: true, filled: formatos.length > 0 },
+    { key: "finalidade", label: "Finalidade", required: false, filled: Boolean(finalidade) },
+    { key: "pecas", label: "Peças", required: false, filled: pecas.length > 0 },
+    {
+      key: "persona",
+      label: "Persona",
+      required: false,
+      filled: personaSel.length > 0 || personaOther.trim().length > 0
+    },
+    { key: "tom", label: "Tom", required: false, filled: Boolean(tom) },
+    {
+      key: "cta",
+      label: "CTA",
+      required: false,
+      filled: Boolean(ctaId) && (ctaId !== "personalizado" || ctaCustom.trim().length > 0)
+    }
+  ])
+  const ready = completeness.ready
+
   async function generate() {
     const token = getTokenFromCookie()
     if (!token || !brand) { setError("Selecione uma marca."); return }
     if (!theme.trim()) { setError("Informe o tema."); return }
+    if (canais.length === 0) { setError("Selecione ao menos um canal."); return }
     setBusy(true); setError(null)
 
-    const reqBody = {
+    const mainChannel = canais.find((c) => SOCIAL_CHANNELS.includes(c)) ?? canais[0]
+    const mainFormat = isCarousel ? "Carrossel" : formatos[0] ?? "Post único"
+    const personaText = [...labelsOf(PERSONAS, personaSel), personaOther.trim()]
+      .filter(Boolean)
+      .join(", ")
+    const ctaValue =
+      ctaId === "personalizado"
+        ? ctaCustom.trim() || undefined
+        : ctaId
+          ? labelOf(CTAS, ctaId)
+          : undefined
+
+    const reqBody: CocreationGenerateRequest = {
       brand_slug: brand,
       theme: theme.trim(),
-      channel,
-      format,
-      slides,
-      persona: persona.trim() || undefined,
-      cta: cta.trim() || undefined,
+      channel: mainChannel,
+      format: mainFormat,
+      slides: isCarousel ? slides : undefined,
+      persona: personaText || undefined,
+      cta: ctaValue,
+      tone: tom ? labelOf(TONS, tom) : undefined,
       depth,
       observacoes: observacoes.trim() || undefined,
       model: model || undefined,
-      research_output_id: researchId ? Number(researchId) : undefined
+      research_output_id:
+        startFrom === "pesquisa" && researchId ? Number(researchId) : undefined,
+      channels: canais,
+      pieces: pecas.filter((p) => (PECAS_EXTRAS_IDS as readonly string[]).includes(p)),
+      briefing_filters: cleanBriefing(briefingDraft) as Record<string, unknown> | undefined
     }
 
     // Resiliência ao timeout do proxy (~30s): a cocriação pode demorar e o backend cria o output
@@ -164,6 +408,21 @@ export function CocreationPanel({
   }
 
   const pkg: ContentPackage | null = result?.package ?? null
+  const extraPieces = pkg?.extra_pieces ?? []
+  const direcaoCount =
+    personaSel.length +
+    (personaOther.trim() ? 1 : 0) +
+    (tom ? 1 : 0) +
+    (ctaId ? 1 : 0) +
+    restricoes.length
+
+  const researchOptions = [
+    { value: "", label: "Selecione a pesquisa aprovada…" },
+    ...(researchId && !approved.some((r) => String(r.id) === researchId)
+      ? [{ value: researchId, label: `#${researchId} · pesquisa vinculada` }]
+      : []),
+    ...approved.map((r) => ({ value: String(r.id), label: `#${r.id} · ${r.title}` }))
+  ]
 
   return (
     <div className="rounded-2xl border border-purple/30 bg-white p-5">
@@ -181,63 +440,135 @@ export function CocreationPanel({
       </div>
 
       {!result && (
-        <div className="space-y-3">
-          <label className="block text-xs font-semibold text-muted">Tema
-            <input value={theme} onChange={(e) => setTheme(e.target.value)} placeholder="Ex.: Lançamento da coleção de inverno" className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:border-purple focus:outline-none" />
-          </label>
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+          <div className="space-y-4">
+            <p className="text-xs text-muted">
+              Gera roteiro, legendas e prompts visuais — a imagem final não é gerada pelo sistema.
+            </p>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
-            <label className="block text-xs font-semibold text-muted">Canal
-              <select value={channel} onChange={(e) => setChannel(e.target.value)} className="mt-1 w-full rounded-lg border border-line px-2 py-2 text-sm text-ink focus:border-purple focus:outline-none">
-                {CHANNELS.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </label>
-            <label className="block text-xs font-semibold text-muted">Formato
-              <select value={format} onChange={(e) => setFormat(e.target.value)} className="mt-1 w-full rounded-lg border border-line px-2 py-2 text-sm text-ink focus:border-purple focus:outline-none">
-                {FORMATS.map((f) => <option key={f} value={f}>{f}</option>)}
-              </select>
-            </label>
-            <label className="block text-xs font-semibold text-muted">Nº de slides
-              <input type="number" min={3} max={12} value={slides} onChange={(e) => setSlides(Math.min(12, Math.max(3, Number(e.target.value) || 3)))} className="mt-1 w-full rounded-lg border border-line px-2 py-2 text-sm text-ink focus:border-purple focus:outline-none" />
-            </label>
-            <label className="block text-xs font-semibold text-muted">Profundidade
-              <select value={depth} onChange={(e) => setDepth(e.target.value)} className="mt-1 w-full rounded-lg border border-line px-2 py-2 text-sm text-ink focus:border-purple focus:outline-none">
-                {DEPTHS.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
-              </select>
-            </label>
+            <FieldGroup label="Começar de">
+              <ChoiceChips options={START_OPTIONS} value={startFrom} onChange={(v) => setStartFrom(v)} allowEmpty={false} />
+            </FieldGroup>
+
+            {startFrom === "pesquisa" && (
+              <FieldSelect
+                label="Pesquisa aprovada da marca"
+                value={researchId}
+                onChange={setResearchId}
+                options={researchOptions}
+              />
+            )}
+
+            {startFrom === "template" && (
+              <FieldGroup label="Template" hint="um clique pré-preenche canais, formatos e peças">
+                <TemplatePicker templates={COCREATION_TEMPLATES} activeId={templateId} onPick={applyTemplate} />
+              </FieldGroup>
+            )}
+
+            <TextField
+              label="Tema"
+              hint="obrigatório"
+              value={theme}
+              onChange={setTheme}
+              placeholder="Ex.: Gestão de contratos e faturamento sem retrabalho"
+            />
+
+            <FieldGroup label="Canais" hint="selecione ao menos um">
+              <MultiSelectChips options={CANAIS} value={canais} onChange={onChannelsChange} />
+            </FieldGroup>
+
+            <FieldGroup label="Formatos" hint="Carrossel vira o formato principal quando selecionado">
+              <MultiSelectChips options={FORMATOS} value={formatos} onChange={setFormatos} size="sm" />
+            </FieldGroup>
+
+            <FieldGroup label="Finalidade">
+              <ChoiceChips options={FINALIDADES} value={finalidade} onChange={setFinalidade} />
+            </FieldGroup>
+
+            {pieceOptions.length > 0 && (
+              <FieldGroup label="Peças" hint="condicionais aos canais selecionados">
+                <MultiSelectChips options={pieceOptions} value={pecas} onChange={setPecas} size="sm" />
+              </FieldGroup>
+            )}
+
+            <CollapsibleSection title="Direção" subtitle="persona, tom, CTA, restrições e execução" count={direcaoCount}>
+              <FieldGroup label="Persona">
+                <MultiSelectChips
+                  options={PERSONAS}
+                  value={personaSel}
+                  onChange={setPersonaSel}
+                  allowOther
+                  otherValue={personaOther}
+                  onOtherChange={setPersonaOther}
+                  size="sm"
+                />
+              </FieldGroup>
+
+              <FieldGroup label="Tom">
+                <ChoiceChips options={TONS} value={tom} onChange={setTom} size="sm" />
+              </FieldGroup>
+
+              <FieldGroup label="CTA">
+                <ChoiceChips options={CTAS} value={ctaId} onChange={setCtaId} size="sm" />
+              </FieldGroup>
+              {ctaId === "personalizado" && (
+                <TextField
+                  label="CTA personalizado"
+                  value={ctaCustom}
+                  onChange={setCtaCustom}
+                  placeholder="Ex.: Garanta sua vaga na demonstração ao vivo"
+                />
+              )}
+
+              <FieldGroup label="Restrições">
+                <MultiSelectChips options={RESTRICOES} value={restricoes} onChange={setRestricoes} size="sm" />
+              </FieldGroup>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {isCarousel && (
+                  <label className="block text-xs font-semibold text-muted">Nº de slides
+                    <input
+                      type="number"
+                      min={3}
+                      max={12}
+                      value={slides}
+                      onChange={(e) => setSlides(Math.min(12, Math.max(3, Number(e.target.value) || 3)))}
+                      className="mt-1 w-full rounded-xl border border-line px-3 py-2 text-sm font-normal text-ink focus:border-purple focus:outline-none"
+                    />
+                  </label>
+                )}
+                <FieldSelect
+                  label="Modelo"
+                  value={model}
+                  onChange={setModel}
+                  options={[{ value: "", label: "Padrão" }, ...models.map((m) => ({ value: m.model_id, label: m.label }))]}
+                />
+              </div>
+
+              <FieldGroup label="Profundidade">
+                <ChoiceChips options={DEPTHS} value={depth} onChange={setDepth} allowEmpty={false} />
+              </FieldGroup>
+
+              <TextAreaField label="Observações" value={observacoes} onChange={setObservacoes} rows={2} />
+            </CollapsibleSection>
+
+            {error && <p className="text-xs font-medium text-red-600">{error}</p>}
+            {!brand && <p className="text-xs text-red-600">Selecione uma marca no topo.</p>}
+
+            <button
+              onClick={generate}
+              disabled={busy || !ready}
+              className="duofy-tap flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-purple px-5 text-sm font-semibold text-white hover:bg-purple-deep disabled:opacity-50"
+            >
+              {busy ? <><svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg> Gerando o pacote — costuma levar 1 a 2 min…</> : <><SparklesIcon className="h-4 w-4" /> Gerar</>}
+            </button>
+            {busy && <p className="text-center text-[11px] text-muted">Pode deixar aberto — o pacote aparece aqui assim que ficar pronto.</p>}
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="block text-xs font-semibold text-muted">Persona (opcional)
-              <input value={persona} onChange={(e) => setPersona(e.target.value)} className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:border-purple focus:outline-none" />
-            </label>
-            <label className="block text-xs font-semibold text-muted">CTA (opcional)
-              <input value={cta} onChange={(e) => setCta(e.target.value)} className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:border-purple focus:outline-none" />
-            </label>
+          <div className="space-y-4">
+            <BriefingCompleteness completeness={completeness} />
+            <BriefingSummary rows={summaryRows} />
           </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="block text-xs font-semibold text-muted">Modelo
-              <select value={model} onChange={(e) => setModel(e.target.value)} className="mt-1 w-full rounded-lg border border-line px-2 py-2 text-sm text-ink focus:border-purple focus:outline-none">
-                <option value="">Padrão</option>
-                {models.map((m) => <option key={m.model_id} value={m.model_id}>{m.label}</option>)}
-              </select>
-            </label>
-            <label className="block text-xs font-semibold text-muted">Pesquisa associada (ID, opcional)
-              <input value={researchId} onChange={(e) => setResearchId(e.target.value.replace(/\D/g, ""))} placeholder="Ex.: 42" className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:border-purple focus:outline-none" />
-            </label>
-          </div>
-
-          <label className="block text-xs font-semibold text-muted">Observações
-            <textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} rows={2} className="mt-1 w-full resize-none rounded-lg border border-line px-3 py-2 text-sm text-ink focus:border-purple focus:outline-none" />
-          </label>
-
-          {error && <p className="text-xs font-medium text-red-600">{error}</p>}
-          {!brand && <p className="text-xs text-red-600">Selecione uma marca no topo.</p>}
-
-          <button onClick={generate} disabled={busy || !brand} className="duofy-tap flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-purple px-5 text-sm font-semibold text-white hover:bg-purple-deep disabled:opacity-50">
-            {busy ? <><svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg> Gerando pacote…</> : <><SparklesIcon className="h-4 w-4" /> Gerar</>}
-          </button>
         </div>
       )}
 
@@ -335,6 +666,27 @@ export function CocreationPanel({
                       <CopyButton text={text} />
                     </div>
                     <p className="text-sm text-ink/90 whitespace-pre-wrap">{text}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Peças extras (multicanal: WhatsApp, e-mail, blog, release, pitch, landing page) */}
+          {extraPieces.length > 0 && (
+            <div>
+              <p className="mb-2 text-sm font-bold text-ink">Peças extras</p>
+              <div className="space-y-3">
+                {extraPieces.map((p, i) => (
+                  <div key={`${p.kind}-${i}`} className="rounded-xl border border-line p-3">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        {p.channel && <Badge tone="teal">{p.channel}</Badge>}
+                        <span className="truncate text-xs font-semibold text-ink">{p.label}</span>
+                      </div>
+                      <CopyButton text={p.content} />
+                    </div>
+                    <p className="text-sm text-ink/90 whitespace-pre-wrap">{p.content}</p>
                   </div>
                 ))}
               </div>

@@ -9,8 +9,8 @@ import { setTokenCookie } from "@/lib/auth"
 export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [email, setEmail] = useState("admin@duofy.com.br")
-  const [password, setPassword] = useState("admin123456")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -53,7 +53,7 @@ export function LoginForm() {
           <form onSubmit={handleSubmit} className="flex h-full flex-col justify-center">
             <div className="mb-8">
               <h2 className="text-3xl font-semibold tracking-[-0.04em]">Entrar</h2>
-              <p className="mt-2 text-linen/60">Use o admin criado pelo seed.</p>
+              <p className="mt-2 text-linen/60">Use as credenciais fornecidas pelo administrador.</p>
             </div>
 
             <label className="text-sm text-linen/70" htmlFor="email">
@@ -64,6 +64,7 @@ export function LoginForm() {
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
+              placeholder="voce@empresa.com"
               className="mt-2 rounded-2xl border border-linen/15 bg-white/10 px-4 py-3 text-linen outline-none transition placeholder:text-linen/30 focus:border-clay"
               autoComplete="email"
               required

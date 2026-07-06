@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.access import assert_brand_access
 from app.audit_service import record_audit_event
 from app.db import get_db
 from app.dependencies import get_current_user
@@ -36,6 +37,7 @@ async def execute_agent(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> AgentRunResponse:
+    assert_brand_access(current_user, payload.brand_slug)
     try:
         run = await run_agent(
             db=db,
@@ -66,7 +68,7 @@ async def execute_agent(
 
 @router.get("/runs", response_model=list[AgentRunResponse])
 async def list_agent_runs(
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     agent_slug: str | None = None,
     provider: str | None = None,
@@ -74,6 +76,9 @@ async def list_agent_runs(
     query: str | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> list[AgentRunResponse]:
+    # NOTA (C1): AgentRun não tem coluna brand_slug, então a lista não é filtrável por marca
+    # sem alteração de schema (débito rastreado). A superfície sensível — exfiltração de RAG
+    # de outra marca — é fechada no /run (assert de marca acima). Esta lista é diagnóstica.
     statement = select(AgentRun)
     if agent_slug:
         statement = statement.where(AgentRun.agent_slug == agent_slug)

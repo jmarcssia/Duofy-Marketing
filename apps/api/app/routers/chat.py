@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.access import assert_brand_access
 from app.db import get_db
 from app.dependencies import get_current_user
 from app.models import AgentLog, AgentTask, ChatMessage, ChatSession, User
@@ -160,6 +161,9 @@ async def create_message(
 ) -> ChatMessageResponse:
     session = await _get_session_or_404(db, session_id, current_user)
     brand_slug = payload.brand_slug or session.brand_slug
+    # C1 — não deixa o chat enfileirar o orquestrador (com RAG) numa marca fora do escopo.
+    if brand_slug:
+        assert_brand_access(current_user, brand_slug)
     if brand_slug and session.brand_slug != brand_slug:
         session.brand_slug = brand_slug
 

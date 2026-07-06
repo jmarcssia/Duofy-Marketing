@@ -28,6 +28,7 @@ export const EVENT_TYPE_META: Record<string, { label: string }> = {
   meeting: { label: "Reunião" },
   event: { label: "Evento" },
   delivery: { label: "Entrega" },
+  publication: { label: "Publicação" },
   campaign: { label: "Campanha" },
   press: { label: "Imprensa" },
   milestone: { label: "Marco" },
@@ -39,7 +40,7 @@ export function eventTypeLabel(t: string): string {
 }
 
 // Tipos oferecidos na criação (V1 — pesquisa é o fluxo vertical completo).
-export const CREATE_EVENT_TYPES = ["research", "content", "task", "meeting", "event", "delivery"]
+export const CREATE_EVENT_TYPES = ["research", "content", "task", "meeting", "event", "delivery", "publication"]
 
 // Estados oferecidos no formulário conforme o tipo.
 export const WORKFLOW_STATUSES = ["draft", "briefing_incomplete", "ready", "scheduled"]

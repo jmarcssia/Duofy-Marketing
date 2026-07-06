@@ -34,11 +34,18 @@ async def execute_due_calendar_events() -> int:
     executed = 0
     try:
         async with AsyncSessionLocal() as db:
+            # Caminho legado (execute_calendar_event): só para eventos NÃO-pesquisa. Eventos de
+            # pesquisa/cocriação passam exclusivamente pelo workflow com gate de aprovação
+            # (_execute_due_research/cocreation_events) — o legado marcava research 'completed'
+            # direto, furando o gate. Também respeita is_paused (antes ignorava).
             result = await db.execute(
                 select(CalendarEvent)
                 .where(
                     CalendarEvent.status == "scheduled",
                     CalendarEvent.assigned_agent_slug.is_not(None),
+                    CalendarEvent.assigned_agent_slug != "research_agent",
+                    CalendarEvent.event_type.notin_(RESEARCH_EVENT_TYPES),
+                    CalendarEvent.is_paused.is_(False),
                     CalendarEvent.start_at <= datetime.now(UTC),
                 )
                 .order_by(CalendarEvent.start_at.asc())

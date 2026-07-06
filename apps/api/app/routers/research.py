@@ -11,6 +11,7 @@ from app.audit_service import record_audit_event
 from app.db import get_db
 from app.dependencies import get_current_user
 from app.document_formatting import document_profile, document_sections, quality_notes_for_content
+from app.errors import InsufficientSourcesError
 from app.llm import LLMConfigurationError
 from app.models import Output, OutputVersion, ResearchSource, User
 from app.research_service import (
@@ -81,6 +82,7 @@ async def _report_read(db: AsyncSession, output: Output) -> ResearchReportRead:
         format=output.format,
         title=output.title,
         briefing=output.briefing,
+        briefing_json=output.briefing_json,
         status=output.status,
         provider=output.provider,
         model=output.model,
@@ -138,10 +140,22 @@ async def run_research(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ResearchReportRead:
+    assert_brand_access(current_user, payload.brand_slug)  # C1
     try:
         output = await run_market_research(db, payload)
     except LLMConfigurationError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except InsufficientSourcesError as exc:
+        # Fontes insuficientes é entrada inadequada (não falha de gateway) → 422 com mensagem
+        # acionável, alinhado a calendar/orchestrator.
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"Nao encontrei fontes suficientes sobre '{exc.theme}' "
+                f"(achei {exc.found}, preciso de {exc.needed}). "
+                "Reduza a profundidade, amplie o periodo/escopo, informe URLs ou use outro tema."
+            ),
+        ) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,

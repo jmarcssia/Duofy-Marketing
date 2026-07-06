@@ -183,6 +183,8 @@ class Output(TimestampMixin, Base):
     format: Mapped[str] = mapped_column(String(80), index=True, nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     briefing: Mapped[str] = mapped_column(Text, nullable=False)
+    # Briefing estruturado (filtros clicáveis) usado na geração; None para saídas legadas.
+    briefing_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     status: Mapped[str] = mapped_column(String(40), index=True, nullable=False, default="draft")
     provider: Mapped[str] = mapped_column(String(80), nullable=False)
     model: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -475,6 +477,13 @@ class CalendarEvent(TimestampMixin, Base):
     )
     publish_target: Mapped[str | None] = mapped_column(String(40), nullable=True)
     publish_ref: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Datas avançadas do ciclo editorial (5d) — metadados; nullable, sem worker de disparo.
+    delivery_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    review_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    approval_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reminder_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    recurrence_rule: Mapped[str | None] = mapped_column(String(40), nullable=True)
 
 
 class Source(TimestampMixin, Base):

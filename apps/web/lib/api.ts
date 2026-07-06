@@ -139,6 +139,7 @@ export type ContentOutput = {
   format: string
   title: string
   briefing: string
+  briefing_json: Record<string, unknown> | null
   status: ContentOutputStatus | string
   provider: string
   model: string
@@ -287,6 +288,13 @@ export type CalendarEvent = {
   published_at: string | null
   publish_target: string | null
   publish_ref: string | null
+  // Datas avançadas do ciclo editorial (5d)
+  delivery_at: string | null
+  review_at: string | null
+  approval_at: string | null
+  due_at: string | null
+  reminder_at: string | null
+  recurrence_rule: string | null
 }
 
 export type CalendarStep = {
@@ -335,13 +343,16 @@ export function executeCalendarResearch(id: number, brandSlug: string, token: st
 export function executeCalendarCocreation(
   id: number,
   brandSlug: string,
-  channel: string,
-  format: string,
+  channel: string | null,
+  format: string | null,
   token: string
 ) {
-  const qs = new URLSearchParams({ brand_slug: brandSlug, channel, format }).toString()
+  // Sem canal/formato explícitos, o backend usa o briefing gravado no evento.
+  const params = new URLSearchParams({ brand_slug: brandSlug })
+  if (channel) params.set("channel", channel)
+  if (format) params.set("format", format)
   return apiFetch<CalendarEventDetail>(
-    `/api/calendar/${id}/execute-cocreation?${qs}`,
+    `/api/calendar/${id}/execute-cocreation?${params.toString()}`,
     token,
     { method: "POST", body: "{}" }
   )
@@ -572,6 +583,14 @@ export type VisualDirection = {
   restricoes: string
 }
 
+export type ExtraPiece = {
+  kind: string
+  label: string
+  channel: string | null
+  content: string
+  required: boolean
+}
+
 export type ContentPackage = {
   brand_slug: string
   channel: string
@@ -586,6 +605,7 @@ export type ContentPackage = {
   captions: Record<string, string>
   slides: ContentSlide[]
   visual_direction: VisualDirection
+  extra_pieces: ExtraPiece[]
   factualidade: string[]
   checklist: string[]
 }
@@ -617,6 +637,9 @@ export type CocreationGenerateRequest = {
   status?: string
   model?: string
   provider?: string
+  channels?: string[]
+  pieces?: string[]
+  briefing_filters?: Record<string, unknown>
 }
 
 export type CocreationRefineTarget =
@@ -706,6 +729,31 @@ export function setContentPieceStatus(
 
 export function deleteContentPiece(pieceId: number, token: string) {
   return apiFetch(`/api/pieces/${pieceId}`, token, { method: "DELETE" })
+}
+
+// 5b — refino individual por peça (regenera só aquela peça via agente; volta a 'pending')
+export function refineContentPiece(pieceId: number, instruction: string, token: string) {
+  return apiFetch<ContentPiece>(`/api/pieces/${pieceId}/refine`, token, {
+    method: "POST",
+    body: JSON.stringify({ instruction })
+  })
+}
+
+// 5c — templates de pesquisa persistidos (reusa research_themes; briefing vai como JSON em notes)
+// O tipo ResearchTheme já é declarado acima (reusado aqui).
+export function getResearchThemes(token: string, brandSlug?: string) {
+  const qs = brandSlug ? `?brand_slug=${encodeURIComponent(brandSlug)}` : ""
+  return apiFetch<ResearchTheme[]>(`/api/research-themes${qs}`, token)
+}
+
+export function createResearchTheme(
+  body: { title: string; notes?: string | null; brand_slug?: string | null },
+  token: string
+) {
+  return apiFetch<ResearchTheme>("/api/research-themes", token, {
+    method: "POST",
+    body: JSON.stringify(body)
+  })
 }
 
 // C5: por padrão as chamadas são relativas (mesmo-origem), proxied p/ a API via next.config

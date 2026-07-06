@@ -1,4 +1,4 @@
-# Perfil de Marca — TOTVS Gestão DeathCare by Duofy
+# Perfil de Marca — Gestão DeathCare by Duofy
 
 > Bússola de marca para todos os agentes. Complementa a memória/RAG com tom, persona e limites.
 > Em conflito sobre produto, a documentação interna recuperada (RAG) prevalece.

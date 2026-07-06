@@ -1,4 +1,4 @@
-# Cocriação — TOTVS Gestão DeathCare by Duofy
+# Cocriação — Gestão DeathCare by Duofy
 
 > Extensão do perfil de marca (`config/brands/deathcare.md`) para uso do agente de Cocriação.
 > **TEMA SENSÍVEL — a dignidade vem antes da venda.** Em conflito sobre produto, a documentação

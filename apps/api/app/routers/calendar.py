@@ -293,11 +293,12 @@ async def execute_cocreation_endpoint(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     brand_slug: Annotated[str, Query(min_length=2)],
-    channel: str = "Instagram",
-    content_format: Annotated[str, Query(alias="format")] = "Carrossel",
+    channel: str | None = None,
+    content_format: Annotated[str | None, Query(alias="format")] = None,
 ) -> CalendarEventDetail:
     """Dispara a cocriação pelo evento (Agente de Cocriação real), gated pela aprovação da
-    pesquisa. `brand_slug` obrigatório e verificado."""
+    pesquisa. Sem `channel`/`format` explícitos, vale o briefing do evento.
+    `brand_slug` obrigatório e verificado."""
     event = await _get_event_or_404(db, event_id, brand_slug, current_user)
     try:
         event = await execute_cocreation(db, event, current_user, channel, content_format)

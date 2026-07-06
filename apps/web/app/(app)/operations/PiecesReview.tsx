@@ -7,6 +7,7 @@ import {
   createContentPiece,
   deleteContentPiece,
   listContentPieces,
+  refineContentPiece,
   setContentPieceStatus,
   type ContentPiece
 } from "@/lib/api"
@@ -37,6 +38,9 @@ export function PiecesReview({ outputId, onChanged }: { outputId: number; onChan
   const [newKind, setNewKind] = useState("email")
   const [newContent, setNewContent] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [refiningId, setRefiningId] = useState<number | null>(null)
+  const [instr, setInstr] = useState("")
+  const [refineBusy, setRefineBusy] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     const token = getTokenFromCookie()
@@ -79,6 +83,23 @@ export function PiecesReview({ outputId, onChanged }: { outputId: number; onChan
       onChanged?.()
     } catch { /* ignore */ }
     setBusy(null)
+  }
+
+  async function refine(piece: ContentPiece) {
+    const token = getTokenFromCookie()
+    if (!token || instr.trim().length < 3) return
+    setRefineBusy(piece.id)
+    setError(null)
+    try {
+      await refineContentPiece(piece.id, instr.trim(), token)
+      setRefiningId(null)
+      setInstr("")
+      await load()
+      onChanged?.()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Falha ao refinar a peça.")
+    }
+    setRefineBusy(null)
   }
 
   async function addManual() {
@@ -135,10 +156,30 @@ export function PiecesReview({ outputId, onChanged }: { outputId: number; onChan
               </div>
               <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-xs text-ink/80">{p.content || "—"}</p>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                <button onClick={() => decide(p, "approved")} disabled={busy === p.id || p.status === "approved"} className="duofy-tap rounded-lg bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50">Aprovar</button>
-                <button onClick={() => decide(p, "rejected")} disabled={busy === p.id || p.status === "rejected"} className="duofy-tap rounded-lg border border-line px-2.5 py-1.5 text-xs font-semibold text-red hover:border-red/40 disabled:opacity-50">Rejeitar</button>
-                {p.origin === "manual" && <button onClick={() => removePiece(p)} disabled={busy === p.id} className="duofy-tap rounded-lg border border-line px-2.5 py-1.5 text-xs font-medium text-muted hover:border-red/40 hover:text-red disabled:opacity-50">Remover</button>}
+                <button onClick={() => decide(p, "approved")} disabled={busy === p.id || refineBusy === p.id || p.status === "approved"} className="duofy-tap rounded-lg bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50">Aprovar</button>
+                <button onClick={() => decide(p, "rejected")} disabled={busy === p.id || refineBusy === p.id || p.status === "rejected"} className="duofy-tap rounded-lg border border-line px-2.5 py-1.5 text-xs font-semibold text-red hover:border-red/40 disabled:opacity-50">Rejeitar</button>
+                <button onClick={() => { setRefiningId((cur) => (cur === p.id ? null : p.id)); setInstr(""); setError(null) }} disabled={busy === p.id || refineBusy === p.id} className="duofy-tap rounded-lg border border-line px-2.5 py-1.5 text-xs font-semibold text-purple hover:border-purple/40 disabled:opacity-50">{refiningId === p.id ? "Cancelar" : "Refinar"}</button>
+                {p.origin === "manual" && <button onClick={() => removePiece(p)} disabled={busy === p.id || refineBusy === p.id} className="duofy-tap rounded-lg border border-line px-2.5 py-1.5 text-xs font-medium text-muted hover:border-red/40 hover:text-red disabled:opacity-50">Remover</button>}
               </div>
+              {refiningId === p.id && (
+                <div className="mt-2 rounded-xl border border-purple/30 bg-purple-soft/30 p-3">
+                  <p className="mb-1.5 text-xs font-semibold text-purple-deep">Refinar esta peça com o agente</p>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <input
+                      value={instr}
+                      onChange={(e) => setInstr(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && refine(p)}
+                      disabled={refineBusy === p.id}
+                      placeholder="Ex.: encurte, CTA mais direto, tom mais formal…"
+                      className="w-full rounded-lg border border-line bg-white px-3 py-2 text-xs text-ink focus:border-purple focus:outline-none disabled:opacity-50"
+                    />
+                    <button onClick={() => refine(p)} disabled={refineBusy === p.id || instr.trim().length < 3} className="duofy-tap inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-purple px-4 py-2 text-xs font-semibold text-white hover:bg-purple-deep disabled:opacity-50">
+                      {refineBusy === p.id ? (<><svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg> Refinando…</>) : "Refinar"}
+                    </button>
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-muted">O agente regenera só esta peça — costuma levar 30 a 60 s. Ela volta para “pendente” ao concluir.</p>
+                </div>
+              )}
             </li>
           ))}
         </ul>

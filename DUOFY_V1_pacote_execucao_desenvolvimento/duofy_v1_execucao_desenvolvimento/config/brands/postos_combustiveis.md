@@ -1,4 +1,4 @@
-# Frente — TOTVS Postos de Combustíveis by Duofy
+# Frente — TOTVS Varejo Postos de Combustíveis
 
 ## Segmento
 

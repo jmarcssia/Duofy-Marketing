@@ -101,13 +101,14 @@ def _document_export(document: Document, chunks: list[DocumentChunk]) -> ExportD
 
 @router.post("/upload", response_model=DocumentRead)
 async def upload_document(
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     file: Annotated[UploadFile, File()],
     brand_slug: Annotated[str, Form()],
     category: Annotated[str, Form()] = "general",
     source_type: Annotated[str, Form()] = "upload",
 ) -> DocumentRead:
+    assert_brand_access(current_user, brand_slug)  # C1: não alimenta RAG de marca alheia
     suffix = Path(file.filename or "").suffix.lower()
     if suffix not in SUPPORTED_EXTENSIONS:
         raise HTTPException(

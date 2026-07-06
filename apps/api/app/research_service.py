@@ -22,6 +22,7 @@ from app.agent_rules import (
     forbidden_terms_for,
     min_sources_for,
 )
+from app.briefing_filters import briefing_filters_to_prompt, normalize_briefing_filters
 from app.crypto import decrypt_secret
 from app.document_formatting import normalize_document_content
 from app.embeddings import embed_text, vector_to_sql
@@ -831,6 +832,13 @@ def _user_prompt(
         + "- Baseie-se nas fontes coletadas (e no contexto RAG). Se um dado nao estiver "
           "nas fontes, diga que nao foi encontrado — nunca invente numeros, datas ou nomes.\n"
     )
+    filters_text = briefing_filters_to_prompt(payload.briefing_filters)
+    filters_block = (
+        ["", "Briefing estruturado (filtros escolhidos pelo usuario — respeite-os):",
+         filters_text]
+        if filters_text
+        else []
+    )
     return "\n".join(
         [
             "Gere um relatorio de pesquisa de mercado APROFUNDADO, longo e bem formatado, "
@@ -846,6 +854,7 @@ def _user_prompt(
             f"- Tema: {sanitize_prompt_input(payload.theme, max_len=255)}",
             f"- Periodo: {sanitize_prompt_input(payload.period, max_len=80)}",
             f"- Profundidade: {payload.depth}",
+            *filters_block,
             "",
             "Memoria RAG relevante:",
             sanitize_prompt_input(rag_context, max_len=8000, preserve_newlines=True)
@@ -956,6 +965,7 @@ async def run_market_research(
                 f"Periodo: {payload.period}\n"
                 f"Profundidade: {payload.depth}"
             ),
+            briefing_json=normalize_briefing_filters(payload.briefing_filters),
             status="draft",
             provider=llm_result.provider,
             model=llm_result.model,

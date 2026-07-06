@@ -13,7 +13,7 @@ from app.audit_service import record_audit_event
 from app.crypto import decrypt_secret, encrypt_secret, mask_secret
 from app.db import get_db
 from app.dependencies import require_admin
-from app.models import Agent, ProviderCredential, User
+from app.models import Agent, Brand, ProviderCredential, User
 from app.schemas import (
     AdminUserRead,
     AgentRead,
@@ -73,6 +73,16 @@ async def set_user_brand_scope(
     user = await db.get(User, user_id)
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario nao encontrado.")
+    if payload.brand_scope:
+        known = {
+            row for (row,) in (await db.execute(select(Brand.slug))).all()
+        }
+        unknown = [slug for slug in payload.brand_scope if slug not in known]
+        if unknown:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Marca(s) inexistente(s) no escopo: {', '.join(unknown)}.",
+            )
     user.brand_scope = payload.brand_scope or None
     await record_audit_event(
         db, user=current_user, action="admin.user_brand_scope_set",
