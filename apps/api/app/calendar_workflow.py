@@ -301,6 +301,10 @@ async def execute_research(
         done_task.result = f"Pesquisa gerada: Output #{output.id}"
     await db.commit()
     await db.refresh(fresh)
+    # F1: Guardião roda automaticamente após a pesquisa do calendário (avaliação, sem aprovar).
+    from app.quality_guardian import run_guardian_after_generation
+
+    await run_guardian_after_generation(db, output)
     return fresh
 
 
@@ -433,6 +437,10 @@ async def execute_cocreation(
         done_task.result = f"Conteúdo gerado: Output #{output.id}"
     await db.commit()
     await db.refresh(fresh)
+    # F1: Guardião roda automaticamente após a cocriação do calendário (avaliação, sem aprovar).
+    from app.quality_guardian import run_guardian_after_generation
+
+    await run_guardian_after_generation(db, output)
     return fresh
 
 

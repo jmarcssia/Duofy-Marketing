@@ -17,9 +17,11 @@ def extract_text(filename: str, content: bytes) -> str:
         return _extract_pdf(content)
     if suffix == ".docx":
         return _extract_docx(content)
-    if suffix in {".txt", ".md"}:
+    # Markdown/YAML/TXT são fontes preferenciais de conhecimento (regras, tom, personas,
+    # playbooks). Tratados como texto puro — o conteúdo já é legível/estruturado.
+    if suffix in {".txt", ".md", ".markdown", ".yaml", ".yml"}:
         return _decode_text(content)
-    raise ValueError("Formato nao suportado. Use PDF, DOCX, TXT ou MD.")
+    raise ValueError("Formato nao suportado. Use PDF, DOCX, TXT, MD, Markdown ou YAML.")
 
 
 def normalize_text(text: str) -> str:

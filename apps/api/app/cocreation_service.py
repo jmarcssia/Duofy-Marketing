@@ -566,6 +566,14 @@ async def _research_context(db: AsyncSession, research_output_id: int | None) ->
     return "\n\n".join(parts)
 
 
+def _is_empty_package(pkg: ContentPackage) -> bool:
+    """True quando o pacote não tem NENHUM conteúdo aproveitável (slides/legendas/extras)."""
+    has_slides = bool(pkg.slides)
+    has_caption = any((v or "").strip() for v in (pkg.captions or {}).values())
+    has_extra = any((p.content or "").strip() for p in (pkg.extra_pieces or []))
+    return not (has_slides or has_caption or has_extra)
+
+
 def _to_package(data: dict, brand: Brand) -> ContentPackage:
     data.setdefault("brand_slug", brand.slug)
     data.setdefault("channel", "")  # o chamador sobrescreve com o valor do payload
@@ -726,6 +734,12 @@ async def generate_content_package(
     pkg.brand_slug = brand.slug
     pkg.channel = payload.channel
     pkg.format = payload.format
+    # F9: rejeita pacote vazio (o LLM às vezes devolve {}), que validaria e travaria o gate de
+    # aprovação por peças (zero peças derivadas). Melhor falhar claro do que persistir vazio.
+    if _is_empty_package(pkg):
+        raise LLMConfigurationError(
+            "O agente retornou um pacote vazio. Revise o briefing/filtros e gere novamente."
+        )
     warnings = validate_package(pkg, payload)
     output, version = await _persist_version(
         db, agent=agent, brand=brand, payload=payload, pkg=pkg, provider=provider,
@@ -766,6 +780,13 @@ async def refine_content_package(
         db, output.brand_slug, payload.model, payload.provider
     )
     instruction = (payload.instruction or "").strip()
+    # Ajuste orientado pelo Guardião (F2): injeta as recomendações da avaliação + nota humana.
+    guardian_block = ""
+    if payload.use_guardian_feedback:
+        from app.quality_guardian import latest_review_feedback
+
+        guardian_block = await latest_review_feedback(db, output)
+    human_note = (payload.human_note or "").strip()
     focus = {
         "caption": f"Reescreva APENAS a legenda do canal '{payload.channel or 'instagram'}'.",
         "slide": f"Regenere APENAS o slide {payload.slide_number}.",
@@ -774,11 +795,21 @@ async def refine_content_package(
         "tone": "Ajuste APENAS o tom, preservando a estrutura.",
         "shorten": "Encurte o conteudo, preservando a estrutura e as secoes.",
         "persona": "Troque APENAS a persona e ajuste o minimo necessario.",
+        "guardian": (
+            "Aplique as correcoes recomendadas ao PACOTE INTEIRO, preservando o que ja esta bom "
+            "e mantendo canais/pecas. Corrija tom, CTA, persona, factualidade e aderencia a marca."
+        ),
     }[payload.target]
+    correcao = ""
+    if guardian_block:
+        correcao += f"\n\nCorrija os pontos apontados pelo Guardião de Qualidade:\n{guardian_block}"
+    if human_note:
+        correcao += f"\n\nObservação da gestora (priorize): {human_note}"
     ask = (
         "Voce recebe um pacote de conteudo (JSON) ja aprovado. Faca uma alteracao PONTUAL e "
         "devolva o PACOTE INTEIRO em JSON valido, preservando tudo que nao foi pedido para mudar.\n"
-        f"Alteracao: {focus} {instruction}\n"
+        f"Alteracao: {focus} {instruction}"
+        f"{correcao}\n"
         "Mantenha as regras: legendas de canais diferentes DIFERENTES; image_prompt independente "
         "e sem logo/@/#/marca.\n\n"
         f"Pacote atual:\n{json.dumps(pkg.model_dump(), ensure_ascii=False)}"
@@ -801,4 +832,9 @@ async def refine_content_package(
         model=used_model, prompt=prompt,
         editor_note=f"Cocriacao — refino ({payload.target}).", existing=output,
     )
+    await db.commit()
+    # F1/F2: o Guardião REAVALIA a nova versão (não é loop — só o humano dispara o próximo refino).
+    from app.quality_guardian import run_guardian_after_generation
+
+    await run_guardian_after_generation(db, output)
     return output, version, new_pkg, warnings

@@ -53,6 +53,7 @@ import {
   getResearchModels,
   refineCocreation,
   type CocreationGenerateRequest,
+  type CocreationRefineTarget,
   type ContentOutput,
   type ContentPackage,
   type ContentPackageResponse,
@@ -232,6 +233,7 @@ export function CocreationPanel({
   const [personaInstr, setPersonaInstr] = useState("")
   const [showToneInput, setShowToneInput] = useState(false)
   const [showPersonaInput, setShowPersonaInput] = useState(false)
+  const [guardianNote, setGuardianNote] = useState("")
 
   useEffect(() => {
     const token = getTokenFromCookie()
@@ -399,8 +401,11 @@ export function CocreationPanel({
   }
 
   async function refine(
-    target: "caption" | "slide" | "cta" | "visual" | "tone" | "shorten" | "persona",
-    extra?: { slide_number?: number; instruction?: string; channel?: string }
+    target: CocreationRefineTarget,
+    extra?: {
+      slide_number?: number; instruction?: string; channel?: string
+      use_guardian_feedback?: boolean; human_note?: string
+    }
   ) {
     if (!result) return
     const token = getTokenFromCookie()
@@ -410,7 +415,7 @@ export function CocreationPanel({
     try {
       const res = await refineCocreation(token, result.output_id, { target, ...extra })
       setResult(res)
-      setShowToneInput(false); setShowPersonaInput(false); setToneInstr(""); setPersonaInstr("")
+      setShowToneInput(false); setShowPersonaInput(false); setToneInstr(""); setPersonaInstr(""); setGuardianNote("")
     } catch (e: unknown) {
       setError(friendlyError(e, "Falha ao ajustar conteúdo."))
     }
@@ -594,6 +599,34 @@ export function CocreationPanel({
           )}
 
           {error && <p className="text-xs font-medium text-red-600">{error}</p>}
+
+          {/* Ajuste orientado pelo Guardião (F2): recomendações + observação humana opcional. */}
+          <div className="rounded-xl border border-purple/30 bg-purple-soft/40 p-3">
+            <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-purple">
+              <SparklesIcon className="h-4 w-4" /> Solicitar ajuste com o Guardião
+            </p>
+            <p className="mb-2 text-xs text-ink/70">
+              O Guardião encontrou pontos de melhoria antes da aprovação. Uma nova versão será criada
+              sem apagar o histórico anterior.
+            </p>
+            <input
+              value={guardianNote}
+              onChange={(e) => setGuardianNote(e.target.value)}
+              placeholder="Observação da gestora (opcional) — some às recomendações do Guardião"
+              className="mb-2 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:border-purple focus:outline-none"
+            />
+            <button
+              onClick={() => refine("guardian", {
+                instruction: undefined,
+                use_guardian_feedback: true,
+                human_note: guardianNote.trim() || undefined,
+              })}
+              disabled={refineBusy === "guardian:"}
+              className="duofy-tap rounded-lg bg-purple px-4 py-2 text-sm font-semibold text-white hover:bg-purple-deep disabled:opacity-50"
+            >
+              {refineBusy === "guardian:" ? "Ajustando…" : "Solicitar ajuste (recomendações do Guardião)"}
+            </button>
+          </div>
 
           <div className="rounded-xl border border-line bg-panel/50 p-3">
             <p className="mb-1 text-xs font-semibold text-ink">Análise estratégica</p>

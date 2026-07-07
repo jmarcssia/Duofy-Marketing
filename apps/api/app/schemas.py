@@ -999,12 +999,17 @@ class ContentPieceRefineRequest(BaseModel):
 
 
 class CocreationRefineRequest(BaseModel):
-    target: Literal["caption", "slide", "cta", "visual", "tone", "shorten", "persona"]
+    target: Literal[
+        "caption", "slide", "cta", "visual", "tone", "shorten", "persona", "guardian"
+    ]
     channel: str | None = Field(default=None, max_length=80)
     slide_number: int | None = Field(default=None, ge=1, le=12)
     instruction: str | None = Field(default=None, max_length=2000)
     model: str | None = Field(default=None, max_length=120)
     provider: str | None = Field(default=None, max_length=40)
+    # Ajuste orientado pelo Guardião: usa as recomendações da última avaliação + observação humana.
+    use_guardian_feedback: bool = False
+    human_note: str | None = Field(default=None, max_length=2000)
 
 
 # ---------------- Publicações e Canais (FASE 9) ----------------

@@ -650,6 +650,7 @@ export type CocreationRefineTarget =
   | "tone"
   | "shorten"
   | "persona"
+  | "guardian"
 
 export type CocreationRefineRequest = {
   target: CocreationRefineTarget
@@ -658,6 +659,8 @@ export type CocreationRefineRequest = {
   instruction?: string
   model?: string
   provider?: string
+  use_guardian_feedback?: boolean
+  human_note?: string
 }
 
 export function generateCocreation(token: string, body: CocreationGenerateRequest) {

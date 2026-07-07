@@ -174,6 +174,10 @@ async def run_research(
         metadata={"theme": payload.theme, "depth": payload.depth, "provider": output.provider},
     )
     await db.commit()
+    # F1: Guardião roda automaticamente após a pesquisa (persiste avaliação, NÃO aprova).
+    from app.quality_guardian import run_guardian_after_generation
+
+    await run_guardian_after_generation(db, output)
     return await _report_read(db, output)
 
 

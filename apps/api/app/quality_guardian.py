@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass, replace
 from typing import Literal
 from unicodedata import combining, normalize
@@ -622,6 +623,71 @@ async def review_output_quality(
     db.add(review)
     await db.flush()
     return review
+
+
+logger = logging.getLogger(__name__)
+
+
+async def run_guardian_after_generation(db: AsyncSession, output: Output) -> QualityReview | None:
+    """Roda o Guardião automaticamente após a geração (pesquisa/cocriação/refino) e PERSISTE a
+    avaliação — **sem aprovar** o output (só orienta a revisão humana).
+
+    Roda numa SESSÃO PRÓPRIA (isolada da transação do request), como o tracking de ModelCall:
+    best-effort, uma falha nunca derruba a geração nem expira objetos do request. O output já foi
+    commitado pelo chamador, então a sessão nova o lê pelo id."""
+    from sqlalchemy import inspect as sa_inspect
+
+    from app.db import AsyncSessionLocal
+
+    # Identidade do output sem disparar IO (o objeto pode estar expirado/em outra sessão).
+    try:
+        identity = sa_inspect(output).identity
+        output_id = identity[0] if identity else getattr(output, "id", None)
+    except Exception:  # noqa: BLE001
+        output_id = getattr(output, "id", None)
+    if output_id is None:
+        return None
+
+    try:
+        async with AsyncSessionLocal() as gdb:
+            fresh = await gdb.get(Output, output_id)
+            if fresh is None:
+                return None
+            review = await review_output_quality(gdb, fresh)
+            await gdb.commit()
+            logger.info(
+                "Guardião automático: output=%s score=%s status=%s",
+                output_id, review.score, review.status,
+            )
+            return review
+    except Exception:  # noqa: BLE001 - Guardião é best-effort; não pode quebrar a geração
+        logger.exception("Guardião automático falhou (best-effort) para output %s.", output_id)
+        return None
+
+
+def guardian_feedback_block(review: QualityReview) -> str:
+    """Formata a avaliação do Guardião em um bloco de texto para orientar o refino do agente."""
+    parts: list[str] = []
+    if review.score is not None:
+        parts.append(f"Avaliação do Guardião: {review.score}/100 (status: {review.status}).")
+    if review.critical_failures:
+        parts.append("Falhas críticas a corrigir:\n- " + "\n- ".join(review.critical_failures))
+    if review.required_fixes:
+        parts.append("Ajustes obrigatórios:\n- " + "\n- ".join(review.required_fixes))
+    if review.optional_improvements:
+        parts.append("Melhorias sugeridas:\n- " + "\n- ".join(review.optional_improvements))
+    if review.summary:
+        parts.append("Resumo: " + review.summary)
+    return "\n\n".join(parts)
+
+
+async def latest_review_feedback(db: AsyncSession, output: Output) -> str:
+    """Bloco de feedback do Guardião para a versão atual do output (vazio se não houver review)."""
+    version = await current_version(db, output)
+    if version is None:
+        return ""
+    review = await latest_quality_review(db, output.id, version.id)
+    return guardian_feedback_block(review) if review is not None else ""
 
 
 async def ensure_quality_passed(db: AsyncSession, output: Output) -> QualityReview:

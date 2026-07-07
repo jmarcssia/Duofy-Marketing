@@ -1,0 +1,29 @@
+# Rubrica do Guardião (referência para teste fora do sistema).
+# A avaliação real combina esta rubrica (LLM) + penalidades determinísticas em app/quality_guardian.py.
+minimum_score: 80
+weights:
+  marca: 20
+  persona: 15
+  factual: 20
+  clareza: 15
+  diferenciacao: 10
+  canal: 10
+  visual: 5
+  cta: 5
+output_shape:
+  score: "0-100"
+  status: "approved | needs_adjustment | blocked"
+  critical_failures: "[]"
+  required_fixes: "[]"
+  recommendations: "[]"
+  brand_alignment: "{}"
+  briefing_alignment: "{}"
+  channel_alignment: "{}"
+  factuality_review: "{}"
+  next_action: "string"
+critical_examples:
+  - "claim/número sem fonte"
+  - "mistura de marca (DeathCare com termos de Postos, etc.)"
+  - "tom insensível em DeathCare"
+  - "placeholder / lorem ipsum / [preencher]"
+  - "encoding quebrado (mojibake)"

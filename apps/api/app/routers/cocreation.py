@@ -73,6 +73,10 @@ async def generate(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Falha ao cocriar conteudo: {str(exc)[:300]}",
         ) from exc
+    # F1: Guardião roda automaticamente após a cocriação (persiste avaliação, NÃO aprova).
+    from app.quality_guardian import run_guardian_after_generation
+
+    await run_guardian_after_generation(db, output)
     return _response(output, version, package, warnings)
 
 

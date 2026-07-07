@@ -1,0 +1,24 @@
+# Saída da Pesquisa é Markdown (não JSON). Este schema descreve as SEÇÕES esperadas
+# para validação/teste da skill fora do sistema.
+format: markdown
+required_sections:
+  - resumo_executivo
+  - pergunta_respondida
+  - recorte_da_analise
+  - contexto_da_marca
+  - sinais_de_mercado
+  - dores_personas_decisores
+  - concorrentes_reais_ou_lacunas
+  - matriz_de_evidencias
+  - oportunidades
+  - riscos_e_limitacoes
+  - recomendacoes
+  - ideias_de_conteudo
+  - briefing_sugerido_cocriacao
+  - fontes
+forbidden_terms:
+  - "Empresa A"
+  - "Empresa B"
+  - "Empresa C"
+  - "Player 1"
+  - "Concorrente X"

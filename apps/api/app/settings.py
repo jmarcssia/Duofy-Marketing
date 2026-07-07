@@ -35,6 +35,18 @@ class Settings(BaseSettings):
     admin_password: str = DEFAULT_ADMIN_PASSWORD
     admin_name: str = "Admin Duofy"
 
+    # --- RAG / recuperação de contexto (F8) ---
+    rag_top_k: int = 5                 # quantos trechos recuperar por consulta
+    rag_min_score: float = 0.0         # piso de similaridade (0..1); 0 = sem corte (padrão local)
+    rag_max_context_chars: int = 6000  # teto do bloco de contexto injetado no prompt
+
+    # --- Embeddings (F6) ---
+    # "local_sha256" (padrão atual, sem custo) | "local_sentence_transformers" (roadmap) | "openai"
+    embeddings_provider: str = "local_sha256"
+    local_embedding_model: str = "paraphrase-multilingual-MiniLM-L12-v2"
+    # Se False e o provedor real falhar, NÃO gera embedding falso — falha de forma clara.
+    allow_sha256_embedding_fallback: bool = True
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @property

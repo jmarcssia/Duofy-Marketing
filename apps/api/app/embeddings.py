@@ -10,10 +10,30 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crypto import decrypt_secret
 from app.models import ProviderCredential
+from app.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
 EMBEDDING_DIMENSIONS = 1536
+
+
+class EmbeddingError(RuntimeError):
+    """Falha ao gerar embedding real quando o fallback SHA256 está desabilitado."""
+
+
+def _sha256_embedding_or_raise(text: str, *, reason: str) -> list[float]:
+    """Retorna o embedding local SHA256, mas SÓ se o fallback estiver permitido.
+
+    Com `ALLOW_SHA256_EMBEDDING_FALLBACK=false`, NUNCA gera embedding falso — falha de forma
+    clara para não indexar/consultar como se estivesse tudo ok (F6)."""
+    settings = get_settings()
+    if not settings.allow_sha256_embedding_fallback:
+        raise EmbeddingError(
+            f"Embedding real indisponível ({reason}) e fallback SHA256 desabilitado. "
+            "Habilite o provedor de embeddings ou defina ALLOW_SHA256_EMBEDDING_FALLBACK=true."
+        )
+    logger.warning("Embedding: usando fallback LOCAL SHA256 (não-semântico) — motivo: %s.", reason)
+    return _local_embedding(text)
 
 
 def vector_to_sql(vector: list[float]) -> str:
@@ -44,7 +64,40 @@ def _local_embedding(text: str) -> list[float]:
     return [value / norm for value in vector]
 
 
+def _sentence_transformer_embedding(text: str) -> list[float]:
+    """Embedding semântico local via sentence-transformers (ROADMAP — requer o pacote instalado).
+
+    Não instalado por padrão (evita ~2GB de torch na imagem). Import lazy: se ausente, levanta
+    para o chamador decidir (fallback controlado ou erro claro)."""
+    from sentence_transformers import SentenceTransformer  # import lazy (opcional)
+
+    settings = get_settings()
+    model = _get_st_model(settings.local_embedding_model, SentenceTransformer)
+    vector = model.encode(text, normalize_embeddings=True).tolist()
+    logger.info("Embedding: sentence-transformers local (%s), dim=%d.",
+                settings.local_embedding_model, len(vector))
+    return _fit_dimensions(vector)
+
+
+_ST_MODEL_CACHE: dict = {}
+
+
+def _get_st_model(name: str, cls):
+    if name not in _ST_MODEL_CACHE:
+        _ST_MODEL_CACHE[name] = cls(name)
+    return _ST_MODEL_CACHE[name]
+
+
 async def embed_text(db: AsyncSession, text: str) -> list[float]:
+    settings = get_settings()
+    provider = settings.embeddings_provider
+
+    if provider == "local_sentence_transformers":
+        try:
+            return _sentence_transformer_embedding(text)
+        except Exception as exc:  # noqa: BLE001 - pacote ausente/erro de carga do modelo
+            return _sha256_embedding_or_raise(text, reason=f"sentence-transformers: {exc}")
+
     result = await db.execute(
         select(ProviderCredential).where(
             ProviderCredential.provider == "openai_embeddings"
@@ -57,7 +110,7 @@ async def embed_text(db: AsyncSession, text: str) -> list[float]:
         )
         credential = result.scalar_one_or_none()
     if credential is None or not credential.is_enabled or not credential.api_key_encrypted:
-        return _local_embedding(text)
+        return _sha256_embedding_or_raise(text, reason="nenhum provedor de embeddings habilitado")
 
     api_key = decrypt_secret(credential.api_key_encrypted)
     base_url = (credential.base_url or "https://api.openai.com/v1").rstrip("/")
@@ -79,13 +132,9 @@ async def embed_text(db: AsyncSession, text: str) -> list[float]:
             )
             response.raise_for_status()
             data = response.json()
-    except Exception:
-        logger.warning(
-            "Embeddings via provedor '%s' falharam; usando embedding local (qualidade menor).",
-            credential.provider,
-            exc_info=True,
-        )
-        return _local_embedding(text)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Embeddings via provedor '%s' falharam: %s", credential.provider, exc)
+        return _sha256_embedding_or_raise(text, reason=f"provedor '{credential.provider}' falhou")
 
     embedding = data["data"][0]["embedding"]
     if len(embedding) != EMBEDDING_DIMENSIONS:

@@ -33,7 +33,7 @@ from app.schemas import DocumentChunkRead, DocumentRead
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 
 STORAGE_DIR = Path("storage/documents")
-SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".txt", ".md"}
+SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".txt", ".md", ".markdown", ".yaml", ".yml"}
 
 
 def _document_read(document: Document) -> DocumentRead:

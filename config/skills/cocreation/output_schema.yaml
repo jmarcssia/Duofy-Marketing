@@ -1,0 +1,18 @@
+# Saída da Cocriação é um ContentPackage (JSON). Campos-chave (ver app/schemas.py::ContentPackage).
+format: json
+key_fields:
+  - brand_slug
+  - channel
+  - format
+  - persona
+  - objetivo
+  - conceito
+  - cta
+  - slides          # lista: numero, funcao, texto, texto_arte, image_prompt, alt_text
+  - captions        # dict por canal social (legendas DIFERENTES entre canais)
+  - extra_pieces    # kinds: whatsapp, whatsapp_image_prompt, email, blog, release, pitch, landing_page
+  - visual_direction
+rules:
+  - "captions de canais diferentes devem DIFERIR"
+  - "image_prompt sem logo/@/hashtag/marca"
+  - "toda peça pedida deve estar presente OU haver aviso"

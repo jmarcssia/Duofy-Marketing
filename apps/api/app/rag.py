@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.embeddings import embed_text, vector_to_sql
+from app.settings import get_settings
+
+logger = logging.getLogger(__name__)
 
 # brand_slug sentinela para documentos institucionais (aparecem no RAG de todas as marcas).
 INSTITUTIONAL_BRAND = "institucional"
@@ -123,30 +127,49 @@ async def build_rag_context(
     query: str,
     brand_slug: str | None = None,
     category: str | None = None,
-    limit: int = 5,
+    limit: int | None = None,
 ) -> str:
+    """Monta o contexto RAG (F8): top_k configurável, piso de score, dedup por conteúdo,
+    teto de tamanho e log dos trechos usados (origem/marca/score). O objetivo é injetar
+    POUCOS trechos relevantes com origem — não um bloco enorme de contexto inútil."""
+    settings = get_settings()
+    top_k = limit if limit is not None else settings.rag_top_k
     hits = await search_memory(
         db=db,
         query=query,
         brand_slug=brand_slug,
         category=category,
-        limit=limit,
+        limit=top_k,
     )
     if not hits:
         return ""
 
-    blocks = []
-    for index, hit in enumerate(hits, start=1):
-        blocks.append(
-            "\n".join(
-                [
-                    f"[Memoria {index}] {hit.title}",
-                    (
-                        f"Marca: {hit.brand_slug} | Categoria: {hit.category} | "
-                        f"Fonte: {hit.source_type}"
-                    ),
-                    hit.content,
-                ]
-            )
-        )
+    blocks: list[str] = []
+    used: list[tuple] = []
+    seen_content: set[str] = set()
+    total = 0
+    for hit in hits:
+        if hit.score < settings.rag_min_score:  # piso de similaridade
+            continue
+        key = (hit.content or "").strip()[:400]
+        if not key or key in seen_content:  # dedup por conteúdo
+            continue
+        block = "\n".join([
+            f"[Memoria {len(blocks) + 1}] {hit.title}",
+            f"Marca: {hit.brand_slug} | Categoria: {hit.category} | Fonte: {hit.source_type} "
+            f"| Score: {hit.score:.2f}",
+            hit.content,
+        ])
+        if total + len(block) > settings.rag_max_context_chars and blocks:
+            break  # respeita o teto de contexto
+        seen_content.add(key)
+        blocks.append(block)
+        used.append((hit.title, hit.brand_slug, round(hit.score, 3)))
+        total += len(block)
+
+    if used:
+        logger.info("RAG: %d trecho(s) usado(s) para marca=%s → %s", len(used), brand_slug, used)
+    else:
+        logger.info("RAG: nenhum trecho acima do piso (min_score=%.2f) para marca=%s",
+                    settings.rag_min_score, brand_slug)
     return "\n\n".join(blocks)
