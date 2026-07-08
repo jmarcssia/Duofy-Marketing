@@ -19,8 +19,10 @@ import {
 import { Badge, GhostButton, PageHeader, Segmented, Spinner, type Tone } from "@/components/ui"
 import {
   apiFetch,
+  getCocreation,
   type ContentOutput,
   type ContentOutputDetail,
+  type ContentPackageResponse,
   type ContentTheme,
   type ResearchReport
 } from "@/lib/api"
@@ -28,8 +30,10 @@ import { getTokenFromCookie } from "@/lib/auth"
 import { friendlyError } from "@/lib/friendly-error"
 import { useBrand } from "@/lib/brand-context"
 import { downloadFile, exportPath } from "@/lib/download"
+import { isResearchOutput } from "@/lib/output-kind"
 
 import { CocreationPanel } from "../operations/CocreationPanel"
+import { ContentPackageView } from "../operations/ContentPackageView"
 import { PiecesReview } from "../operations/PiecesReview"
 
 type Mode = "lista" | "estruturado"
@@ -51,14 +55,12 @@ const CONTENT_PRESETS = [
   { label: "E-mail", channel: "E-mail", format: "E-mail" }
 ]
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
-function isResearch(o: { format?: string; channel?: string; category?: string }) {
-  return o.format === "research_report" || o.channel === "Pesquisa" || o.category === "research"
-}
 
 function CocreationInner() {
   const params = useSearchParams()
   const research = params.get("research") ?? undefined
-  const { selected: brand } = useBrand()
+  const idParam = params.get("id")
+  const { selected: brand, setSelected: setBrand } = useBrand()
 
   const [mode, setMode] = useState<Mode>("estruturado")
   const [content, setContent] = useState<ContentOutput[]>([])
@@ -78,6 +80,9 @@ function CocreationInner() {
   // foco (editar um conteúdo)
   const [focusId, setFocusId] = useState<number | null>(null)
   const [detail, setDetail] = useState<ContentOutputDetail | null>(null)
+  const [pkg, setPkg] = useState<ContentPackageResponse | null>(null)
+  const [focusTab, setFocusTab] = useState<"visao" | "editar">("visao")
+  const [idNotFound, setIdNotFound] = useState(false)
   const [ef, setEf] = useState({ title: "", content: "", status: "draft" })
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
@@ -96,7 +101,7 @@ function CocreationInner() {
         apiFetch<ResearchReport[]>(`/api/research/reports?limit=40${bq}`, token).catch(() => []),
         apiFetch<ContentTheme[]>(`/api/themes?limit=500`, token).catch(() => [])
       ])
-      setContent(c.filter((x) => !isResearch(x)))
+      setContent(c.filter((x) => !isResearchOutput(x)))
       setReports(r)
       setThemes(t)
     } catch { /* vazio */ }
@@ -106,15 +111,31 @@ function CocreationInner() {
   useEffect(() => { void loadData() }, [loadData])
 
   const openFocus = useCallback(async (id: number) => {
-    setFocusId(id); setDetail(null); setMsg(null); setRefineInstr("")
+    setFocusId(id); setDetail(null); setPkg(null); setMsg(null); setRefineInstr(""); setIdNotFound(false)
     const token = getTokenFromCookie()
     if (!token) return
     try {
       const d = await apiFetch<ContentOutputDetail>(`/api/outputs/${id}`, token)
       setDetail(d)
       setEf({ title: d.title, content: d.current_content ?? "", status: d.status })
-    } catch { setMsg("Não foi possível carregar o conteúdo.") }
-  }, [])
+      setBrand(d.brand_slug)
+      try {
+        setPkg(await getCocreation(token, id))
+      } catch {
+        setPkg(null) // sem pacote estruturado nesta versão — comportamento esperado, não é erro
+      }
+    } catch {
+      setIdNotFound(true)
+    }
+  }, [setBrand])
+
+  useEffect(() => {
+    if (!idParam) return
+    const id = Number(idParam)
+    if (!Number.isFinite(id)) { setIdNotFound(true); return }
+    void openFocus(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idParam])
 
   async function generateContent() {
     const token = getTokenFromCookie()
@@ -140,7 +161,7 @@ function CocreationInner() {
     let known = new Set(content.map((c) => c.id))
     try {
       const cur = await apiFetch<ContentOutput[]>(`/api/content/outputs?limit=60${bq}`, token)
-      known = new Set(cur.filter((x) => !isResearch(x)).map((c) => c.id))
+      known = new Set(cur.filter((x) => !isResearchOutput(x)).map((c) => c.id))
     } catch { /* usa o estado atual */ }
     let done = false
     let postError: string | null = null
@@ -153,8 +174,8 @@ function CocreationInner() {
       if (done) break
       try {
         const latest = await apiFetch<ContentOutput[]>(`/api/content/outputs?limit=60${bq}`, token)
-        const fresh = latest.filter((x) => !isResearch(x)).find((c) => !known.has(c.id))
-        if (fresh) { done = true; setContent(latest.filter((x) => !isResearch(x))); setNote(""); openFocus(fresh.id); break }
+        const fresh = latest.filter((x) => !isResearchOutput(x)).find((c) => !known.has(c.id))
+        if (fresh) { done = true; setContent(latest.filter((x) => !isResearchOutput(x))); setNote(""); openFocus(fresh.id); break }
       } catch { /* segue */ }
     }
     await post.catch(() => {})
@@ -277,67 +298,103 @@ function CocreationInner() {
     }
   }
 
-  // ---- Foco (editar um conteúdo) ----
+  // ---- Foco (visualizar/editar um conteúdo) ----
   if (focusId !== null) {
+    if (idNotFound) {
+      return (
+        <div className="space-y-4">
+          <button onClick={() => { setFocusId(null); setIdNotFound(false) }} className="duofy-tap inline-flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-2 text-sm font-semibold text-ink hover:border-purple/40 hover:text-purple">← Conteúdos</button>
+          <div className="grid place-items-center gap-2 rounded-2xl border border-dashed border-line py-16 text-center">
+            <AlertTriangleIcon className="h-8 w-8 text-amber" />
+            <p className="text-sm font-semibold text-ink">Conteúdo não encontrado</p>
+            <p className="text-xs text-muted">Este conteúdo não existe ou você não tem acesso a ele.</p>
+          </div>
+        </div>
+      )
+    }
     return (
       <div className="space-y-5">
-        <div className="flex items-center justify-between gap-3">
-          <button onClick={() => { setFocusId(null); setDetail(null) }} className="duofy-tap inline-flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-2 text-sm font-semibold text-ink hover:border-purple/40 hover:text-purple">← Conteúdos</button>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <button onClick={() => { setFocusId(null); setDetail(null); setPkg(null) }} className="duofy-tap inline-flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-2 text-sm font-semibold text-ink hover:border-purple/40 hover:text-purple">← Conteúdos</button>
           {detail && <p className="truncate text-xs text-muted">{detail.channel} · {detail.provider}/{detail.model.replace("~", "")}</p>}
         </div>
         {!detail ? (
           <div className="grid place-items-center py-20"><Spinner size={22} className="text-purple" /></div>
         ) : (
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-            <div className="duofy-card space-y-4 rounded-2xl p-5">
-              <label className="block text-xs font-semibold text-muted">Título
-                <input value={ef.title} onChange={(e) => setEf({ ...ef, title: e.target.value })} className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm font-semibold text-ink focus:border-purple focus:outline-none" />
-              </label>
-              <label className="block text-xs font-semibold text-muted">Status
-                <select value={ef.status} onChange={(e) => setEf({ ...ef, status: e.target.value })} className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:border-purple focus:outline-none">
-                  {Object.keys(STATUS_LABEL).map((s) => <option key={s} value={s}>{STATUS_LABEL[s].label}</option>)}
-                </select>
-              </label>
-              <label className="block text-xs font-semibold text-muted">Conteúdo (Markdown)
-                <textarea value={ef.content} onChange={(e) => setEf({ ...ef, content: e.target.value })} rows={16} className="mt-1 w-full resize-y rounded-lg border border-line px-3 py-2 font-mono text-xs leading-relaxed text-ink focus:border-purple focus:outline-none" />
-              </label>
+          <>
+            <Segmented
+              options={[{ id: "visao", label: "Visão geral" }, { id: "editar", label: "Editar" }]}
+              value={focusTab}
+              onChange={setFocusTab}
+            />
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="duofy-card space-y-4 rounded-2xl p-5">
+                {focusTab === "visao" ? (
+                  pkg ? (
+                    <ContentPackageView
+                      outputId={focusId}
+                      package={pkg.package}
+                      warnings={pkg.warnings}
+                      onRefined={() => { void openFocus(focusId) }}
+                    />
+                  ) : (
+                    <Markdown content={ef.content || "_Sem conteúdo._"} />
+                  )
+                ) : (
+                  <>
+                    <label className="block text-xs font-semibold text-muted">Título
+                      <input value={ef.title} onChange={(e) => setEf({ ...ef, title: e.target.value })} className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm font-semibold text-ink focus:border-purple focus:outline-none" />
+                    </label>
+                    <label className="block text-xs font-semibold text-muted">Status
+                      <select value={ef.status} onChange={(e) => setEf({ ...ef, status: e.target.value })} className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:border-purple focus:outline-none">
+                        {Object.keys(STATUS_LABEL).map((s) => <option key={s} value={s}>{STATUS_LABEL[s].label}</option>)}
+                      </select>
+                    </label>
+                    <label className="block text-xs font-semibold text-muted">Conteúdo (Markdown)
+                      <textarea value={ef.content} onChange={(e) => setEf({ ...ef, content: e.target.value })} rows={16} className="mt-1 w-full resize-y rounded-lg border border-line px-3 py-2 font-mono text-xs leading-relaxed text-ink focus:border-purple focus:outline-none" />
+                    </label>
 
-              <div className="rounded-xl border border-purple/30 bg-purple-soft/30 p-3">
-                <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-purple-deep"><SparklesIcon className="h-4 w-4" /> Pedir ajuste ao agente</p>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <input value={refineInstr} onChange={(e) => setRefineInstr(e.target.value)} onKeyDown={(e) => e.key === "Enter" && refineWithAgent()} placeholder="Ex.: encurte, CTA mais direto, tom mais formal…" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink focus:border-purple focus:outline-none" />
-                  <button onClick={refineWithAgent} disabled={refineBusy || refineInstr.trim().length < 3} className="duofy-tap shrink-0 rounded-lg bg-purple px-4 py-2 text-sm font-semibold text-white hover:bg-purple-deep disabled:opacity-50">{refineBusy ? "Ajustando…" : "Ajustar"}</button>
-                </div>
-              </div>
+                    <div className="rounded-xl border border-purple/30 bg-purple-soft/30 p-3">
+                      <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-purple-deep"><SparklesIcon className="h-4 w-4" /> Pedir ajuste ao agente</p>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <input value={refineInstr} onChange={(e) => setRefineInstr(e.target.value)} onKeyDown={(e) => e.key === "Enter" && refineWithAgent()} placeholder="Ex.: encurte, CTA mais direto, tom mais formal…" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink focus:border-purple focus:outline-none" />
+                        <button onClick={refineWithAgent} disabled={refineBusy || refineInstr.trim().length < 3} className="duofy-tap shrink-0 rounded-lg bg-purple px-4 py-2 text-sm font-semibold text-white hover:bg-purple-deep disabled:opacity-50">{refineBusy ? "Ajustando…" : "Ajustar"}</button>
+                      </div>
+                    </div>
 
-              {msg && <p className="text-xs font-medium text-purple-deep">{msg}</p>}
-              <div className="flex flex-wrap gap-2 border-t border-line pt-4">
-                <button onClick={saveEdit} disabled={busy} className="duofy-tap inline-flex items-center gap-1.5 rounded-lg bg-purple px-4 py-2 text-sm font-semibold text-white hover:bg-purple-deep disabled:opacity-50"><CheckCircleIcon className="h-4 w-4" /> Salvar</button>
-                {(detail.status === "draft" || detail.status === "needs_adjustment") && (
-                  <GhostButton onClick={submitReview} disabled={busy}>Enviar para revisão</GhostButton>
+                    {msg && <p className="text-xs font-medium text-purple-deep">{msg}</p>}
+                    <div className="flex flex-wrap gap-2 border-t border-line pt-4">
+                      <button onClick={saveEdit} disabled={busy} className="duofy-tap inline-flex items-center gap-1.5 rounded-lg bg-purple px-4 py-2 text-sm font-semibold text-white hover:bg-purple-deep disabled:opacity-50"><CheckCircleIcon className="h-4 w-4" /> Salvar</button>
+                      {(detail.status === "draft" || detail.status === "needs_adjustment") && (
+                        <GhostButton onClick={submitReview} disabled={busy}>Enviar para revisão</GhostButton>
+                      )}
+                      <button onClick={approveOutput} disabled={busy} className="duofy-tap rounded-lg border border-line px-3 py-2 text-sm font-medium text-green hover:border-green/40 disabled:opacity-50">Aprovar</button>
+                      <button onClick={() => action("request-adjustment", "Ajuste solicitado.")} disabled={busy} className="duofy-tap inline-flex items-center gap-1 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink hover:border-purple/40 hover:text-purple disabled:opacity-50"><SettingsIcon className="h-4 w-4" /> Ajuste</button>
+                      <button onClick={exportPdf} className="duofy-tap inline-flex items-center gap-1 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink hover:border-purple/40 hover:text-purple"><DownloadIcon className="h-4 w-4" /> PDF</button>
+                      <button onClick={() => navigator.clipboard?.writeText(ef.content)} className="duofy-tap inline-flex items-center gap-1 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink hover:border-purple/40 hover:text-purple"><CopyIcon className="h-4 w-4" /> Copiar</button>
+                      <button onClick={() => action("archive", "Arquivado.")} disabled={busy} className="duofy-tap ml-auto inline-flex items-center gap-1 rounded-lg border border-line px-3 py-2 text-sm font-medium text-muted hover:border-red/40 hover:text-red disabled:opacity-50"><AlertTriangleIcon className="h-4 w-4" /> Arquivar</button>
+                    </div>
+                  </>
                 )}
-                <button onClick={approveOutput} disabled={busy} className="duofy-tap rounded-lg border border-line px-3 py-2 text-sm font-medium text-green hover:border-green/40 disabled:opacity-50">Aprovar</button>
-                <button onClick={() => action("request-adjustment", "Ajuste solicitado.")} disabled={busy} className="duofy-tap inline-flex items-center gap-1 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink hover:border-purple/40 hover:text-purple disabled:opacity-50"><SettingsIcon className="h-4 w-4" /> Ajuste</button>
-                <button onClick={exportPdf} className="duofy-tap inline-flex items-center gap-1 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink hover:border-purple/40 hover:text-purple"><DownloadIcon className="h-4 w-4" /> PDF</button>
-                <button onClick={() => navigator.clipboard?.writeText(ef.content)} className="duofy-tap inline-flex items-center gap-1 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink hover:border-purple/40 hover:text-purple"><CopyIcon className="h-4 w-4" /> Copiar</button>
-                <button onClick={() => action("archive", "Arquivado.")} disabled={busy} className="duofy-tap ml-auto inline-flex items-center gap-1 rounded-lg border border-line px-3 py-2 text-sm font-medium text-muted hover:border-red/40 hover:text-red disabled:opacity-50"><AlertTriangleIcon className="h-4 w-4" /> Arquivar</button>
               </div>
-            </div>
 
-            <div className="space-y-4">
-              <PiecesReview outputId={focusId} onChanged={() => { void openFocus(focusId); void loadData() }} />
-              {detail.quality_notes?.length > 0 && (
-                <div className="duofy-card rounded-2xl p-4">
-                  <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-ink"><BookIcon className="h-4 w-4 text-purple" /> Notas de qualidade</p>
-                  <ul className="space-y-1">{detail.quality_notes.map((n, i) => <li key={i} className="flex gap-2 text-xs text-muted"><span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber" />{n}</li>)}</ul>
-                </div>
-              )}
-              <div className="duofy-card rounded-2xl p-4">
-                <p className="mb-1 text-xs font-semibold text-ink">Prévia</p>
-                <div className="max-h-80 overflow-y-auto duofy-scroll"><Markdown content={ef.content || "_Sem conteúdo._"} /></div>
+              <div className="space-y-4">
+                <PiecesReview outputId={focusId} onChanged={() => { void openFocus(focusId); void loadData() }} />
+                {detail.quality_notes?.length > 0 && (
+                  <div className="duofy-card rounded-2xl p-4">
+                    <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-ink"><BookIcon className="h-4 w-4 text-purple" /> Notas de qualidade</p>
+                    <ul className="space-y-1">{detail.quality_notes.map((n, i) => <li key={i} className="flex gap-2 text-xs text-muted"><span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber" />{n}</li>)}</ul>
+                  </div>
+                )}
+                {focusTab === "editar" && (
+                  <div className="duofy-card rounded-2xl p-4">
+                    <p className="mb-1 text-xs font-semibold text-ink">Prévia</p>
+                    <div className="max-h-80 overflow-y-auto duofy-scroll"><Markdown content={ef.content || "_Sem conteúdo._"} /></div>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          </>
         )}
       </div>
     )
