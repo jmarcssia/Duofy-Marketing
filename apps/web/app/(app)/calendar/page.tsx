@@ -60,7 +60,9 @@ import {
 } from "@/lib/briefing"
 import { apiFetch, type Brand, type CalendarEvent } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
+import { friendlyError } from "@/lib/friendly-error"
 import { useBrand } from "@/lib/brand-context"
+import { allowedPiecesFor, PIECES_BY_CHANNEL } from "@/lib/pieces"
 import { downloadFile } from "@/lib/download"
 
 import { EventDetailPanel } from "./EventDetailPanel"
@@ -94,36 +96,6 @@ const RECURRENCE_OPTIONS: [string, string][] = [
   ["monthly", "Mensal"]
 ]
 const RECURRENCE_LABELS: Record<string, string> = Object.fromEntries(RECURRENCE_OPTIONS)
-
-/** Peças pré-selecionadas quando o canal entra na seleção (mesma lógica da cocriação). */
-const PIECES_BY_CHANNEL: Record<string, string[]> = {
-  Instagram: ["carousel", "caption_instagram", "visual_direction"],
-  LinkedIn: ["carousel", "caption_linkedin", "visual_direction"],
-  WhatsApp: ["whatsapp"],
-  "E-mail": ["email"],
-  Blog: ["blog"],
-  Release: ["release"],
-  Pitch: ["pitch"],
-  "Landing page": ["landing_page"]
-}
-
-/** Peças visíveis/coerentes com os canais selecionados (mesma lógica da cocriação). */
-function allowedPiecesFor(channels: string[]): Set<string> {
-  const set = new Set<string>()
-  if (channels.includes("Instagram") || channels.includes("LinkedIn")) {
-    for (const p of ["carousel", "caption_instagram", "caption_linkedin", "visual_direction"]) set.add(p)
-  }
-  if (channels.includes("WhatsApp")) {
-    set.add("whatsapp")
-    set.add("whatsapp_image_prompt")
-  }
-  if (channels.includes("E-mail")) set.add("email")
-  if (channels.includes("Blog")) set.add("blog")
-  if (channels.includes("Release")) set.add("release")
-  if (channels.includes("Pitch")) set.add("pitch")
-  if (channels.includes("Landing page")) set.add("landing_page")
-  return set
-}
 
 /** Chaves do briefing controladas pelos campos do wizard (o resto vira "extra"). */
 const UI_BRIEFING_KEYS = new Set([
@@ -481,7 +453,7 @@ export default function CalendarPage() {
       setSelectedDay(form.date)
       await load()
     } catch (e: unknown) {
-      setFormError(e instanceof Error ? e.message : "Falha ao salvar o evento.")
+      setFormError(friendlyError(e, "Falha ao salvar o evento."))
     }
     setSaving(false)
   }
@@ -503,7 +475,7 @@ export default function CalendarPage() {
       setObjective("")
       await load()
     } catch (e: unknown) {
-      setGenMsg(e instanceof Error ? e.message : "Falha ao gerar calendário.")
+      setGenMsg(friendlyError(e, "Falha ao gerar calendário."))
     }
     setGenerating(false)
   }
@@ -526,8 +498,8 @@ export default function CalendarPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-[30px] font-extrabold tracking-[-0.04em] text-ink">
-            <CalendarIcon className="h-7 w-7 text-purple" /> Calendário
+          <h1 className="flex items-center gap-2.5 font-display text-[26px] font-bold leading-[1.1] tracking-[-0.025em] text-ink">
+            <CalendarIcon className="h-6 w-6 text-brand" /> Calendário
           </h1>
           <p className="mt-1 text-sm text-muted">Centro operacional por marca: pesquisa, conteúdo e entregas em um fluxo só.{brandName ? ` Marca: ${brandName}.` : ""}</p>
         </div>

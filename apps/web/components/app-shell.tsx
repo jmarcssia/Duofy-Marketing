@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react"
 import { apiFetch, type AuditEvent, type ContentOutput, type MemorySearchResult, type User } from "@/lib/api"
 import { clearTokenCookie, getTokenFromCookie } from "@/lib/auth"
 import { DuofyLogo } from "@/components/duofy-logo"
+import { brandAccent } from "@/lib/brand-accent"
 import { useBrand } from "@/lib/brand-context"
 import {
   BellIcon,
@@ -24,18 +25,31 @@ import {
   SparklesIcon
 } from "@/components/icons"
 
-// Navegação principal V2 — Calendário permanece o centro operacional, mas Pesquisa,
-// Cocriação e Publicações passam a ter páginas próprias. Memória vira item secundário.
-const navItems = [
-  { href: "/operations", label: "Operações", icon: GridIcon },
-  { href: "/calendar", label: "Calendário", icon: CalendarIcon },
-  { href: "/research", label: "Agente de Pesquisa", icon: SearchIcon },
-  { href: "/content", label: "Agente de Cocriação", icon: SparklesIcon },
-  { href: "/approvals", label: "Revisão", icon: ShieldCheckIcon },
-  { href: "/publicacoes", label: "Publicações", icon: SendIcon },
-  { href: "/relatorios", label: "Relatórios", icon: ChartIcon },
-  // /redes (Redes & Tráfego) está fora do escopo V1 — oculto até haver integração real.
-  { href: "/admin", label: "Administração", icon: SettingsIcon }
+// Navegação agrupada pela jornada: Operar → Produzir → Governar. Rótulos curtos e coerentes.
+const navGroups = [
+  {
+    label: "Operar",
+    items: [
+      { href: "/operations", label: "Operações", icon: GridIcon },
+      { href: "/calendar", label: "Calendário", icon: CalendarIcon }
+    ]
+  },
+  {
+    label: "Produzir",
+    items: [
+      { href: "/research", label: "Pesquisa", icon: SearchIcon },
+      { href: "/content", label: "Cocriação", icon: SparklesIcon }
+    ]
+  },
+  {
+    label: "Governar",
+    items: [
+      { href: "/approvals", label: "Revisão", icon: ShieldCheckIcon },
+      { href: "/publicacoes", label: "Publicações", icon: SendIcon },
+      { href: "/relatorios", label: "Relatórios", icon: ChartIcon },
+      { href: "/admin", label: "Administração", icon: SettingsIcon }
+    ]
+  }
 ]
 
 // Itens secundários (rodapé da sidebar) — acessíveis, fora da barra principal.
@@ -208,6 +222,74 @@ function BellPopover() {
   )
 }
 
+function BrandSelector() {
+  const { brands, selected, setSelected } = useBrand()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const current = brands.find((b) => b.slug === selected)
+
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener("mousedown", onDoc)
+    return () => document.removeEventListener("mousedown", onDoc)
+  }, [])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((p) => !p)}
+        className="duofy-tap flex h-11 items-center gap-2.5 rounded-xl border border-line bg-white pl-3 pr-2.5 text-sm font-semibold text-ink hover:border-brand/40"
+      >
+        <span
+          className="h-3 w-3 shrink-0 rounded-full ring-2 ring-white"
+          style={{ backgroundColor: brandAccent(selected), boxShadow: "0 0 0 1px rgba(23,22,31,0.08)" }}
+        />
+        <span className="max-w-[190px] truncate">{current?.name ?? "Selecionar marca"}</span>
+        <ChevronDownIcon className="h-4 w-4 text-muted" />
+      </button>
+      {open ? (
+        <div className="duofy-raised absolute left-0 top-[calc(100%+8px)] z-50 w-[280px] rounded-xl p-1.5">
+          <p className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted/70">
+            Marca ativa
+          </p>
+          {brands.length === 0 ? (
+            <p className="px-2.5 py-2 text-sm text-muted">Carregando marcas…</p>
+          ) : (
+            brands.map((b) => {
+              const active = b.slug === selected
+              return (
+                <button
+                  key={b.slug}
+                  onClick={() => {
+                    setSelected(b.slug)
+                    setOpen(false)
+                  }}
+                  className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition ${
+                    active ? "bg-brand-50 font-semibold text-brand" : "text-ink hover:bg-surface"
+                  }`}
+                >
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: brandAccent(b.slug) }}
+                  />
+                  <span className="truncate">{b.name}</span>
+                  {active ? (
+                    <svg viewBox="0 0 20 20" className="ml-auto h-4 w-4 text-brand" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m5 10.5 3.5 3.5 6-7" />
+                    </svg>
+                  ) : null}
+                </button>
+              )
+            })
+          )}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 function UserMenu({ user }: { user: User | null }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -232,9 +314,9 @@ function UserMenu({ user }: { user: User | null }) {
 
   return (
     <div ref={wrapperRef} className="relative">
-      <button onClick={() => setOpen((p) => !p)} className="flex items-center gap-3 rounded-full py-1 pl-1 pr-2 transition hover:bg-purple-soft/60">
-        <span className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-orange/30 to-purple/30 text-sm font-bold text-ink">
-          {name.slice(0, 1)}
+      <button onClick={() => setOpen((p) => !p)} className="duofy-tap flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2.5 transition hover:bg-surface">
+        <span className="grid h-9 w-9 place-items-center rounded-full bg-brand-50 text-sm font-bold text-brand">
+          {name.slice(0, 1).toUpperCase()}
         </span>
         <span className="hidden text-left leading-tight md:block">
           <span className="block text-sm font-semibold text-ink">{name}</span>
@@ -253,26 +335,59 @@ function UserMenu({ user }: { user: User | null }) {
   )
 }
 
+function NavItem({
+  href,
+  label,
+  Icon,
+  active,
+  onNavigate
+}: {
+  href: string
+  label: string
+  Icon: (props: { className?: string }) => JSX.Element
+  active: boolean
+  onNavigate?: () => void
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onNavigate}
+      aria-current={active ? "page" : undefined}
+      className={`relative flex items-center gap-3 rounded-xl py-2.5 pl-3.5 pr-3 text-[14px] transition ${
+        active
+          ? "bg-brand-50 font-semibold text-brand"
+          : "font-medium text-muted hover:bg-surface hover:text-ink"
+      }`}
+    >
+      {active ? (
+        <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-brand" />
+      ) : null}
+      <Icon className={`h-[18px] w-[18px] ${active ? "text-brand" : "text-muted"}`} />
+      <span>{label}</span>
+    </Link>
+  )
+}
+
 function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
   return (
-    <nav className="space-y-1">
-      {navItems.map((item) => {
-        const Icon = item.icon
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onNavigate}
-            className={`flex items-center gap-3 rounded-xl px-3.5 py-3 text-[15px] transition ${
-              active ? "bg-purple-soft font-semibold text-purple" : "text-muted hover:bg-purple-soft/50 hover:text-ink"
-            }`}
-          >
-            <Icon className={`h-5 w-5 ${active ? "text-purple" : "text-muted"}`} />
-            <span className="font-medium">{item.label}</span>
-          </Link>
-        )
-      })}
+    <nav className="space-y-6">
+      {navGroups.map((group) => (
+        <div key={group.label} className="space-y-1">
+          <p className="px-3.5 pb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted/70">
+            {group.label}
+          </p>
+          {group.items.map((item) => (
+            <NavItem
+              key={item.href}
+              href={item.href}
+              label={item.label}
+              Icon={item.icon}
+              active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
+              onNavigate={onNavigate}
+            />
+          ))}
+        </div>
+      ))}
     </nav>
   )
 }
@@ -287,23 +402,16 @@ function SidebarBody({ pathname, onNavigate }: { pathname: string; onNavigate?: 
         <NavLinks pathname={pathname} onNavigate={onNavigate} />
       </div>
       <div className="space-y-1 border-t border-line pt-3">
-        {secondaryItems.map((item) => {
-          const Icon = item.icon
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
-          return (
-            <Link
-              key={item.label}
-              href={item.href}
-              onClick={onNavigate}
-              className={`flex items-center gap-3 rounded-xl px-3.5 py-3 text-[15px] font-medium transition ${
-                active ? "bg-purple-soft text-purple" : "text-muted hover:bg-purple-soft/50 hover:text-ink"
-              }`}
-            >
-              <Icon className="h-5 w-5" />
-              {item.label}
-            </Link>
-          )
-        })}
+        {secondaryItems.map((item) => (
+          <NavItem
+            key={item.href}
+            href={item.href}
+            label={item.label}
+            Icon={item.icon}
+            active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
+            onNavigate={onNavigate}
+          />
+        ))}
       </div>
     </>
   )
@@ -311,7 +419,6 @@ function SidebarBody({ pathname, onNavigate }: { pathname: string; onNavigate?: 
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const { brands, selected, setSelected } = useBrand()
   const [user, setUser] = useState<User | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -328,8 +435,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [pathname])
 
   return (
-    <main className="min-h-screen bg-[#f7f7fb] text-ink">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col border-r border-line bg-white px-4 py-6 text-ink lg:flex">
+    <main className="min-h-screen bg-paper text-ink">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col border-r border-line bg-paper px-4 py-6 text-ink lg:flex">
         <SidebarBody pathname={pathname} />
       </aside>
 
@@ -353,30 +460,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ) : null}
 
       <section className="min-h-screen lg:pl-[248px]">
-        <header className="sticky top-0 z-20 flex h-[78px] items-center gap-3 border-b border-line bg-white/95 px-4 backdrop-blur md:gap-5 md:px-7">
-          <button onClick={() => setMobileOpen(true)} aria-label="Abrir menu" className="grid h-10 w-10 place-items-center rounded-lg border border-line text-ink transition hover:bg-purple-soft hover:text-purple lg:hidden">
+        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-line bg-paper/85 px-4 backdrop-blur-sm md:gap-4 md:px-8">
+          <button onClick={() => setMobileOpen(true)} aria-label="Abrir menu" className="grid h-10 w-10 place-items-center rounded-lg border border-line text-ink transition hover:bg-surface lg:hidden">
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />
             </svg>
           </button>
 
-          <label className="hidden h-11 shrink-0 items-center gap-2 rounded-xl border border-line bg-white px-3 text-sm font-semibold shadow-soft sm:flex">
-            <select
-              value={selected}
-              onChange={(e) => setSelected(e.target.value)}
-              className="max-w-[200px] bg-transparent pr-1 outline-none"
-            >
-              {brands.length === 0 ? (
-                <option value="">Carregando marcas…</option>
-              ) : (
-                brands.map((b) => (
-                  <option key={b.slug} value={b.slug}>
-                    {b.name}
-                  </option>
-                ))
-              )}
-            </select>
-          </label>
+          <div className="hidden sm:block">
+            <BrandSelector />
+          </div>
 
           <GlobalSearch />
 
@@ -384,7 +477,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <UserMenu user={user} />
         </header>
 
-        <div className="px-4 py-6 md:px-7 md:py-7">{children}</div>
+        <div className="mx-auto w-full max-w-[1280px] px-4 py-7 md:px-8">{children}</div>
       </section>
     </main>
   )

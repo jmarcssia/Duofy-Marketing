@@ -12,6 +12,7 @@ import {
   type ContentPiece
 } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
+import { friendlyError } from "@/lib/friendly-error"
 
 const MANUAL_KINDS: [string, string][] = [
   ["whatsapp", "WhatsApp"],
@@ -50,7 +51,7 @@ export function PiecesReview({ outputId, onChanged }: { outputId: number; onChan
       setPieces(await listContentPieces(outputId, token))
       setError(null)
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Falha ao carregar peças.")
+      setError(friendlyError(e, "Falha ao carregar peças."))
     }
     setLoading(false)
   }, [outputId])
@@ -68,7 +69,7 @@ export function PiecesReview({ outputId, onChanged }: { outputId: number; onChan
       await load()
       onChanged?.()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Falha ao atualizar a peça.")
+      setError(friendlyError(e, "Falha ao atualizar a peça."))
     }
     setBusy(null)
   }
@@ -97,7 +98,7 @@ export function PiecesReview({ outputId, onChanged }: { outputId: number; onChan
       await load()
       onChanged?.()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Falha ao refinar a peça.")
+      setError(friendlyError(e, "Falha ao refinar a peça."))
     }
     setRefineBusy(null)
   }
@@ -113,7 +114,7 @@ export function PiecesReview({ outputId, onChanged }: { outputId: number; onChan
       await load()
       onChanged?.()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Falha ao adicionar peça.")
+      setError(friendlyError(e, "Falha ao adicionar peça."))
     }
     setAdding(false)
   }

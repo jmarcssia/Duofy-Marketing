@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/app-shell"
+import { ToastProvider } from "@/components/ui"
 import { BrandProvider } from "@/lib/brand-context"
 
 export default function AppLayout({
@@ -8,7 +9,9 @@ export default function AppLayout({
 }>) {
   return (
     <BrandProvider>
-      <AppShell>{children}</AppShell>
+      <ToastProvider>
+        <AppShell>{children}</AppShell>
+      </ToastProvider>
     </BrandProvider>
   )
 }

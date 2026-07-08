@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui"
 import { PlusIcon, RefreshIcon } from "@/components/icons"
 import { apiFetch } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
+import { friendlyError } from "@/lib/friendly-error"
 import { useBrand } from "@/lib/brand-context"
 import { Markdown } from "@/components/markdown"
 
@@ -183,7 +184,7 @@ export default function AdminPage() {
       await loadAll()
       flash("Provedor atualizado.")
     } catch (e: unknown) {
-      flash(e instanceof Error ? e.message : "Falha ao salvar provedor.")
+      flash(friendlyError(e, "Falha ao salvar provedor."))
     }
     setSavingProvider(false)
   }
@@ -200,7 +201,7 @@ export default function AdminPage() {
       })
       flash("Limites de agentes salvos.")
     } catch (e: unknown) {
-      flash(e instanceof Error ? e.message : "Falha ao salvar limites.")
+      flash(friendlyError(e, "Falha ao salvar limites."))
     }
     setSavingSkills(false)
   }
@@ -217,7 +218,7 @@ export default function AdminPage() {
       })
       flash("Configuração de qualidade salva.")
     } catch (e: unknown) {
-      flash(e instanceof Error ? e.message : "Falha ao salvar qualidade.")
+      flash(friendlyError(e, "Falha ao salvar qualidade."))
     }
     setSavingQuality(false)
   }
@@ -273,7 +274,7 @@ export default function AdminPage() {
       setTestResult(data)
       loadRuns(selectedAgent.slug)
     } catch (e: unknown) {
-      setTestError(e instanceof Error ? e.message : "Erro desconhecido")
+      setTestError(friendlyError(e, "Erro desconhecido"))
     }
     setTestLoading(false)
   }

@@ -32,6 +32,7 @@ import {
   type PublicationChannel
 } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
+import { friendlyError } from "@/lib/friendly-error"
 import { useBrand } from "@/lib/brand-context"
 
 const CHANNEL_STATUS: Record<string, { label: string; tone: Tone }> = {
@@ -127,7 +128,7 @@ export default function PublicacoesPage() {
       }
       setMsg("Mídia anexada.")
     } catch (e: unknown) {
-      setMsg(e instanceof Error ? e.message : "Falha no upload da mídia.")
+      setMsg(friendlyError(e, "Falha no upload da mídia."))
     }
     setBusy(false)
   }
@@ -158,7 +159,7 @@ export default function PublicacoesPage() {
       resetComposer()
       await load()
     } catch (e: unknown) {
-      setMsg(e instanceof Error ? e.message : "Falha ao salvar.")
+      setMsg(friendlyError(e, "Falha ao salvar."))
     }
     setBusy(false)
   }
@@ -173,7 +174,7 @@ export default function PublicacoesPage() {
       await load()
     } catch (e: unknown) {
       // Meta stub: mensagem honesta do backend aparece aqui (não finge sucesso).
-      setMsg(e instanceof Error ? e.message : "Falha ao publicar.")
+      setMsg(friendlyError(e, "Falha ao publicar."))
       await load()
     }
     setBusy(false)
@@ -201,7 +202,7 @@ export default function PublicacoesPage() {
     try {
       await apiFetch(`/api/publications/channels`, token, { method: "POST", body: JSON.stringify({ brand_slug: brand, platform: chPlatform, display_name: chName.trim() }) })
       setChName(""); await load()
-    } catch (e: unknown) { setMsg(e instanceof Error ? e.message : "Falha ao conectar canal.") }
+    } catch (e: unknown) { setMsg(friendlyError(e, "Falha ao conectar canal.")) }
     setBusy(false)
   }
 

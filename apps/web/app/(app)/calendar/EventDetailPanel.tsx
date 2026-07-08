@@ -25,6 +25,7 @@ import {
   type ContentPiece
 } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
+import { friendlyError } from "@/lib/friendly-error"
 import { useBrand } from "@/lib/brand-context"
 import { briefingSummaryRows, labelOf, PECAS, type StructuredBriefing } from "@/lib/briefing"
 
@@ -106,7 +107,7 @@ export function EventDetailPanel({
       setDetail(await getCalendarEventDetail(eventId, brandSlug, token))
       setError(null)
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Falha ao carregar o evento.")
+      setError(friendlyError(e, "Falha ao carregar o evento."))
     }
     setLoading(false)
   }, [eventId, brandSlug])
@@ -153,7 +154,7 @@ export function EventDetailPanel({
         // fontes insuficientes) → mostra a mensagem e para o polling, sem spinner de 210s.
         if (!done && Date.now() - start < 25_000) {
           done = true
-          setError(e instanceof Error ? e.message : "Falha ao executar a pesquisa.")
+          setError(friendlyError(e, "Falha ao executar a pesquisa."))
         }
         // Caso contrário: provável timeout do proxy — o polling recupera.
       })
@@ -188,7 +189,7 @@ export function EventDetailPanel({
         // pesquisa) → mostra a mensagem e para, em vez de girar 210s.
         if (!done && Date.now() - start < 25_000) {
           done = true
-          setError(e instanceof Error ? e.message : "Falha ao executar a cocriação.")
+          setError(friendlyError(e, "Falha ao executar a cocriação."))
         }
       })
     while (!done && Date.now() - start < 210_000) {
@@ -216,7 +217,7 @@ export function EventDetailPanel({
       onChanged()
     } catch (e: unknown) {
       // Meta ainda não integrada: a mensagem clara do backend aparece aqui (não finge sucesso).
-      setError(e instanceof Error ? e.message : "Falha ao publicar.")
+      setError(friendlyError(e, "Falha ao publicar."))
     }
     setPublishing(false)
   }
@@ -230,7 +231,7 @@ export function EventDetailPanel({
       setDetail(d)
       onChanged()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Falha ao alterar a pausa.")
+      setError(friendlyError(e, "Falha ao alterar a pausa."))
     }
   }
 

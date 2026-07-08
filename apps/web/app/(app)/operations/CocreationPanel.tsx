@@ -62,6 +62,7 @@ import {
 } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
 import { friendlyError } from "@/lib/friendly-error"
+import { allowedPiecesFor, PIECES_BY_CHANNEL } from "@/lib/pieces"
 import { useBrand } from "@/lib/brand-context"
 
 import { PiecesReview } from "./PiecesReview"
@@ -78,36 +79,6 @@ const DEPTHS: Option[] = [
 ]
 
 const SOCIAL_CHANNELS = ["Instagram", "LinkedIn", "Facebook"]
-
-/** Peças pré-selecionadas quando o canal entra na seleção (FASE 6.6). */
-const PIECES_BY_CHANNEL: Record<string, string[]> = {
-  Instagram: ["carousel", "caption_instagram", "visual_direction"],
-  LinkedIn: ["carousel", "caption_linkedin", "visual_direction"],
-  WhatsApp: ["whatsapp"],
-  "E-mail": ["email"],
-  Blog: ["blog"],
-  Release: ["release"],
-  Pitch: ["pitch"],
-  "Landing page": ["landing_page"]
-}
-
-/** Peças visíveis/coerentes com os canais selecionados. */
-function allowedPiecesFor(channels: string[]): Set<string> {
-  const set = new Set<string>()
-  if (channels.includes("Instagram") || channels.includes("LinkedIn")) {
-    for (const p of ["carousel", "caption_instagram", "caption_linkedin", "visual_direction"]) set.add(p)
-  }
-  if (channels.includes("WhatsApp")) {
-    set.add("whatsapp")
-    set.add("whatsapp_image_prompt")
-  }
-  if (channels.includes("E-mail")) set.add("email")
-  if (channels.includes("Blog")) set.add("blog")
-  if (channels.includes("Release")) set.add("release")
-  if (channels.includes("Pitch")) set.add("pitch")
-  if (channels.includes("Landing page")) set.add("landing_page")
-  return set
-}
 
 type CocreationTemplate = {
   id: string

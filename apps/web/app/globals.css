@@ -3,12 +3,13 @@
 @tailwind utilities;
 
 :root {
-  --background: #f7f7fb;
-  --foreground: #11131a;
-  --muted: #6b7280;
-  --line: #e9e8ef;
-  --purple: #6d35ee;
-  --purple-soft: #f4efff;
+  --background: #faf9fd; /* paper */
+  --foreground: #17161f; /* ink */
+  --muted: #6a6976;
+  --line: #e8e7f0;
+  --brand: #5a34e0;
+  --brand-soft: #f1eeff;
+  --signal: #c17722;
 }
 
 * {
@@ -25,6 +26,8 @@ body {
   margin: 0;
   color: var(--foreground);
   background: var(--background);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   font-feature-settings:
     "cv02",
     "cv03",
@@ -39,28 +42,39 @@ textarea {
   font: inherit;
 }
 
+::selection {
+  background: rgba(90, 52, 224, 0.16);
+}
+
+/* Cartão padrão: "flat" — borda 1px + sombra mínima. É o que faz o app ler como clean/premium. */
 .duofy-card {
   border: 1px solid var(--line);
   background: #ffffff;
-  box-shadow:
-    0 1px 2px rgba(18, 20, 30, 0.04),
-    0 12px 32px rgba(18, 20, 30, 0.05);
+  box-shadow: 0 1px 2px rgba(23, 22, 31, 0.04);
 }
 
-/* Card interativo: leve elevação no hover, sem exagero. */
+/* Cartão interativo: no hover ganha borda de marca + leve realce, sem "levitar". */
 .duofy-card-hover {
   transition:
-    transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
     box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 200ms ease;
+    border-color 200ms ease,
+    background-color 200ms ease;
 }
 
 .duofy-card-hover:hover {
-  transform: translateY(-2px);
-  border-color: rgba(109, 53, 238, 0.28);
+  border-color: rgba(90, 52, 224, 0.35);
   box-shadow:
-    0 1px 2px rgba(18, 20, 30, 0.04),
-    0 18px 44px rgba(91, 41, 214, 0.1);
+    0 1px 2px rgba(23, 22, 31, 0.05),
+    0 8px 24px rgba(90, 52, 224, 0.07);
+}
+
+/* Painel elevado (popovers/drawers). */
+.duofy-raised {
+  border: 1px solid var(--line);
+  background: #ffffff;
+  box-shadow:
+    0 1px 2px rgba(23, 22, 31, 0.05),
+    0 10px 28px rgba(23, 22, 31, 0.06);
 }
 
 /* Transições suaves padrão em controles interativos. */
@@ -90,14 +104,20 @@ a,
 
 .duofy-focus:focus-visible,
 .duofy-focus:focus {
-  border-color: rgba(109, 53, 238, 0.6);
-  box-shadow: 0 0 0 4px rgba(109, 53, 238, 0.12);
+  border-color: rgba(90, 52, 224, 0.6);
+  box-shadow: 0 0 0 4px rgba(90, 52, 224, 0.12);
 }
 
 /* Anel de foco acessível global para navegação por teclado. */
 :focus-visible {
-  outline: 2px solid rgba(109, 53, 238, 0.55);
+  outline: 2px solid rgba(90, 52, 224, 0.55);
   outline-offset: 2px;
+}
+
+/* Números tabulares para métricas/KPIs. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 
 .duofy-scroll::-webkit-scrollbar {
@@ -106,7 +126,7 @@ a,
 }
 
 .duofy-scroll::-webkit-scrollbar-thumb {
-  background: #e3e2ec;
+  background: #e0dfea;
   border-radius: 999px;
   transition: background 160ms ease;
 }
@@ -120,7 +140,7 @@ a,
 }
 
 .duofy-skeleton {
-  background: linear-gradient(90deg, #f1f0f6 25%, #e9e8ef 37%, #f1f0f6 63%);
+  background: linear-gradient(90deg, #f3f2f8 25%, #ebeaf3 37%, #f3f2f8 63%);
   background-size: 400% 100%;
   animation: duofy-shimmer 1.4s ease infinite;
   border-radius: 10px;
@@ -132,5 +152,15 @@ a,
   }
   100% {
     background-position: 0 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
   }
 }

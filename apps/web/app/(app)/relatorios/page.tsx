@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { AreaLineChart, DonutChart, HBarChart, Legend } from "@/components/charts"
-import { Segmented, StatCard } from "@/components/ui"
+import { Segmented, StatCard, useToast } from "@/components/ui"
 import { Markdown } from "@/components/markdown"
 import {
   AlertTriangleIcon,
@@ -20,6 +20,7 @@ import {
 } from "@/components/icons"
 import { apiFetch, type InternalReport, type MetricsSummary, type ModelCall, type Publication } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
+import { friendlyError } from "@/lib/friendly-error"
 import { useBrand } from "@/lib/brand-context"
 import { downloadFile, exportPath } from "@/lib/download"
 
@@ -39,9 +40,10 @@ function startFor(period: Period, nowMs: number): string | null {
 
 const usd = (v: number) => `US$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`
 const num = (v: number) => v.toLocaleString("pt-BR")
-const DONUT_COLORS = ["#6d35ee", "#8b5cf6", "#2563eb", "#0d9488", "#f97316", "#db2777"]
+const DONUT_COLORS = ["#5a34e0", "#3e63c8", "#0d7d72", "#c17722", "#c14a86", "#4a3fce"]
 
 export default function RelatoriosPage() {
+  const toast = useToast()
   const { selected: brand, brands } = useBrand()
   const brandName = (slug: string | null | undefined) =>
     slug ? brands.find((b) => b.slug === slug)?.name ?? slug : null
@@ -84,7 +86,7 @@ export default function RelatoriosPage() {
     try {
       await downloadFile(exportPath(`/api/reports/${id}`, format), token, `duofy-relatorio-${id}.${format}`)
     } catch (e: unknown) {
-      window.alert(e instanceof Error && e.message ? e.message : "Falha ao exportar o relatório.")
+      toast(friendlyError(e, "Falha ao exportar o relatório."), "danger")
     }
   }
 
@@ -147,7 +149,7 @@ export default function RelatoriosPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-[30px] font-extrabold tracking-[-0.04em] text-ink">Relatórios</h1>
+          <h1 className="font-display text-[26px] font-bold leading-[1.1] tracking-[-0.025em] text-ink">Relatórios</h1>
           <p className="mt-1 text-sm text-muted">Custos e uso de IA reais — dados do OpenRouter via model_calls.{brand ? ` Marca: ${brandName(brand)}.` : " Todas as marcas."}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

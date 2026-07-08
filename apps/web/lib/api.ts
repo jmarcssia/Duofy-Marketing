@@ -775,12 +775,23 @@ export async function apiFetch<T>(path: string, _token?: string, init?: RequestI
     }
   })
 
+  // Sessão expirada: limpa a flag e manda ao login (evita erros genéricos espalhados).
+  if (response.status === 401 && typeof window !== "undefined" && !path.includes("/auth/")) {
+    document.cookie = "duofy_auth=; Max-Age=0; path=/"
+    if (!window.location.pathname.startsWith("/login")) {
+      window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`
+    }
+    throw new Error("Sessão expirada.")
+  }
+
   if (!response.ok) {
     const message = await response.text()
     throw new Error(message || `Request failed with status ${response.status}`)
   }
 
-  return response.json() as Promise<T>
+  // Corpo vazio (200/204 sem JSON) não deve virar "Unexpected end of JSON input".
+  const text = await response.text()
+  return (text ? JSON.parse(text) : undefined) as T
 }
 
 // --- FASE 9: Publicações e Canais ---

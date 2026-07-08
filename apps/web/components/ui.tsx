@@ -1,6 +1,6 @@
 "use client"
 
-import type { ReactNode } from "react"
+import { createContext, type ReactNode, useCallback, useContext, useState } from "react"
 
 import { ChevronDownIcon, TrendDownIcon, TrendUpIcon } from "@/components/icons"
 
@@ -94,7 +94,9 @@ export function StatCard({
       </div>
       <div className="min-w-0">
         <p className="text-sm text-muted">{label}</p>
-        <p className="mt-1 text-[26px] font-extrabold leading-none tracking-[-0.03em] text-ink">{value}</p>
+        <p className="tabular mt-1 font-display text-[26px] font-bold leading-none tracking-[-0.02em] text-ink">
+          {value}
+        </p>
         {delta ? (
           <p
             className={`mt-2 flex items-center gap-1 text-xs font-semibold ${
@@ -222,11 +224,11 @@ export function ProgressRing({
   const radius = (size - stroke) / 2
   const circ = 2 * Math.PI * radius
   const offset = circ - (Math.min(100, Math.max(0, value)) / 100) * circ
-  const color = value >= 80 ? "#16a34a" : value >= 60 ? "#d97706" : "#ef4444"
+  const color = value >= 80 ? "#1e8e5a" : value >= 60 ? "#b7791f" : "#d8483f"
   return (
     <div className="relative grid place-items-center" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} stroke="#eceaf4" strokeWidth={stroke} fill="none" />
+        <circle cx={size / 2} cy={size / 2} r={radius} stroke="#ece9f6" strokeWidth={stroke} fill="none" />
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -241,7 +243,7 @@ export function ProgressRing({
         />
       </svg>
       <div className="absolute text-center">
-        <span className="block text-2xl font-extrabold text-ink">{value}</span>
+        <span className="tabular block font-display text-2xl font-bold text-ink">{value}</span>
         {label ? <span className="block text-[10px] font-medium text-muted">{label}</span> : null}
       </div>
     </div>
@@ -355,13 +357,15 @@ export function PageHeader({
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="flex items-start gap-3">
         {icon ? (
-          <span className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-purple-soft text-purple">
+          <span className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand">
             {icon}
           </span>
         ) : null}
         <div>
-          <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.035em] text-ink">{title}</h1>
-          {subtitle ? <p className="mt-0.5 text-sm text-muted">{subtitle}</p> : null}
+          <h1 className="font-display text-[26px] font-bold leading-[1.1] tracking-[-0.025em] text-ink">
+            {title}
+          </h1>
+          {subtitle ? <p className="mt-1 text-sm text-muted">{subtitle}</p> : null}
         </div>
       </div>
       {right}
@@ -383,7 +387,7 @@ export function SectionHeader({
   return (
     <div className={`flex items-start justify-between gap-3 ${className}`}>
       <div>
-        <h2 className="text-base font-bold tracking-[-0.02em] text-ink">{title}</h2>
+        <h2 className="font-display text-[17px] font-semibold tracking-[-0.015em] text-ink">{title}</h2>
         {subtitle ? <p className="mt-0.5 text-xs text-muted">{subtitle}</p> : null}
       </div>
       {right}
@@ -475,6 +479,115 @@ export function SidePanel({
       {children}
     </aside>
   )
+}
+
+/* ---------------- Card ---------------- */
+
+export function Card({
+  children,
+  className = "",
+  hover = false,
+  padded = true
+}: {
+  children: ReactNode
+  className?: string
+  hover?: boolean
+  padded?: boolean
+}) {
+  return (
+    <div
+      className={`duofy-card rounded-2xl ${hover ? "duofy-card-hover" : ""} ${padded ? "p-5" : ""} ${className}`}
+    >
+      {children}
+    </div>
+  )
+}
+
+export function SectionCard({
+  title,
+  subtitle,
+  right,
+  children,
+  className = ""
+}: {
+  title?: string
+  subtitle?: string
+  right?: ReactNode
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <div className={`duofy-card rounded-2xl p-5 ${className}`}>
+      {title ? <SectionHeader title={title} subtitle={subtitle} right={right} className="mb-4" /> : null}
+      {children}
+    </div>
+  )
+}
+
+/* ---------------- Buttons (primary / secondary) ---------------- */
+
+type BtnProps = React.ButtonHTMLAttributes<HTMLButtonElement> & { block?: boolean }
+
+export function PrimaryButton({ className = "", block = false, children, ...rest }: BtnProps) {
+  return (
+    <button
+      {...rest}
+      className={`duofy-tap inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50 ${block ? "w-full" : ""} ${className}`}
+    >
+      {children}
+    </button>
+  )
+}
+
+export function SecondaryButton({ className = "", block = false, children, ...rest }: BtnProps) {
+  return (
+    <button
+      {...rest}
+      className={`duofy-tap inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-line bg-white px-4 text-sm font-semibold text-ink hover:border-brand/40 hover:text-brand disabled:cursor-not-allowed disabled:opacity-50 ${block ? "w-full" : ""} ${className}`}
+    >
+      {children}
+    </button>
+  )
+}
+
+/* ---------------- Toast (notificação global) ---------------- */
+
+type ToastTone = "default" | "positive" | "danger"
+type ToastItem = { id: number; message: string; tone: ToastTone }
+const ToastCtx = createContext<(message: string, tone?: ToastTone) => void>(() => {})
+
+export function ToastProvider({ children }: { children: ReactNode }) {
+  const [items, setItems] = useState<ToastItem[]>([])
+  const push = useCallback((message: string, tone: ToastTone = "default") => {
+    const id = Date.now() + Math.random()
+    setItems((prev) => [...prev, { id, message, tone }])
+    setTimeout(() => setItems((prev) => prev.filter((t) => t.id !== id)), 4200)
+  }, [])
+  return (
+    <ToastCtx.Provider value={push}>
+      {children}
+      <div className="pointer-events-none fixed bottom-6 right-6 z-[100] flex flex-col items-end gap-2">
+        {items.map((t) => (
+          <div
+            key={t.id}
+            className={`duofy-raised pointer-events-auto max-w-sm animate-slide-up rounded-xl px-4 py-3 text-sm font-medium ${
+              t.tone === "danger"
+                ? "bg-red text-white"
+                : t.tone === "positive"
+                  ? "bg-green text-white"
+                  : "bg-ink text-white"
+            }`}
+          >
+            {t.message}
+          </div>
+        ))}
+      </div>
+    </ToastCtx.Provider>
+  )
+}
+
+export function useToast() {
+  return useContext(ToastCtx)
 }
 
 /* ---------------- Checklist row ---------------- */

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-import { Badge, GhostButton, StatCard } from "@/components/ui"
+import { Badge, GhostButton, StatCard, useToast } from "@/components/ui"
 import {
   BookIcon,
   BookmarkIcon,
@@ -26,32 +26,30 @@ import {
   type ResearchTheme
 } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
+import { friendlyError } from "@/lib/friendly-error"
 import { useBrand } from "@/lib/brand-context"
 import { downloadFile, exportPath } from "@/lib/download"
 
-async function downloadDoc(id: number, name: string) {
+type Toast = (message: string, tone?: "default" | "positive" | "danger") => void
+
+async function downloadDoc(id: number, name: string, toast: Toast) {
   const token = getTokenFromCookie()
   if (!token) return
   try {
     await downloadFile(`/api/documents/${id}/download`, token, name)
-  } catch (e: unknown) {
-    // O arquivo original pode não estar no disco (ex.: reindexado/seed). Dá feedback e sugere o PDF.
-    window.alert(
-      (e instanceof Error && e.message
-        ? e.message
-        : "Não foi possível baixar o arquivo original.") +
-        "\nSe o original não estiver disponível, use “Exportar PDF” para gerar do conteúdo indexado."
-    )
+  } catch {
+    // O arquivo original pode não estar no disco (ex.: reindexado/seed). Sugere o PDF.
+    toast("Original indisponível. Use “Exportar PDF” para gerar do conteúdo indexado.", "danger")
   }
 }
 
-async function exportDoc(id: number, name: string) {
+async function exportDoc(id: number, name: string, toast: Toast) {
   const token = getTokenFromCookie()
   if (!token) return
   try {
     await downloadFile(exportPath(`/api/documents/${id}`, "pdf"), token, `${name}.pdf`)
   } catch (e: unknown) {
-    window.alert(e instanceof Error && e.message ? e.message : "Falha ao exportar o documento.")
+    toast(friendlyError(e, "Falha ao exportar o documento."), "danger")
   }
 }
 
@@ -95,6 +93,7 @@ function fmtRelative(iso: string): string {
 }
 
 export default function MemoryPage() {
+  const toast = useToast()
   const { selected: brand } = useBrand()
   const [docs, setDocs] = useState<DocumentItem[]>([])
   const [entries, setEntries] = useState<MemoryEntry[]>([])
@@ -157,7 +156,7 @@ export default function MemoryPage() {
       setNewTheme({ title: "", theme: "", kind: "" })
       setThemeMsg("Tema adicionado.")
       await loadThemes()
-    } catch (e: unknown) { setThemeMsg(e instanceof Error ? e.message : "Falha ao adicionar tema.") }
+    } catch (e: unknown) { setThemeMsg(friendlyError(e, "Falha ao adicionar tema.")) }
     setThemeBusy(false)
   }
 
@@ -181,7 +180,7 @@ export default function MemoryPage() {
       )
       setThemeMsg(`Importados ${res.inserted} novos (de ${res.parsed}; ${res.skipped} já existiam).`)
       await loadThemes()
-    } catch (e: unknown) { setThemeMsg(e instanceof Error ? e.message : "Falha ao importar CSV.") }
+    } catch (e: unknown) { setThemeMsg(friendlyError(e, "Falha ao importar CSV.")) }
     setThemeBusy(false)
   }
 
@@ -213,7 +212,7 @@ export default function MemoryPage() {
       setNewRTheme({ title: "", notes: "" })
       setRThemeMsg("Tema de pesquisa adicionado.")
       await loadResearchThemes()
-    } catch (e: unknown) { setRThemeMsg(e instanceof Error ? e.message : "Falha ao adicionar.") }
+    } catch (e: unknown) { setRThemeMsg(friendlyError(e, "Falha ao adicionar.")) }
     setRThemeBusy(false)
   }
 
@@ -237,7 +236,7 @@ export default function MemoryPage() {
       )
       setRThemeMsg(`Importados ${res.inserted} novos (de ${res.parsed}; ${res.skipped} já existiam).`)
       await loadResearchThemes()
-    } catch (e: unknown) { setRThemeMsg(e instanceof Error ? e.message : "Falha ao importar CSV.") }
+    } catch (e: unknown) { setRThemeMsg(friendlyError(e, "Falha ao importar CSV.")) }
     setRThemeBusy(false)
   }
 
@@ -278,7 +277,7 @@ export default function MemoryPage() {
       setUploadFile(null)
       await load()
     } catch (e: unknown) {
-      setUploadMsg(e instanceof Error ? e.message : "Falha ao enviar documento.")
+      setUploadMsg(friendlyError(e, "Falha ao enviar documento."))
     }
     setUploadBusy(false)
   }
@@ -659,14 +658,14 @@ export default function MemoryPage() {
                           <td className="py-3 text-right">
                             <div className="flex items-center justify-end gap-1">
                               <button
-                                onClick={(e) => { e.stopPropagation(); downloadDoc(d.id, d.filename) }}
+                                onClick={(e) => { e.stopPropagation(); downloadDoc(d.id, d.filename, toast) }}
                                 title="Baixar original"
                                 className="duofy-tap grid h-7 w-7 place-items-center rounded-lg border border-line text-muted hover:border-purple/40 hover:text-purple"
                               >
                                 <DownloadIcon className="h-3.5 w-3.5" />
                               </button>
                               <button
-                                onClick={(e) => { e.stopPropagation(); exportDoc(d.id, d.filename) }}
+                                onClick={(e) => { e.stopPropagation(); exportDoc(d.id, d.filename, toast) }}
                                 title="Exportar PDF"
                                 className="duofy-tap rounded-lg border border-line px-2 py-1 text-[11px] font-semibold text-muted hover:border-purple/40 hover:text-purple"
                               >
