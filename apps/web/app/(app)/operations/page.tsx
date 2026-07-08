@@ -41,6 +41,7 @@ import {
 } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
 import { useBrand } from "@/lib/brand-context"
+import { isResearchOutput, resultHref } from "@/lib/output-kind"
 
 import { BriefingPanel } from "./BriefingPanel"
 import { ThemePicker } from "./ThemePicker"
@@ -73,9 +74,6 @@ function now() {
 }
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
-}
-function isResearch(o: { format?: string; channel?: string; category?: string }) {
-  return o.format === "research_report" || o.channel === "Pesquisa" || o.category === "research"
 }
 
 export default function OperationsPage() {
@@ -119,7 +117,7 @@ export default function OperationsPage() {
         apiFetch<ResearchTheme[]>(`/api/research-themes?limit=500${bq}`, token).catch(() => [])
       ])
       setReports(r)
-      setContent(c.filter((x) => !isResearch(x)))
+      setContent(c.filter((x) => !isResearchOutput(x)))
       setEvents(ev)
       setAudit(au)
       setSummary(sm)
@@ -337,10 +335,10 @@ export default function OperationsPage() {
                 <p className="text-sm text-muted">Nenhuma saída ainda.</p>
               )}
               {recentOutputs.map((o) => {
-                const research = isResearch(o)
+                const research = isResearchOutput(o)
                 const st = STATUS_LABEL[o.status] ?? { label: o.status, tone: "slate" as Tone }
                 return (
-                  <Link key={`${research ? "r" : "c"}${o.id}`} href={research ? "/research" : "/approvals"} className="duofy-card-hover flex flex-col rounded-xl border border-line bg-white p-3.5">
+                  <Link key={`${research ? "r" : "c"}${o.id}`} href={resultHref(o)} className="duofy-card-hover flex flex-col rounded-xl border border-line bg-white p-3.5">
                     <div className="flex items-start justify-between gap-2">
                       <Badge tone={research ? "purple" : "blue"}>{research ? "Pesquisa" : "Conteúdo"}</Badge>
                       <Badge tone={st.tone}>{st.label}</Badge>

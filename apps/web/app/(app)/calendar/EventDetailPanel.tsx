@@ -382,7 +382,7 @@ export function EventDetailPanel({
                         Status: {detail.research_output_status ?? "—"}
                         {detail.research_approved ? " • aprovada" : " • aguardando aprovação"}
                       </p>
-                      <a href="/research" className="duofy-tap mt-2 inline-flex items-center gap-1.5 rounded-lg bg-purple px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-deep">
+                      <a href={`/research?id=${detail.research_output_id}`} className="duofy-tap mt-2 inline-flex items-center gap-1.5 rounded-lg bg-purple px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-deep">
                         <ExternalLinkIcon className="h-3.5 w-3.5" /> Abrir no Agente de Pesquisa
                       </a>
                     </div>
@@ -437,7 +437,7 @@ export function EventDetailPanel({
                         </ul>
                       )}
                       <div className="flex flex-wrap gap-2 pt-1">
-                        <a href="/content" className="duofy-tap inline-flex items-center gap-1.5 rounded-lg bg-purple px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-deep">
+                        <a href={`/content?id=${detail.content_output_id}`} className="duofy-tap inline-flex items-center gap-1.5 rounded-lg bg-purple px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-deep">
                           <SparklesIcon className="h-3.5 w-3.5" /> Abrir na Cocriação
                         </a>
                         <a href="/approvals" className="duofy-tap inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink hover:border-purple/40 hover:text-purple">
@@ -527,7 +527,7 @@ function ResearchActions({
         <div className="space-y-2">
           <p className="text-sm font-semibold text-ink">Pesquisa concluída — aguardando aprovação</p>
           <p className="text-xs text-muted">Aprove a pesquisa na página do Agente de Pesquisa para liberar a cocriação.</p>
-          <a href="/research" className="duofy-tap inline-flex items-center gap-1.5 rounded-lg bg-purple px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-deep">
+          <a href={`/research?id=${detail.research_output_id}`} className="duofy-tap inline-flex items-center gap-1.5 rounded-lg bg-purple px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-deep">
             <ExternalLinkIcon className="h-3.5 w-3.5" /> Abrir no Agente de Pesquisa
           </a>
         </div>

@@ -9,6 +9,7 @@ import { clearTokenCookie, getTokenFromCookie } from "@/lib/auth"
 import { DuofyLogo } from "@/components/duofy-logo"
 import { brandAccent } from "@/lib/brand-accent"
 import { useBrand } from "@/lib/brand-context"
+import { resultHref } from "@/lib/output-kind"
 import {
   BellIcon,
   CalendarIcon,
@@ -123,7 +124,7 @@ function GlobalSearch() {
             <div className="border-b border-line px-3 py-2">
               <p className="mb-1 px-1 text-xs font-semibold uppercase tracking-wide text-muted">Conteúdos</p>
               {results.outputs.slice(0, 5).map((output) => (
-                <Link key={output.id} href={`/approvals`} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-ink hover:bg-purple-soft">
+                <Link key={output.id} href={resultHref(output)} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-ink hover:bg-purple-soft">
                   <FileIcon className="h-4 w-4 shrink-0 text-muted" />
                   <span className="truncate">{output.title}</span>
                 </Link>

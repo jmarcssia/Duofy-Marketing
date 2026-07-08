@@ -25,6 +25,7 @@ import {
 import { apiFetch, type CalendarEvent, type ContentOutput } from "@/lib/api"
 import { getTokenFromCookie } from "@/lib/auth"
 import { useBrand } from "@/lib/brand-context"
+import { isResearchOutput } from "@/lib/output-kind"
 
 type Kind = "pesquisa" | "conteudo" | "evento" | "publicacao"
 type Bucket = "pendente" | "ajuste" | "aprovado" | "concluido"
@@ -60,11 +61,9 @@ type Item = {
   priority: Priority
   bucket: Bucket
   updatedAt: string
+  href: string
 }
 
-function isResearch(o: ContentOutput): boolean {
-  return o.category === "research" || (o.format?.includes("research") ?? false)
-}
 function ageDays(iso: string): number {
   const ms = Date.now() - new Date(iso).getTime()
   return Math.max(0, Math.floor(ms / 86_400_000))
@@ -112,7 +111,7 @@ export default function ReviewPage() {
     // Outputs (pesquisas + conteúdos) — marca do topo escopa a visão.
     for (const o of outputs) {
       if (brand && o.brand_slug !== brand) continue
-      const kind: Kind = isResearch(o) ? "pesquisa" : "conteudo"
+      const kind: Kind = isResearchOutput(o) ? "pesquisa" : "conteudo"
       const bucket: Bucket =
         o.status === "needs_adjustment" ? "ajuste"
           : o.status === "approved" ? "aprovado"
@@ -123,7 +122,8 @@ export default function ReviewPage() {
           : o.status === "needs_adjustment" ? "media" : "baixa"
       list.push({
         key: `o${o.id}`, kind, outputId: o.id, title: o.title, brand: o.brand_slug,
-        status: o.status, priority, bucket, updatedAt: o.updated_at
+        status: o.status, priority, bucket, updatedAt: o.updated_at,
+        href: kind === "pesquisa" ? `/research?id=${o.id}` : `/content?id=${o.id}`
       })
     }
     // Eventos + publicações (do calendário)
@@ -140,7 +140,8 @@ export default function ReviewPage() {
       list.push({
         key: `e${e.id}`, kind, outputId: null, title: e.title, brand: e.brand_slug,
         status: e.published_at ? "completed" : (e.status === "awaiting_approval" ? "awaiting_approval" : "review"),
-        priority, bucket, updatedAt: e.updated_at
+        priority, bucket, updatedAt: e.updated_at,
+        href: KIND_META[kind].href
       })
     }
     return list.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))
@@ -288,7 +289,7 @@ export default function ReviewPage() {
                         Aprovar
                       </button>
                     )}
-                    <Link href={km.href} className="duofy-tap inline-flex items-center gap-1 rounded-lg bg-purple/10 px-2.5 py-1.5 text-xs font-semibold text-purple hover:bg-purple/20">
+                    <Link href={it.href} className="duofy-tap inline-flex items-center gap-1 rounded-lg bg-purple/10 px-2.5 py-1.5 text-xs font-semibold text-purple hover:bg-purple/20">
                       Abrir <ArrowRightIcon className="h-3.5 w-3.5" />
                     </Link>
                   </div>
