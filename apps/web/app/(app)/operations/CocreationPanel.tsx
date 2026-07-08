@@ -48,13 +48,13 @@ import {
 } from "@/lib/briefing"
 import {
   apiFetch,
-  generateCocreation,
+  generateCocreationAsync,
   getCocreation,
   getResearchModels,
-  refineCocreation,
+  pollAgentTask,
+  refineCocreationAsync,
   type CocreationGenerateRequest,
   type CocreationRefineTarget,
-  type ContentOutput,
   type ContentPackage,
   type ContentPackageResponse,
   type ResearchModel,
@@ -337,37 +337,22 @@ export function CocreationPanel({
     // Em desenvolvimento, registra o payload enviado para depuração (não vaza em produção).
     if (process.env.NODE_ENV !== "production") console.debug("[cocriação] payload →", reqBody)
 
-    // Resiliência ao timeout do proxy (~30s): a cocriação pode demorar e o backend cria o output
-    // mesmo se a requisição estourar. Então: dispara o POST E faz polling do output novo.
-    const bq = `?limit=40&brand_slug=${encodeURIComponent(brand)}`
-    let known = new Set<number>()
+    // Assíncrono via AgentTask: enfileira e acompanha por polling (elimina o teto de
+    // timeout do proxy ~30s nas cocriações reais, que podem demorar).
     try {
-      const cur = await apiFetch<ContentOutput[]>(`/api/content/outputs${bq}`, token)
-      known = new Set(cur.map((o) => o.id))
-    } catch { /* usa vazio */ }
-
-    let done = false
-    let postError: string | null = null
-    const post = generateCocreation(token, reqBody)
-      .then((res) => { if (!done) { done = true; setResult(res) } })
-      .catch((e: unknown) => {
-        postError = friendlyError(e, "Não foi possível gerar o conteúdo. Revise os filtros e tente novamente.")
-      })
-
-    const start = Date.now()
-    while (!done && Date.now() - start < 150_000) {
-      await new Promise((r) => setTimeout(r, 4000))
-      if (done) break
-      try {
-        const latest = await apiFetch<ContentOutput[]>(`/api/content/outputs${bq}`, token)
-        const fresh = latest.find((o) => !known.has(o.id))
-        if (fresh) {
-          try { const pkg = await getCocreation(token, fresh.id); done = true; setResult(pkg); break } catch { /* ainda não pronto */ }
-        }
-      } catch { /* segue */ }
+      const task = await generateCocreationAsync(token, reqBody)
+      const finished = await pollAgentTask(task.id, token, { intervalMs: 4000, timeoutMs: 150_000 })
+      if (finished.output_id) {
+        const pkg = await getCocreation(token, finished.output_id)
+        setResult(pkg)
+      }
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === "AgentTaskTimeoutError") {
+        setError("A geração está demorando; tente novamente ou veja na lista de conteúdos.")
+      } else {
+        setError(friendlyError(e, "Não foi possível gerar o conteúdo. Revise os filtros e tente novamente."))
+      }
     }
-    await post.catch(() => {})
-    if (!done) setError(postError ?? "A geração está demorando; tente novamente ou veja na lista de conteúdos.")
     setBusy(false)
   }
 
@@ -384,11 +369,19 @@ export function CocreationPanel({
     const key = `${target}:${extra?.slide_number ?? ""}`
     setRefineBusy(key); setError(null)
     try {
-      const res = await refineCocreation(token, result.output_id, { target, ...extra })
-      setResult(res)
+      const task = await refineCocreationAsync(token, result.output_id, { target, ...extra })
+      const finished = await pollAgentTask(task.id, token, { intervalMs: 3000, timeoutMs: 120_000 })
+      if (finished.output_id) {
+        const res = await getCocreation(token, finished.output_id)
+        setResult(res)
+      }
       setShowToneInput(false); setShowPersonaInput(false); setToneInstr(""); setPersonaInstr(""); setGuardianNote("")
     } catch (e: unknown) {
-      setError(friendlyError(e, "Falha ao ajustar conteúdo."))
+      if (e instanceof Error && e.name === "AgentTaskTimeoutError") {
+        setError("O ajuste está demorando; tente novamente em instantes.")
+      } else {
+        setError(friendlyError(e, "Falha ao ajustar conteúdo."))
+      }
     }
     setRefineBusy(null)
   }

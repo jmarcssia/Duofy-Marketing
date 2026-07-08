@@ -85,6 +85,11 @@ storage/media/*
 # Lixo gerado por ferramentas MCP (Playwright snapshots/exports)
 .playwright-mcp/
 
+# Artefatos do Playwright Test (E2E — apps/web/tests-e2e)
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/blob-report/
+
 # Artefatos gerados de apresentacao/output e locks do Office
 outputs/
 ~$*

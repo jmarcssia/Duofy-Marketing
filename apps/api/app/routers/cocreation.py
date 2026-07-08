@@ -15,13 +15,37 @@ from app.dependencies import get_current_user
 from app.llm import LLMConfigurationError
 from app.models import Output, OutputVersion, User
 from app.schemas import (
+    AgentTaskRead,
     CocreationRefineRequest,
     ContentPackage,
     ContentPackageResponse,
     CreationRequest,
 )
+from app.task_service import enqueue_agent_task, read_agent_task
 
 router = APIRouter(prefix="/api/cocreation", tags=["cocreation"])
+
+
+async def _assert_research_usable(
+    db: AsyncSession, brand_slug: str, research_output_id: int
+) -> None:
+    """Cocriação a partir de pesquisa: só pesquisa DA MESMA MARCA e APROVADA vira contexto."""
+    research = await db.get(Output, research_output_id)
+    if research is None or research.brand_slug != brand_slug:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Pesquisa não encontrada para esta marca.",
+        )
+    if research.channel != "Pesquisa":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="O item selecionado não é um relatório de pesquisa.",
+        )
+    if research.status != "approved":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A pesquisa selecionada ainda não foi aprovada. Aprove-a antes de cocriar.",
+        )
 
 
 def _response(
@@ -44,24 +68,8 @@ async def generate(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ContentPackageResponse:
     assert_brand_access(current_user, payload.brand_slug)  # C1
-    # Cocriação a partir de pesquisa: só pesquisa DA MESMA MARCA e APROVADA pode virar contexto.
     if payload.research_output_id is not None:
-        research = await db.get(Output, payload.research_output_id)
-        if research is None or research.brand_slug != payload.brand_slug:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Pesquisa não encontrada para esta marca.",
-            )
-        if research.channel != "Pesquisa":
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="O item selecionado não é um relatório de pesquisa.",
-            )
-        if research.status != "approved":
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="A pesquisa selecionada ainda não foi aprovada. Aprove-a antes de cocriar.",
-            )
+        await _assert_research_usable(db, payload.brand_slug, payload.research_output_id)
     try:
         output, version, package, warnings = await generate_content_package(db, payload)
     except LLMConfigurationError as exc:
@@ -78,6 +86,32 @@ async def generate(
 
     await run_guardian_after_generation(db, output)
     return _response(output, version, package, warnings)
+
+
+@router.post("/generate-async", response_model=AgentTaskRead)
+async def generate_async(
+    payload: CreationRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> AgentTaskRead:
+    """Versão assíncrona de /generate: enfileira a cocriação e retorna a tarefa na hora.
+
+    Mesmas validações do fluxo síncrono (marca/escopo e pesquisa aprovada), mas o
+    trabalho pesado do LLM roda no worker — o cliente acompanha por GET /api/tasks/{id}.
+    """
+    assert_brand_access(current_user, payload.brand_slug)  # C1
+    if payload.research_output_id is not None:
+        await _assert_research_usable(db, payload.brand_slug, payload.research_output_id)
+    task = await enqueue_agent_task(
+        db,
+        task_type="cocreation",
+        input_text=payload.theme,
+        user_id=current_user.id,
+        brand_slug=payload.brand_slug,
+        params=payload.model_dump(mode="json"),
+    )
+    await db.commit()
+    return await read_agent_task(db, task)
 
 
 @router.post("/{output_id}/refine", response_model=ContentPackageResponse)
@@ -105,6 +139,34 @@ async def refine(
             detail=f"Falha ao refinar: {str(exc)[:300]}",
         ) from exc
     return _response(output, version, package, warnings)
+
+
+@router.post("/{output_id}/refine-async", response_model=AgentTaskRead)
+async def refine_async(
+    output_id: int,
+    payload: CocreationRefineRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> AgentTaskRead:
+    """Versão assíncrona de /refine: enfileira o refino e retorna a tarefa na hora."""
+    existing = await db.get(Output, output_id)
+    if existing is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Conteudo nao encontrado."
+        )
+    assert_brand_access(current_user, existing.brand_slug)  # C1
+    params = payload.model_dump(mode="json")
+    params["output_id"] = output_id
+    task = await enqueue_agent_task(
+        db,
+        task_type="refine",
+        input_text=payload.instruction or payload.target,
+        user_id=current_user.id,
+        brand_slug=existing.brand_slug,
+        params=params,
+    )
+    await db.commit()
+    return await read_agent_task(db, task)
 
 
 @router.get("/{output_id}", response_model=ContentPackageResponse)

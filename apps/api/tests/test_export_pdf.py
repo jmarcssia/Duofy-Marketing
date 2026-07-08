@@ -1,4 +1,5 @@
-import importlib.util
+import contextlib
+import io
 
 import pytest
 
@@ -8,12 +9,29 @@ from app.export_service import (
     markdown_to_html,
 )
 
-# WeasyPrint depende de libs nativas (Pango/Cairo) presentes só no container da API.
-# Fora dele (host de dev Windows), pula APENAS os testes que geram PDF; os testes
-# de markdown_to_html continuam rodando em qualquer ambiente.
-_HAS_WEASYPRINT = importlib.util.find_spec("weasyprint") is not None
+
+# WeasyPrint depende de libs nativas (Pango/Cairo/GObject) presentes no container da API
+# e, no Windows, do GTK3 Runtime. Fora dele (host de dev sem GTK), pula APENAS os testes
+# que geram PDF; os testes de markdown_to_html continuam rodando em qualquer ambiente.
+#
+# Sonda a CAPACIDADE REAL de renderizar (importar o WeasyPrint carrega as libs nativas) em
+# vez de só a presença do pacote: assim, um `pip install weasyprint` num host sem GTK não
+# "liga" estes testes e quebra a suíte — eles voltam a rodar sozinhos quando o GTK estiver
+# instalado, sem exigir nova mudança de código.
+def _weasyprint_available() -> bool:
+    try:
+        # redireciona o stderr para engolir o banner de troubleshooting que o WeasyPrint
+        # imprime quando as libs nativas faltam (ruído irrelevante nos testes).
+        with contextlib.redirect_stderr(io.StringIO()):
+            from weasyprint import HTML  # noqa: F401  # dispara o carregamento das libs nativas
+    except Exception:
+        return False
+    return True
+
+
+_HAS_WEASYPRINT = _weasyprint_available()
 requires_weasyprint = pytest.mark.skipif(
-    not _HAS_WEASYPRINT, reason="WeasyPrint indisponível fora do container da API"
+    not _HAS_WEASYPRINT, reason="WeasyPrint indisponível (GTK/Pango ausentes fora do container)"
 )
 
 WIDE_CONTENT = """## Metadados editoriais

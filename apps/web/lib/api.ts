@@ -685,6 +685,90 @@ export function getResearchModels(token: string) {
   return apiFetch<ResearchModel[]>("/api/research-models", token)
 }
 
+export type ResearchRunRequest = {
+  brand_slug: string
+  theme: string
+  period?: string
+  depth?: string
+  provider?: string
+  model?: string
+  source_urls?: string[]
+  use_apify?: boolean
+  briefing_filters?: Record<string, unknown>
+}
+
+// --- Item 1: tarefas assíncronas (AgentTask) para research/cocreation/refine ---
+// Elimina o teto de timeout do proxy Next (~30s) nas cargas de LLM longas: o endpoint
+// *-async enfileira e retorna na hora; o cliente acompanha por polling em /api/tasks/{id}
+// até a tarefa concluir (status "completed"/"failed"), sem depender de uma única
+// requisição longa nem da corrida heurística POST-vs-lista usada anteriormente.
+
+export function runResearchAsync(token: string, body: ResearchRunRequest) {
+  return apiFetch<AgentTask>("/api/research/run-async", token, {
+    method: "POST",
+    body: JSON.stringify(body)
+  })
+}
+
+export function generateCocreationAsync(token: string, body: CocreationGenerateRequest) {
+  return apiFetch<AgentTask>("/api/cocreation/generate-async", token, {
+    method: "POST",
+    body: JSON.stringify(body)
+  })
+}
+
+export function refineCocreationAsync(
+  token: string,
+  outputId: number,
+  body: CocreationRefineRequest
+) {
+  return apiFetch<AgentTask>(`/api/cocreation/${outputId}/refine-async`, token, {
+    method: "POST",
+    body: JSON.stringify(body)
+  })
+}
+
+export function getAgentTask(taskId: number, token: string) {
+  return apiFetch<AgentTask>(`/api/tasks/${taskId}`, token)
+}
+
+export class AgentTaskTimeoutError extends Error {
+  constructor(public readonly task: AgentTask) {
+    super("A tarefa está demorando mais que o esperado.")
+    this.name = "AgentTaskTimeoutError"
+  }
+}
+
+export class AgentTaskFailedError extends Error {
+  constructor(public readonly task: AgentTask) {
+    super(task.error || task.result || "A tarefa falhou.")
+    this.name = "AgentTaskFailedError"
+  }
+}
+
+/**
+ * Faz polling de uma AgentTask até ela concluir (completed) ou falhar (failed).
+ * Lança AgentTaskFailedError em falha e AgentTaskTimeoutError se estourar timeoutMs
+ * (a tarefa pode continuar rodando no worker — quem chamar pode reabrir por task_id).
+ */
+export async function pollAgentTask(
+  taskId: number,
+  token: string,
+  opts?: { intervalMs?: number; timeoutMs?: number; onUpdate?: (task: AgentTask) => void }
+): Promise<AgentTask> {
+  const intervalMs = opts?.intervalMs ?? 3000
+  const timeoutMs = opts?.timeoutMs ?? 210_000
+  const start = Date.now()
+  while (true) {
+    const task = await getAgentTask(taskId, token)
+    opts?.onUpdate?.(task)
+    if (task.status === "completed") return task
+    if (task.status === "failed") throw new AgentTaskFailedError(task)
+    if (Date.now() - start >= timeoutMs) throw new AgentTaskTimeoutError(task)
+    await new Promise((resolve) => setTimeout(resolve, intervalMs))
+  }
+}
+
 // --- F2b: peças/subpeças aprovaveis por peça ---
 export type ContentPiece = {
   id: number

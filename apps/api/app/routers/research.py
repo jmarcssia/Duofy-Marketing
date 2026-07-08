@@ -20,12 +20,14 @@ from app.research_service import (
     save_research_as_memory,
 )
 from app.schemas import (
+    AgentTaskRead,
     ResearchContentBriefingResponse,
     ResearchMemoryResponse,
     ResearchReportRead,
     ResearchRunRequest,
     ResearchSourceRead,
 )
+from app.task_service import enqueue_agent_task, read_agent_task
 
 router = APIRouter(prefix="/api/research", tags=["research"])
 
@@ -179,6 +181,43 @@ async def run_research(
 
     await run_guardian_after_generation(db, output)
     return await _report_read(db, output)
+
+
+@router.post("/run-async", response_model=AgentTaskRead)
+async def run_research_async(
+    payload: ResearchRunRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> AgentTaskRead:
+    """Versão assíncrona de /run: enfileira a pesquisa e retorna a tarefa na hora.
+
+    Elimina o teto de timeout do proxy para pesquisas longas — o cliente acompanha
+    por GET /api/tasks/{id} (ou o SSE /stream) e, ao concluir, lê o relatório pelo
+    output_id da tarefa. A validação (marca/escopo) acontece aqui, no enfileiramento.
+    """
+    assert_brand_access(current_user, payload.brand_slug)  # C1
+    task = await enqueue_agent_task(
+        db,
+        task_type="research",
+        input_text=payload.theme,
+        user_id=current_user.id,
+        brand_slug=payload.brand_slug,
+        params=payload.model_dump(mode="json"),
+    )
+    await record_audit_event(
+        db,
+        user=current_user,
+        action="research.enqueued",
+        entity_type="agent_task",
+        entity_id=task.id,
+        status=task.status,
+        brand_slug=payload.brand_slug,
+        agent_slug="research_agent",
+        summary=f"Pesquisa enfileirada: {payload.theme}",
+        metadata={"theme": payload.theme, "depth": payload.depth, "task_id": task.id},
+    )
+    await db.commit()
+    return await read_agent_task(db, task)
 
 
 @router.get("/reports", response_model=list[ResearchReportRead])

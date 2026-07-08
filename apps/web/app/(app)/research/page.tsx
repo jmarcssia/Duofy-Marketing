@@ -42,6 +42,8 @@ import {
   createResearchTheme,
   getResearchModels,
   getResearchThemes,
+  pollAgentTask,
+  runResearchAsync,
   type ResearchModel,
   type ResearchReport,
   type ResearchTheme
@@ -318,54 +320,41 @@ export default function ResearchPage() {
     setRunning(true)
     setError(null)
 
-    const reqBody = JSON.stringify({
-      brand_slug: brand,
-      theme: pergunta.trim().slice(0, 255),
-      period: periodValue || "ultimos 30 dias",
-      depth: normalizeDepth(profundidade),
-      model: model || undefined,
-      source_urls: sourceUrls
-        .split(/\n+/)
-        .map((u) => u.trim())
-        .filter((u) => u.startsWith("http"))
-        .slice(0, 8),
-      briefing_filters: cleanBriefing(builtBriefing)
-    })
-    const listQs = brand ? `?brand_slug=${encodeURIComponent(brand)}&limit=20` : "?limit=20"
-
-    // A pesquisa REAL leva 1–2 min. O proxy da API estoura antes (~30s → 500) mesmo com o
-    // backend criando o relatório. Então: dispara o POST E faz polling do relatório novo — o que
-    // resolver primeiro vence. Robusto ao timeout, sem depender de uma única requisição longa.
-    let knownIds = new Set(reports.map((r) => r.id))
+    // Assíncrono via AgentTask: enfileira e acompanha por polling (elimina o teto de
+    // timeout do proxy ~30s nas pesquisas reais, que levam 1–2 min). Substitui a corrida
+    // heurística POST-vs-lista por um acompanhamento real do estado da tarefa.
     try {
-      const cur = await apiFetch<ResearchReport[]>(`/api/research/reports${listQs}`, token)
-      knownIds = new Set(cur.map((r) => r.id))
-    } catch { /* usa o estado atual */ }
-
-    let done = false
-    let postError: string | null = null
-    const post = apiFetch<ResearchReport>("/api/research/run", token, { method: "POST", body: reqBody })
-      .then((rep) => {
-        if (!done) { done = true; setSelected(rep); setActionMsg(null); void loadReports() }
+      const task = await runResearchAsync(token, {
+        brand_slug: brand,
+        theme: pergunta.trim().slice(0, 255),
+        period: periodValue || "ultimos 30 dias",
+        depth: normalizeDepth(profundidade),
+        model: model || undefined,
+        source_urls: sourceUrls
+          .split(/\n+/)
+          .map((u) => u.trim())
+          .filter((u) => u.startsWith("http"))
+          .slice(0, 8),
+        briefing_filters: cleanBriefing(builtBriefing)
       })
-      .catch((e: unknown) => { postError = friendlyError(e, "Não foi possível executar a pesquisa. Revise os filtros e tente novamente.") })
-
-    const start = Date.now()
-    while (!done && Date.now() - start < 210_000) {
-      await new Promise((r) => setTimeout(r, 5000))
-      if (done) break
-      try {
-        const latest = await apiFetch<ResearchReport[]>(`/api/research/reports${listQs}`, token)
-        const fresh = latest.find((r) => !knownIds.has(r.id))
-        if (fresh) { done = true; setSelected(fresh); setReports(latest); setActionMsg(null); break }
-      } catch { /* segue tentando */ }
-    }
-    await post.catch(() => {})
-
-    if (!done) {
-      setError(
-        "A pesquisa está demorando mais que o normal. Se um relatório aparecer em “Pesquisas recentes”, ela concluiu — abra por lá."
-      )
+      const finished = await pollAgentTask(task.id, token, { intervalMs: 4000, timeoutMs: 210_000 })
+      if (finished.output_id) {
+        const report = await apiFetch<ResearchReport>(
+          `/api/research/reports/${finished.output_id}`,
+          token
+        )
+        setSelected(report)
+        setActionMsg(null)
+      }
+      void loadReports()
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === "AgentTaskTimeoutError") {
+        setError(
+          "A pesquisa está demorando mais que o normal. Se um relatório aparecer em “Pesquisas recentes”, ela concluiu — abra por lá."
+        )
+      } else {
+        setError(friendlyError(e, "Não foi possível executar a pesquisa. Revise os filtros e tente novamente."))
+      }
       void loadReports()
     }
     setRunning(false)
