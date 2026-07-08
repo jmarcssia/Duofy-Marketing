@@ -1,7 +1,7 @@
 "use client"
 
-import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import {
   BriefingCompleteness,
@@ -96,9 +96,12 @@ function fmtDate(iso: string): string {
   })
 }
 
-export default function ResearchPage() {
+function ResearchPageInner() {
   const router = useRouter()
-  const { brands, selected: brand } = useBrand()
+  const searchParams = useSearchParams()
+  const idParam = searchParams.get("id")
+  const [idNotFound, setIdNotFound] = useState(false)
+  const { brands, selected: brand, setSelected: setBrand } = useBrand()
   const brandName = brands.find((b) => b.slug === brand)?.name ?? brand
   const [models, setModels] = useState<ResearchModel[]>([])
   const [reports, setReports] = useState<ResearchReport[]>([])
@@ -402,6 +405,25 @@ export default function ResearchPage() {
     }
   }
 
+  useEffect(() => {
+    if (!idParam) return
+    const id = Number(idParam)
+    if (!Number.isFinite(id)) { setIdNotFound(true); return }
+    const token = getTokenFromCookie()
+    if (!token) return
+    let cancelled = false
+    setIdNotFound(false)
+    apiFetch<ResearchReport>(`/api/research/reports/${id}`, token)
+      .then((report) => {
+        if (cancelled) return
+        setBrand(report.brand_slug)
+        setSelected(report)
+      })
+      .catch(() => { if (!cancelled) setIdNotFound(true) })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idParam])
+
   async function act(kind: "approve" | "request-adjustment") {
     if (!selected) return
     const token = getTokenFromCookie()
@@ -462,6 +484,22 @@ export default function ResearchPage() {
   }
 
   const st = selected ? STATUS_TONE[selected.status] ?? { label: selected.status, tone: "slate" as Tone } : null
+
+  if (idNotFound) {
+    return (
+      <div className="grid place-items-center gap-3 rounded-2xl border border-dashed border-line py-20 text-center">
+        <AlertTriangleIcon className="h-8 w-8 text-amber" />
+        <p className="text-sm font-semibold text-ink">Pesquisa não encontrada</p>
+        <p className="text-xs text-muted">Esta pesquisa não existe ou você não tem acesso a ela.</p>
+        <button
+          onClick={() => { setIdNotFound(false); router.push("/research") }}
+          className="duofy-tap mt-2 rounded-lg border border-line bg-white px-3 py-2 text-sm font-semibold text-ink hover:border-purple/40 hover:text-purple"
+        >
+          ← Ver pesquisas recentes
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -799,5 +837,13 @@ export default function ResearchPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function ResearchPage() {
+  return (
+    <Suspense fallback={<div className="grid place-items-center py-20"><Spinner size={22} className="text-purple" /></div>}>
+      <ResearchPageInner />
+    </Suspense>
   )
 }
