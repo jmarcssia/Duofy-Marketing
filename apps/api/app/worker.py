@@ -4,8 +4,9 @@ import asyncio
 import logging
 
 from celery import Celery
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.db import AsyncSessionLocal
+from app.db import build_engine
 from app.settings import get_settings
 from app.task_service import execute_agent_task
 
@@ -26,8 +27,17 @@ celery_app.conf.update(
 )
 
 
+# Engine dedicado do worker, com NullPool: o worker Celery roda `asyncio.run()`
+# uma vez por tarefa, cada chamada com seu próprio event loop. O engine
+# compartilhado da API (app.db.engine) usa um pool que recicla conexões entre
+# chamadas — o que quebra aqui, já que uma conexão aberta no loop de uma tarefa
+# fica presa a ele e não pode ser reusada pela tarefa seguinte (loop diferente).
+_worker_engine = build_engine(null_pool=True)
+WorkerSessionLocal = async_sessionmaker(_worker_engine, expire_on_commit=False)
+
+
 async def _execute(task_id: int) -> None:
-    async with AsyncSessionLocal() as db:
+    async with WorkerSessionLocal() as db:
         await execute_agent_task(db, task_id)
 
 
