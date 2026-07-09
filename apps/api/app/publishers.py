@@ -16,9 +16,6 @@ from typing import Protocol
 
 from app.models import CalendarEvent
 
-# Alvos de publicação suportados pelo contrato (a Meta ainda é stub).
-PUBLISH_TARGETS = ("meta", "manual")
-
 
 class PublisherError(RuntimeError):
     """Falha de publicação (genérica)."""

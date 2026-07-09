@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass
 from unicodedata import combining, normalize
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Output, OutputVersion
@@ -305,13 +305,6 @@ async def _versions_for_output(db: AsyncSession, output_id: int) -> list[OutputV
         .order_by(OutputVersion.version_number.asc())
     )
     return list(result.scalars().all())
-
-
-async def next_version_number(db: AsyncSession, output_id: int) -> int:
-    result = await db.execute(
-        select(func.max(OutputVersion.version_number)).where(OutputVersion.output_id == output_id)
-    )
-    return int(result.scalar() or 0) + 1
 
 
 def _normalize_markdown(content: str) -> str:

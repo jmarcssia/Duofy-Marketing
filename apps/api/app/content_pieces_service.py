@@ -15,7 +15,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import ContentPiece, Output, OutputDecision, User
 from app.schemas import ContentPackage
 
-PIECE_STATUSES = ("pending", "approved", "rejected")
 # Tipos manuais suportados (alem dos derivados do pacote).
 MANUAL_KINDS = (
     "whatsapp", "whatsapp_image_prompt", "email", "blog", "release", "pitch",

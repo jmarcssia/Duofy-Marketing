@@ -40,7 +40,6 @@ logger = logging.getLogger(__name__)
 # Orquestrador. Eventos são executados por estes agentes de conteúdo/pesquisa/imprensa.
 AGENT_SLUGS = {"content_agent", "press_agent", "research_agent"}
 EVENT_STATUSES = {"planned", "scheduled", "in_progress", "completed", "cancelled", "failed"}
-PRESS_FORMATS = {"press_release", "pauta", "comunicado", "editorial_angle", "approach"}
 
 
 def _plain_text(value: str) -> str:
