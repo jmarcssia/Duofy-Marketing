@@ -78,21 +78,3 @@ export function normalizePieces(values: string[] | null | undefined): string[] {
   }
   return out
 }
-
-/**
- * Formato é string livre no backend (não é enum) — só normalizamos espaços. Mantido como
- * função para a UI ter um ponto único, caso o backend passe a exigir enum de formato.
- */
-export function normalizeFormat(value: string | null | undefined): string {
-  return (value ?? "").trim()
-}
-
-/** Finalidade/propósito — string livre; normaliza espaços. */
-export function normalizePurpose(value: string | null | undefined): string {
-  return (value ?? "").trim()
-}
-
-/** Marca — slug técnico (minúsculo, sem espaços). */
-export function normalizeBrand(value: string | null | undefined): string {
-  return (value ?? "").trim().toLowerCase()
-}

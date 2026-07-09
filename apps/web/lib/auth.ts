@@ -1,6 +1,5 @@
 // C5: o token JWT agora vive num cookie HttpOnly (`duofy_token`), invisível ao JS — imune a
 // roubo por XSS. O JS só enxerga a flag não-secreta `duofy_auth`, que apenas sinaliza "há sessão".
-export const TOKEN_COOKIE = "duofy_token"
 export const AUTH_FLAG_COOKIE = "duofy_auth"
 
 /**

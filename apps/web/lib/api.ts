@@ -13,50 +13,10 @@ export type Brand = {
   description: string
 }
 
-export type Agent = {
-  id: number
-  name: string
-  slug: string
-  default_model: string
-  is_active: boolean
-}
-
 export type LoginResponse = {
   access_token: string
   token_type: "bearer"
   user: User
-}
-
-export type ProviderCredential = {
-  provider: "openrouter" | "anthropic" | "openai" | "openai_embeddings" | "apify"
-  display_name: string
-  base_url: string | null
-  default_model: string | null
-  is_enabled: boolean
-  has_api_key: boolean
-  masked_api_key: string | null
-}
-
-export type QualitySettings = {
-  review_mode: "local_only" | "hybrid" | "llm_required"
-  provider: "openrouter" | "anthropic" | "openai" | null
-  model: string | null
-}
-
-export type AgentSettings = {
-  token_budgets: Record<string, number>
-  research_depth: Record<string, { sources: number; excerpt: number }>
-}
-
-export type AgentRun = {
-  id: number
-  agent_slug: string
-  provider: string
-  model: string
-  prompt: string
-  output: string
-  status: string
-  error: string | null
 }
 
 export type AgentLog = {
@@ -86,42 +46,6 @@ export type AgentTask = {
   updated_at: string
   logs: AgentLog[]
 }
-
-export type ChatMessage = {
-  id: number
-  session_id: number
-  role: string
-  content: string
-  agent_task_id: number | null
-  metadata_json: Record<string, unknown> | null
-  created_at: string
-}
-
-export type ChatSession = {
-  id: number
-  user_id: number
-  title: string
-  brand_slug: string | null
-  status: string
-  created_at: string
-  updated_at: string
-}
-
-export type ChatSessionDetail = ChatSession & {
-  messages: ChatMessage[]
-}
-
-export type ChatMessageResponse = {
-  message: ChatMessage
-  task: AgentTask
-}
-
-export type AgentRunStatus =
-  | "completed"
-  | "approved"
-  | "needs_adjustment"
-  | "rejected"
-  | "failed"
 
 export type ContentOutputStatus =
   | "draft"
@@ -191,41 +115,6 @@ export type ContentOutputDetail = ContentOutput & {
   latest_quality_review: QualityReview | null
 }
 
-export type OutputWorkflowDetail = ContentOutputDetail & {
-  approved_memory_id: number | null
-  temporary_learning_id: number | null
-  latest_feedback: string | null
-}
-
-export type OutputComment = {
-  id: number
-  output_id: number
-  version_id: number | null
-  user_id: number | null
-  user_name: string | null
-  anchor_text: string | null
-  selected_text: string | null
-  comment: string
-  status: "open" | "resolved" | string
-  resolved_at: string | null
-  created_at: string
-  updated_at: string
-}
-
-export type OutputVersionDiffLine = {
-  change_type: "added" | "removed" | "unchanged"
-  old_line_number: number | null
-  new_line_number: number | null
-  content: string
-}
-
-export type OutputVersionCompare = {
-  output_id: number
-  from_version: ContentOutputVersion
-  to_version: ContentOutputVersion
-  lines: OutputVersionDiffLine[]
-}
-
 export type ResearchSource = {
   id: number
   output_id: number
@@ -243,14 +132,6 @@ export type ResearchSource = {
 
 export type ResearchReport = ContentOutput & {
   sources: ResearchSource[]
-}
-
-export type ResearchContentBriefing = {
-  brand_slug: string
-  category: string
-  channel: string
-  format: string
-  briefing: string
 }
 
 export type CalendarEvent = {
@@ -488,35 +369,6 @@ export type OperationsSummary = {
   by_action: Array<{ key: string; events: number }>
 }
 
-export type AgentHealth = {
-  agent_slug: string
-  model_calls: number
-  failed_model_calls: number
-  agent_runs: number
-  failed_agent_runs: number
-  estimated_cost_usd: number
-  avg_latency_ms: number | null
-  last_activity_at: string | null
-  health_status: string
-}
-
-export type QualityReviewListItem = {
-  id: number
-  output_id: number
-  version_id: number
-  reviewer_slug: string
-  status: string
-  score: number
-  passed: boolean
-  review_mode: string
-  llm_provider: string | null
-  llm_model: string | null
-  llm_error: string | null
-  confidence: number | null
-  summary: string
-  created_at: string
-}
-
 export type InternalReport = {
   id: number
   title: string
@@ -661,20 +513,6 @@ export type CocreationRefineRequest = {
   provider?: string
   use_guardian_feedback?: boolean
   human_note?: string
-}
-
-export function generateCocreation(token: string, body: CocreationGenerateRequest) {
-  return apiFetch<ContentPackageResponse>("/api/cocreation/generate", token, {
-    method: "POST",
-    body: JSON.stringify(body)
-  })
-}
-
-export function refineCocreation(token: string, outputId: number, body: CocreationRefineRequest) {
-  return apiFetch<ContentPackageResponse>(`/api/cocreation/${outputId}/refine`, token, {
-    method: "POST",
-    body: JSON.stringify(body)
-  })
 }
 
 export function getCocreation(token: string, outputId: number) {

@@ -393,39 +393,6 @@ export const RESTRICOES_DEFAULT = [
   "legendas_diferentes"
 ]
 
-/* ---------------- 21. Nutrição de leads ---------------- */
-
-export const NUTRICAO_CANAIS: Option[] = [
-  opt("whatsapp", "WhatsApp"),
-  opt("email", "E-mail"),
-  opt("ambos", "Ambos")
-]
-
-export const NUTRICAO_OPCOES: Option[] = [
-  opt("mensagem_curta", "Mensagem curta"),
-  opt("mensagem_alternativa", "Mensagem alternativa"),
-  opt("prompt_imagem", "Prompt de imagem opcional"),
-  opt("cta_comercial", "CTA comercial"),
-  opt("cta_educativo", "CTA educativo"),
-  opt("versao_curta", "Versão curta"),
-  opt("versao_media", "Versão média")
-]
-
-/* ---------------- 22. Assessoria de imprensa ---------------- */
-
-export const IMPRENSA_OPCOES: Option[] = [
-  opt("release", "Release"),
-  opt("sugestao_pauta", "Sugestão de pauta"),
-  opt("pitch_jornalista", "Pitch para jornalista"),
-  opt("artigo_assinado", "Artigo assinado"),
-  opt("nota_curta", "Nota curta"),
-  opt("qa", "Q&A"),
-  opt("mensagens_chave", "Mensagens-chave"),
-  opt("porta_voz", "Porta-voz"),
-  opt("angulo_editorial", "Ângulo editorial"),
-  opt("veiculos_sugeridos", "Veículos/nichos sugeridos")
-]
-
 /* ---------------- 23. Publicação ---------------- */
 
 export const PUBLICACAO_MODOS: Option[] = [
